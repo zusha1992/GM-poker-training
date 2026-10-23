@@ -20,6 +20,11 @@ export type DrillPiece = {
   answer: DrillAction;
   /** Hand keys that auto-fill as already-correct once this piece is answered right. */
   reveal?: string[];
+  /** For a "mix" answer: [primaryAction, secondaryAction, primaryPercent] — painted
+   * as a diagonal gradient split instead of a solid color once answered. */
+  mixSplit?: [DrillAction, DrillAction, number];
+  /** Longer explanation shown in the per-piece "explain" sheet. */
+  desc?: string;
 };
 
 export type SwipeDirection = "up" | "down" | "left" | "right";
@@ -33,3 +38,6 @@ export type DrillMode = {
   colors: Record<DrillAction, string>;
   pieces: DrillPiece[];
 };
+
+/** One legend row: a solid color or CSS gradient/pattern string, plus its label. */
+export type LegendEntry = { swatch: string; label: string };

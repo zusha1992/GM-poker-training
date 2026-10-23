@@ -25,3 +25,37 @@ body {
   color: var(--foreground);
   font-family: var(--font-sans), Arial, Helvetica, sans-serif;
 }
+
+@keyframes celin {
+  0% { transform: scale(0.3); opacity: 0; }
+  20% { transform: scale(1.1); opacity: 1; }
+  75% { transform: scale(1); opacity: 1; }
+  100% { transform: scale(1.05); opacity: 0; }
+}
+
+@keyframes conf {
+  to { transform: translate(var(--dx), var(--dy)) rotate(var(--rot)); opacity: 0; }
+}
+
+@keyframes bump {
+  50% { transform: scale(1.4); }
+}
+
+@keyframes flick {
+  to { transform: scale(1.25) rotate(-6deg); }
+}
+
+@keyframes wig {
+  0%, 100% { transform: none; }
+  12% { transform: translateY(-14px); }
+  25% { transform: none; }
+  37% { transform: translateX(14px); }
+  50% { transform: none; }
+  62% { transform: translateX(-14px); }
+  75% { transform: none; }
+  87% { transform: translateY(14px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; }
+}

@@ -37,6 +37,17 @@ export function coordOfHand(hand: string): GridCoord {
   return coord;
 }
 
+/** The hand key at a given row/col, e.g. (0,0) -> "AA", (0,1) -> "AKs". */
+export function labelAt(row: number, col: number): string {
+  return label(row, col);
+}
+
+/** Number of concrete card combinations a starting-hand key represents. */
+export function combosOf(hand: string): number {
+  if (hand.length === 2) return 6;
+  return hand[2] === "s" ? 4 : 12;
+}
+
 /** Bounding box + per-cell coords for a group of hands, used to size/shape the swipeable piece. */
 export function footprint(hands: string[]) {
   const coords = hands.map(coordOfHand);

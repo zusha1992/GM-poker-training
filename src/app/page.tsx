@@ -1,5 +1,5 @@
-import { redirect } from "next/navigation";
+import { Lobby } from "@/components/Lobby";
 
 export default function RootPage() {
-  redirect("/gm-poker-training.html");
+  return <Lobby />;
 }
