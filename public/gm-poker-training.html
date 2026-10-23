@@ -289,6 +289,7 @@ button{font:inherit;color:inherit}
       </button>
     </div>
     <div class="lstats"><span id="lStreak">Best streak 0</span><span>6-max cash · 100bb · proof of concept</span></div>
+    <a href="gm-poker-training-feedback.html" style="text-align:center;font-size:12px;color:var(--muted);text-decoration:underline">All feedback across every drill</a>
   </div>
 </div>
 
@@ -804,7 +805,7 @@ function fbTimeAgo(iso){
   return d.toLocaleDateString()+' '+d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
 }
 function fbEsc(t){return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
-function openFeedback(drillTag,drillLabel){
+function openFeedback(drillTag,drillLabel,pageUrl){
   const myName=()=>localStorage.getItem(FB_NAME_KEY)||'';
   let replyTo=null;
   const s=sheet('<div style="display:flex;align-items:center;justify-content:space-between;gap:10px"><h2 style="margin:0">Feedback &middot; '+fbEsc(drillLabel)+'</h2><button type="button" id="fbClose" aria-label="Close" style="width:34px;height:34px;flex-shrink:0;border-radius:10px;border:1px solid var(--line);background:var(--panel-2);color:var(--ink);font-size:16px;line-height:1;cursor:pointer">&times;</button></div><div class="fbwrap"><div class="fblist" id="fbList">Loading…</div><div class="fbcompose"><div class="fbreplyto" id="fbReplyTo" hidden></div><input class="fbname" id="fbNameInput" placeholder="Your name (Uri or Noam)" value="'+fbEsc(myName())+'"><textarea class="fbtextarea" id="fbMsgInput" placeholder="Write a note…"></textarea><button class="cta" id="fbSend" type="button">Send</button></div></div>');
@@ -865,7 +866,7 @@ function openFeedback(drillTag,drillLabel){
     const author=nameInput.value.trim(),message=msgInput.value.trim();
     if(!author||!message){toast('Add your name and a message',false);return;}
     localStorage.setItem(FB_NAME_KEY,author);
-    await fetch('/api/feedback',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({drill:drillTag,parentId:replyTo,author,message})});
+    await fetch('/api/feedback',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({drill:drillTag,drillLabel,pageUrl,parentId:replyTo,author,message})});
     msgInput.value='';setReply(null,'');
     fbLoad();
   };
@@ -877,7 +878,8 @@ document.getElementById('feedbackBtn').onclick=()=>{
   const inLobby=document.getElementById('lobby').hidden!==true;
   const tag=inLobby?'preflop:lobby':'preflop:'+mode.key+':'+pos.k;
   const label=inLobby?'Lobby':mode.title+' — '+pos.k;
-  openFeedback(tag,label);
+  const url=inLobby?'gm-poker-training.html':(mode.key==='rfi'?'gm-poker-training.html?mode=rfi&pos='+encodeURIComponent(pos.k):'gm-poker-training.html');
+  openFeedback(tag,label,url);
 };
 
 document.getElementById('legendBtn').onclick=()=>{
@@ -995,7 +997,14 @@ function finish(){
 }
 
 applyMode(MODES.rfi);
-showLobby();
+(function deepLink(){
+  const qs=new URLSearchParams(location.search);
+  if(qs.get('mode')==='rfi'){
+    const p=POS.find(x=>x.k===qs.get('pos'));
+    if(p){start(p);return;}
+  }
+  showLobby();
+})();
 })();
 </script>
 

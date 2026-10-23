@@ -1,0 +1,85 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>GM Poker Training — All Feedback</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Figtree:wght@400;500;600&display=swap">
+<style>
+:root{
+  --ground:#0F1317; --panel:#182027; --panel-2:#212A33; --line:#2C3640;
+  --ink:#EEF2F5; --muted:#9AA6B1; --mix:#F2B33D;
+  --display:"Chakra Petch","Avenir Next Condensed","Arial Narrow",sans-serif;
+  --body:"Figtree","Segoe UI",system-ui,sans-serif;
+  color-scheme:dark;
+}
+html,body{height:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--body);-webkit-tap-highlight-color:transparent}
+.app{max-width:520px;margin:0 auto;min-height:100%;display:flex;flex-direction:column;gap:12px;padding:16px max(16px, env(safe-area-inset-left, 0px)) 32px;box-sizing:border-box}
+.top{display:flex;align-items:center;gap:10px}
+.nav{width:34px;height:34px;flex-shrink:0;padding:0;border-radius:9px;border:1px solid var(--line);background:var(--panel);display:flex;align-items:center;justify-content:center;cursor:pointer;color:inherit;text-decoration:none}
+h1{margin:0;font-family:var(--display);font-weight:700;font-size:19px;flex:1}
+.filterrow{display:flex;gap:6px;flex-wrap:wrap}
+.filterchip{font-family:var(--display);font-size:11px;font-weight:600;padding:5px 10px;border-radius:999px;border:1px solid var(--line);background:var(--panel);color:var(--muted);cursor:pointer}
+.filterchip.on{border-color:var(--mix);color:var(--mix);background:var(--panel-2)}
+.empty{text-align:center;color:var(--muted);font-size:13px;padding:40px 10px}
+.list{display:flex;flex-direction:column;gap:10px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px}
+.card .head{display:flex;align-items:center;gap:8px;margin-bottom:4px}
+.card .head b{font-family:var(--display);font-size:13px}
+.card .head span{font-size:11px;color:var(--muted)}
+.badge{font-family:var(--display);font-size:10px;font-weight:700;letter-spacing:.04em;color:var(--mix);background:var(--panel-2);border:1px solid var(--line);padding:2px 8px;border-radius:999px;margin-bottom:8px;display:inline-block}
+.msg{font-size:14px;line-height:1.45;white-space:pre-wrap;margin-bottom:8px}
+.viewlink{font-family:var(--display);font-size:12px;font-weight:700;color:var(--mix);text-decoration:none}
+.replytag{font-size:11px;color:var(--muted);margin-bottom:4px}
+</style>
+</head><body>
+<div class="app">
+  <div class="top">
+    <a class="nav" href="gm-poker-training.html" aria-label="Lobby"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 11l8-7 8 7"></path><path d="M6 10v10h12V10"></path></svg></a>
+    <h1>All Feedback</h1>
+  </div>
+  <div class="filterrow" id="filters"></div>
+  <div class="list" id="list"><div class="empty">Loading…</div></div>
+</div>
+<script>
+(function(){
+function esc(t){return (t||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function timeAgo(iso){
+  const d=new Date(iso),diff=(Date.now()-d.getTime())/1000;
+  if(diff<60)return 'just now';
+  if(diff<3600)return Math.floor(diff/60)+'m ago';
+  if(diff<86400)return Math.floor(diff/3600)+'h ago';
+  return d.toLocaleDateString()+' '+d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+}
+let allRows=[],activeFilter=null;
+function render(){
+  const list=document.getElementById('list');
+  const byId={};allRows.forEach(r=>byId[r.id]=r);
+  const rows=activeFilter?allRows.filter(r=>r.drill===activeFilter):allRows;
+  if(!rows.length){list.innerHTML='<div class="empty">No feedback yet. Once someone leaves a note on any drill, it shows up here.</div>';return;}
+  const sorted=rows.slice().sort((a,b)=>b.createdAt.localeCompare(a.createdAt));
+  list.innerHTML=sorted.map(r=>{
+    const parent=r.parentId?byId[r.parentId]:null;
+    return '<div class="card">'
+      +'<span class="badge">'+esc(r.drillLabel||r.drill)+'</span>'
+      +(parent?'<div class="replytag">&#8618; replying to '+esc(parent.author)+': "'+esc(parent.message.slice(0,50))+(parent.message.length>50?'…':'')+'"</div>':'')
+      +'<div class="head"><b>'+esc(r.author)+'</b><span>'+timeAgo(r.createdAt)+(r.updatedAt?' &middot; edited':'')+'</span></div>'
+      +'<div class="msg">'+esc(r.message)+'</div>'
+      +'<a class="viewlink" href="'+esc(r.pageUrl||'gm-poker-training.html')+'">View on page &rarr;</a>'
+      +'</div>';
+  }).join('');
+}
+function renderFilters(){
+  const drills=[...new Set(allRows.map(r=>r.drill))];
+  const labelOf=d=>{const r=allRows.find(x=>x.drill===d);return r?(r.drillLabel||d):d;};
+  const el=document.getElementById('filters');
+  if(drills.length<2){el.innerHTML='';return;}
+  el.innerHTML='<button type="button" class="filterchip'+(activeFilter?'':' on')+'" data-d="">All</button>'
+    +drills.map(d=>'<button type="button" class="filterchip'+(activeFilter===d?' on':'')+'" data-d="'+esc(d)+'">'+esc(labelOf(d))+'</button>').join('');
+  el.querySelectorAll('.filterchip').forEach(b=>b.onclick=()=>{activeFilter=b.dataset.d||null;renderFilters();render();});
+}
+fetch('/api/feedback').then(r=>r.json()).then(rows=>{
+  allRows=rows;
+  renderFilters();
+  render();
+}).catch(()=>{document.getElementById('list').innerHTML='<div class="empty">Could not load feedback.</div>';});
+})();
+</script>
+</body></html>

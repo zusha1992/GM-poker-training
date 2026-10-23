@@ -24,6 +24,8 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   const body = (await request.json()) as {
     drill?: string;
+    drillLabel?: string;
+    pageUrl?: string;
     parentId?: string | null;
     author?: string;
     message?: string;
@@ -35,9 +37,12 @@ export async function POST(request: Request) {
   }
 
   const db = await getDb();
+  const drill = (body.drill ?? "unknown").trim() || "unknown";
   const row = {
     id: crypto.randomUUID(),
-    drill: (body.drill ?? "unknown").trim() || "unknown",
+    drill,
+    drillLabel: (body.drillLabel ?? "").trim() || drill,
+    pageUrl: (body.pageUrl ?? "").trim() || "/",
     parentId: body.parentId ?? null,
     author: (body.author ?? "Uri").trim() || "Uri",
     message,

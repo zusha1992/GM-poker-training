@@ -120,6 +120,7 @@ button{font:inherit;color:inherit}
       <span class="dtext"><b>BTN c-bet vs BB</b><span>K&spades; 7&hearts; 2&diams; &middot; small bet or check</span></span>
     </button>
     <button class="ghost" id="lobbyBackBtn" type="button" style="text-align:center;line-height:44px;display:block;width:100%">Back to lobby</button>
+    <a href="gm-poker-training-feedback.html" style="text-align:center;font-size:12px;color:var(--muted);text-decoration:underline">All feedback across every drill</a>
   </div>
 
   <div class="top">
@@ -306,7 +307,7 @@ function fbTimeAgo(iso){
   return d.toLocaleDateString()+' '+d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
 }
 function fbEsc(t){return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
-function openFeedback(drillTag,drillLabel){
+function openFeedback(drillTag,drillLabel,pageUrl){
   const myName=()=>localStorage.getItem(FB_NAME_KEY)||'';
   let replyTo=null;
   const s=sheet('<div style="display:flex;align-items:center;justify-content:space-between;gap:10px"><h2 style="margin:0">Feedback &middot; '+fbEsc(drillLabel)+'</h2><button type="button" id="fbClose" aria-label="Close" style="width:34px;height:34px;flex-shrink:0;border-radius:10px;border:1px solid var(--line);background:var(--panel-2);color:var(--ink);font-size:16px;line-height:1;cursor:pointer">&times;</button></div><div class="fbwrap"><div class="fblist" id="fbList">Loading…</div><div class="fbcompose"><div class="fbreplyto" id="fbReplyTo" hidden></div><input class="fbname" id="fbNameInput" placeholder="Your name (Uri or Noam)" value="'+fbEsc(myName())+'"><textarea class="fbtextarea" id="fbMsgInput" placeholder="Write a note…"></textarea><button class="cta" id="fbSend" type="button">Send</button></div></div>');
@@ -367,7 +368,7 @@ function openFeedback(drillTag,drillLabel){
     const author=nameInput.value.trim(),message=msgInput.value.trim();
     if(!author||!message){toast('Add your name and a message',false);return;}
     localStorage.setItem(FB_NAME_KEY,author);
-    await fetch('/api/feedback',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({drill:drillTag,parentId:replyTo,author,message})});
+    await fetch('/api/feedback',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({drill:drillTag,drillLabel,pageUrl,parentId:replyTo,author,message})});
     msgInput.value='';setReply(null,'');
     fbLoad();
   };
@@ -378,7 +379,7 @@ document.getElementById('feedbackBtn').onclick=()=>{
   const inLobby=document.getElementById('lobby').hidden!==true;
   const tag=inLobby?'postflop:lobby':'postflop:btn-vs-bb:'+mode.key;
   const label=inLobby?'Lobby':mode.title;
-  openFeedback(tag,label);
+  openFeedback(tag,label,'gm-poker-training-postflop.html');
 };
 function finish(){
   const pct=Math.round(score/(order.length*100)*100);
