@@ -807,7 +807,8 @@ function fbEsc(t){return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>
 function openFeedback(drillTag,drillLabel){
   const myName=()=>localStorage.getItem(FB_NAME_KEY)||'';
   let replyTo=null;
-  const s=sheet('<h2>Feedback &middot; '+fbEsc(drillLabel)+'</h2><div class="fbwrap"><div class="fblist" id="fbList">Loading…</div><div class="fbcompose"><div class="fbreplyto" id="fbReplyTo" hidden></div><input class="fbname" id="fbNameInput" placeholder="Your name (Uri or Noam)" value="'+fbEsc(myName())+'"><textarea class="fbtextarea" id="fbMsgInput" placeholder="Write a note…"></textarea><button class="cta" id="fbSend" type="button">Send</button></div></div>');
+  const s=sheet('<div style="display:flex;align-items:center;justify-content:space-between;gap:10px"><h2 style="margin:0">Feedback &middot; '+fbEsc(drillLabel)+'</h2><button type="button" id="fbClose" aria-label="Close" style="width:34px;height:34px;flex-shrink:0;border-radius:10px;border:1px solid var(--line);background:var(--panel-2);color:var(--ink);font-size:16px;line-height:1;cursor:pointer">&times;</button></div><div class="fbwrap"><div class="fblist" id="fbList">Loading…</div><div class="fbcompose"><div class="fbreplyto" id="fbReplyTo" hidden></div><input class="fbname" id="fbNameInput" placeholder="Your name (Uri or Noam)" value="'+fbEsc(myName())+'"><textarea class="fbtextarea" id="fbMsgInput" placeholder="Write a note…"></textarea><button class="cta" id="fbSend" type="button">Send</button></div></div>');
+  s.querySelector('#fbClose').onclick=()=>s.remove();
   const list=s.querySelector('#fbList'),nameInput=s.querySelector('#fbNameInput'),msgInput=s.querySelector('#fbMsgInput'),replyBox=s.querySelector('#fbReplyTo');
   function setReply(id,snippet){
     replyTo=id;
