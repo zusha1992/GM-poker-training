@@ -1,0 +1,51 @@
+import { getDb } from "@/db";
+import { drillFeedback } from "@/db/schema";
+import { asc, eq } from "drizzle-orm";
+
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const drill = searchParams.get("drill");
+
+  const db = await getDb();
+  const rows = drill
+    ? await db
+        .select()
+        .from(drillFeedback)
+        .where(eq(drillFeedback.drill, drill))
+        .orderBy(asc(drillFeedback.createdAt))
+    : await db
+        .select()
+        .from(drillFeedback)
+        .orderBy(asc(drillFeedback.createdAt));
+
+  return Response.json(rows);
+}
+
+export async function POST(request: Request) {
+  const body = (await request.json()) as {
+    drill?: string;
+    parentId?: string | null;
+    author?: string;
+    message?: string;
+  };
+
+  const message = (body.message ?? "").trim();
+  if (!message) {
+    return Response.json({ error: "message is required" }, { status: 400 });
+  }
+
+  const db = await getDb();
+  const row = {
+    id: crypto.randomUUID(),
+    drill: (body.drill ?? "unknown").trim() || "unknown",
+    parentId: body.parentId ?? null,
+    author: (body.author ?? "Uri").trim() || "Uri",
+    message,
+    createdAt: new Date().toISOString(),
+    updatedAt: null as string | null,
+  };
+
+  await db.insert(drillFeedback).values(row);
+
+  return Response.json(row);
+}

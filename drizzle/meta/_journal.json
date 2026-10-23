@@ -1,0 +1,41 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1786812521561,
+      "tag": "0000_white_white_queen",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1787123075947,
+      "tag": "0001_stale_randall",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1792741263344,
+      "tag": "0002_daffy_red_shift",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1792741334691,
+      "tag": "0003_mute_wild_child",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1792749753451,
+      "tag": "0004_normal_sister_grimm",
+      "breakpoints": true
+    }
+  ]
+}

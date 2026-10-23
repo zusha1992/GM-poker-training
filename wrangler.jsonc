@@ -1,0 +1,57 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "gm-poker-training-app",
+	"main": ".open-next/worker.js",
+	"compatibility_date": "2026-08-15",
+	"compatibility_flags": [
+		"nodejs_compat",
+		"global_fetch_strictly_public"
+	],
+	"assets": {
+		"directory": ".open-next/assets",
+		"binding": "ASSETS"
+	},
+	"images": {
+		"binding": "IMAGES"
+	},
+	"services": [
+		{
+			"binding": "WORKER_SELF_REFERENCE",
+			"service": "gm-poker-training-app"
+		}
+	],
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "poker-training",
+			"database_id": "d7be8738-195d-4081-a3d6-c3eedc4734b9",
+			"migrations_dir": "drizzle"
+		}
+	],
+	"env": {
+		"dev": {
+			"name": "gm-poker-training-app-dev",
+			"assets": {
+				"directory": ".open-next/assets",
+				"binding": "ASSETS"
+			},
+			"images": {
+				"binding": "IMAGES"
+			},
+			"services": [
+				{
+					"binding": "WORKER_SELF_REFERENCE",
+					"service": "gm-poker-training-app-dev"
+				}
+			],
+			"d1_databases": [
+				{
+					"binding": "DB",
+					"database_name": "poker-training",
+					"database_id": "d7be8738-195d-4081-a3d6-c3eedc4734b9",
+					"migrations_dir": "drizzle"
+				}
+			]
+		}
+	}
+}

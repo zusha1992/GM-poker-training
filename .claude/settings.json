@@ -1,0 +1,34 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx --yes playwright --version)",
+      "Bash(curl -sf http://localhost:3000)",
+      "Bash(npx --yes playwright install chromium)",
+      "Bash(echo \"EXIT:$?\")",
+      "Bash(npx --yes -p playwright node \"C:/Users/noams/AppData/Local/Temp/claude/c--Users-noams-Developer-Chess-Poker-Training/d64d233d-463f-49fd-a8c0-665439db0b79/scratchpad/explore.mjs\")",
+      "Bash(npm init *)",
+      "Bash(npm install *)",
+      "Bash(node explore.mjs)",
+      "Bash(node check-issue.mjs)",
+      "Bash(git stash *)",
+      "Bash(node check-baseline.mjs)",
+      "Bash(node -e ' *)",
+      "Bash(npx tsc *)",
+      "Bash(echo \"TSC_EXIT:$?\")",
+      "Bash(npm run *)",
+      "Bash(node verify2.mjs)",
+      "Read(//tmp/**)",
+      "Bash(node verify3.mjs)",
+      "Bash(node verify7.mjs)",
+      "Bash(node verify8.mjs)",
+      "Bash(node debug1.mjs)",
+      "Bash(node verify9.mjs)",
+      "Bash(npx tsx *)",
+      "Bash(rm _checkbackdoor3.mjs)",
+      "Bash(taskkill //PID 8548 //F)",
+      "Bash(npx wrangler *)",
+      "Bash(npx playwright *)",
+      "Bash(node check-responsive.mjs)"
+    ]
+  }
+}
