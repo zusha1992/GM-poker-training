@@ -103,7 +103,7 @@ export const STEPS: Record<Street, StreetStep> = {
     correct: "bet",
     why: "The queen adds a flush draw. Go big and polar: strong hands bet for value, draws bet as semi-bluffs, and the medium hands check.",
     keeps: ["strong", "draw"],
-    betsWho: "Strong hands and draws bet. Medium hands and air check and leave the line. BB calls.",
+    betsWho: "Value and bluffs overbet. The rest checks and leaves the line. BB calls.",
   },
   river: {
     street: "river",
@@ -277,6 +277,58 @@ function snapshot(street: Street, live: { c: Combo; g: Group }[], basis: Map<str
     total += c.weight;
   }
   return { street, cells, basis, total, byGroup };
+}
+
+/** The same picture with some groups removed — used while the player sorts
+ * the turn range piece by piece. */
+export function withoutGroups(snap: RangeSnapshot, groups: Group[]): RangeSnapshot {
+  const drop = new Set(groups);
+  const cells = new Map<string, Partial<Record<Group, number>>>();
+  const byGroup = { ...snap.byGroup };
+  let total = snap.total;
+  for (const [hand, cell] of snap.cells) {
+    const next: Partial<Record<Group, number>> = {};
+    for (const [g, n] of Object.entries(cell) as [Group, number][]) {
+      if (drop.has(g)) continue;
+      next[g] = n;
+    }
+    if (Object.keys(next).length) cells.set(hand, next);
+  }
+  for (const g of drop) {
+    total -= byGroup[g];
+    byGroup[g] = 0;
+  }
+  return { ...snap, cells, byGroup, total };
+}
+
+/** A ready-made group the player drags into Overbet or Check on the turn. */
+export type SortPieceDef = {
+  key: "value" | "bluff" | "check";
+  label: string;
+  sub: string;
+  color: string;
+  groups: Group[];
+  target: "bet" | "check";
+  /** Squares with at least one combo in this piece (for its Tetris shape). */
+  hands: string[];
+  /** Share of the range (0-100) this piece holds. */
+  pct: number;
+};
+
+/** The three pieces for the turn overbet decision on this board: value
+ * (strong hands, incl. KJ/KT), bluffs (AJ, AT, JT and every flush draw),
+ * and everything else, which checks. */
+export function turnSortPieces(turn: RangeSnapshot): SortPieceDef[] {
+  const defs: Omit<SortPieceDef, "hands" | "pct">[] = [
+    { key: "value", label: "Value", sub: "Strong hands", color: GROUP_INFO.strong.color, groups: ["strong"], target: "bet" },
+    { key: "bluff", label: "Bluffs", sub: "Draws", color: GROUP_INFO.draw.color, groups: ["draw"], target: "bet" },
+    { key: "check", label: "The rest", sub: "Medium & air", color: GROUP_INFO.medium.color, groups: ["medium", "air"], target: "check" },
+  ];
+  return defs.map((d) => {
+    const hands = [...turn.cells].filter(([, cell]) => d.groups.some((g) => (cell[g] ?? 0) > 0)).map(([h]) => h);
+    const n = d.groups.reduce((s, g) => s + turn.byGroup[g], 0);
+    return { ...d, hands, pct: Math.round((n / turn.total) * 100) };
+  });
 }
 
 /** Every picture the demo shows, in order:

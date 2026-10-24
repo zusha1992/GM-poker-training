@@ -15,6 +15,10 @@ type LineMatrixProps = {
   /** Changes every time the picture changes, to replay the animations. */
   seq?: number;
   mini?: boolean;
+  /** While the player holds a piece: its hands get a ring, the rest dim. */
+  highlight?: Group[] | null;
+  /** A piece was just sent to the bet: its hands pop once (replays when seq changes). */
+  pulse?: { groups: Group[]; seq: number } | null;
 };
 
 const fillOf = (g: Group) => GROUP_INFO[g].pattern ?? GROUP_INFO[g].color;
@@ -24,7 +28,7 @@ function sum(cell: Partial<Record<Group, number>> | undefined): number {
   return GROUP_ORDER.reduce((s, g) => s + (cell[g] ?? 0), 0);
 }
 
-export function LineMatrix({ snap, prev, seq = 0, mini = false }: LineMatrixProps) {
+export function LineMatrix({ snap, prev, seq = 0, mini = false, highlight = null, pulse = null }: LineMatrixProps) {
   const narrowing = !!prev && snap.total < prev.total - 0.01;
   const revealing = !!prev && !narrowing && prev.street !== snap.street;
 
@@ -38,7 +42,18 @@ export function LineMatrix({ snap, prev, seq = 0, mini = false }: LineMatrixProp
           </div>
         ))}
       {RANK_LABELS.map((r, row) => (
-        <Row key={r} row={row} snap={snap} prev={prev} seq={seq} mini={mini} narrowing={narrowing} revealing={revealing} />
+        <Row
+          key={r}
+          row={row}
+          snap={snap}
+          prev={prev}
+          seq={seq}
+          mini={mini}
+          narrowing={narrowing}
+          revealing={revealing}
+          highlight={highlight}
+          pulse={pulse}
+        />
       ))}
     </div>
   );
@@ -52,6 +67,8 @@ function Row({
   mini,
   narrowing,
   revealing,
+  highlight,
+  pulse,
 }: {
   row: number;
   snap: RangeSnapshot;
@@ -60,6 +77,8 @@ function Row({
   mini: boolean;
   narrowing: boolean;
   revealing: boolean;
+  highlight: Group[] | null;
+  pulse: { groups: Group[]; seq: number } | null;
 }) {
   const cells = MATRIX_HANDS.filter((c) => c.row === row);
   return (
@@ -93,8 +112,18 @@ function Row({
         const changed =
           !mini && revealing && GROUP_ORDER.some((g) => Math.abs((now?.[g] ?? 0) - (before?.[g] ?? 0)) > 0.001);
         const kept = !mini && narrowing && nowTotal > 0;
+        const has = (gs: Group[]) => gs.some((g) => (now?.[g] ?? 0) > 0);
+        const lit = !!highlight && has(highlight);
+        const dim = !!highlight && !lit;
+        const pop = !!pulse && has(pulse.groups);
 
-        const cls = [styles.cell, changed ? styles.flash : "", kept ? styles.kept : ""].join(" ");
+        const cls = [
+          styles.cell,
+          changed ? styles.flash : "",
+          kept ? styles.kept : "",
+          lit ? styles.lit : "",
+          dim ? styles.dim : "",
+        ].join(" ");
         return (
           <div key={c.key} className={cls} style={style} title={`${c.key}`} data-hand={c.key}>
             <div className={styles.stack}>
@@ -103,6 +132,7 @@ function Row({
                 return <span key={g} className={styles.seg} style={{ height: `${(n / basis) * 100}%`, background: fillOf(g) }} />;
               })}
             </div>
+            {pop && <span key={`pop-${pulse!.seq}`} className={styles.pop} />}
             {ghost && (
               <span key={`ghost-${seq}`} className={styles.ghost} style={{ height: `${ghost.h}%`, background: ghost.fill }} />
             )}

@@ -5,8 +5,9 @@ import { useRouter } from "next/navigation";
 import { PieceCard, type FlyTo } from "@/components/drill/PieceCard";
 import { FeedbackSheet } from "@/components/drill/FeedbackSheet";
 import { colorOf } from "@/lib/drill/colors";
-import { badSound, buzz, goodSound } from "@/lib/drill/sound";
+import { badSound, buzz, goodSound, tone } from "@/lib/drill/sound";
 import type { DrillPiece, SwipeDirection } from "@/lib/drill/types";
+import { Toast, useToast } from "@/components/drill/Toast";
 import {
   boardUpTo,
   buildLine,
@@ -15,20 +16,33 @@ import {
   rankChar,
   STEPS,
   STREETS,
+  turnSortPieces,
+  withoutGroups,
   type Card,
+  type Group,
   type RangeSnapshot,
+  type SortPieceDef,
   type Street,
 } from "@/lib/drill/postflop/line-demo";
 import { LineMatrix } from "./LineMatrix";
+import { SortPiece, type SortDir } from "./SortPiece";
 import { ArrowIcon, HINT_POS } from "./bits";
 
 const LINE = buildLine();
+/** The turn is sorted, not swiped: three ready-made groups. */
+const TURN_PIECES = turnSortPieces(LINE.before.turn);
 
 type Phase = "intro" | "decide" | "resolved" | "wrong" | "final";
 
 const BET_COLOR: Record<Street, string> = { flop: colorOf("small"), turn: colorOf("big"), river: colorOf("big") };
 const NEXT_LABEL: Record<Street, string> = { flop: "Deal the turn", turn: "Deal the river", river: "See the whole line" };
 const SUIT_GLYPH: Record<string, string> = { s: "♠", h: "♥", d: "♦", c: "♣" };
+
+/** On the turn the three pieces need the full width, so Check / Overbet sit in the bottom corners. */
+const SORT_POS: Record<SortDir, string> = {
+  left: "left-2 bottom-2 flex-row gap-1 rounded-full px-2.5 py-1 text-[11.5px]",
+  right: "right-2 bottom-2 flex-row gap-1 rounded-full px-2.5 py-1 text-[11.5px]",
+};
 
 const PLAN_PIECE: DrillPiece = { key: "plan", label: "", sub: "", color: "#9AA6B1", hands: [], answer: "" };
 
@@ -51,10 +65,79 @@ export function LineDemoScreen() {
   const busy = useRef(false);
   const generation = useRef(0);
 
+  // Turn sorting state.
+  const [placed, setPlaced] = useState<SortPieceDef["key"][]>([]);
+  const [sortSnap, setSortSnap] = useState<RangeSnapshot | null>(null);
+  const [held, setHeld] = useState<Group[] | null>(null);
+  const [sortArmed, setSortArmed] = useState<SortDir | null>(null);
+  const [shakes, setShakes] = useState<Record<string, number>>({});
+  const [flying, setFlying] = useState<Record<string, SortDir>>({});
+  const [pulse, setPulse] = useState<{ groups: Group[]; seq: number } | null>(null);
+  const pulseSeq = useRef(0);
+  const { toast, show: showToast } = useToast();
+
   const street = STREETS[streetIdx];
   const step = STEPS[street];
-  const snap = afterBet ? LINE.after[street] : LINE.before[street];
+  const baseSnap = afterBet ? LINE.after[street] : LINE.before[street];
+  // While sorting the turn, the matrix shows the range minus what has been sent to check so far.
+  const snap = street === "turn" && !afterBet && sortSnap ? sortSnap : baseSnap;
   const board = boardUpTo(street);
+
+  function resetSort() {
+    setPlaced([]);
+    setSortSnap(null);
+    setHeld(null);
+    setSortArmed(null);
+    setShakes({});
+    setFlying({});
+    setPulse(null);
+  }
+
+  function handleSortDrop(piece: SortPieceDef, dir: SortDir) {
+    if (busy.current || placed.includes(piece.key)) return;
+    setHeld(null);
+    const right = (dir === "right") === (piece.target === "bet");
+    if (!right) {
+      showToast("Not quite. Try again", false);
+      badSound();
+      buzz([30, 40, 30]);
+      setShakes((s) => ({ ...s, [piece.key]: (s[piece.key] ?? 0) + 1 }));
+      return;
+    }
+    showToast(piece.target === "bet" ? `Perfect · ${piece.label} overbet` : "Perfect · these check", true);
+    goodSound();
+    buzz(15);
+    setFlying((f) => ({ ...f, [piece.key]: dir }));
+    const nextPlaced = [...placed, piece.key];
+    setPlaced(nextPlaced);
+
+    if (piece.target === "check") {
+      // The checking hands visibly leave the line.
+      setPrev(snap);
+      setSortSnap(withoutGroups(snap, piece.groups));
+      setSeq((s) => s + 1);
+    } else {
+      pulseSeq.current += 1;
+      setPulse({ groups: piece.groups, seq: pulseSeq.current });
+    }
+
+    if (nextPlaced.length === TURN_PIECES.length) {
+      busy.current = true;
+      const gen = generation.current;
+      setTimeout(() => {
+        if (gen !== generation.current) return;
+        tone(784, 0.1);
+        setTimeout(() => tone(1046, 0.18), 90);
+        // The sorted range IS the overbet range; switch to it without replaying the narrowing.
+        setPrev(LINE.after.turn);
+        setAfterBet(true);
+        setSortSnap(null);
+        setPulse(null);
+        setPhase("resolved");
+        busy.current = false;
+      }, 800);
+    }
+  }
 
   const swipes = useMemo(() => ({ left: "check", right: step.betAction }) as Partial<Record<SwipeDirection, string>>, [step.betAction]);
 
@@ -72,6 +155,7 @@ export function LineDemoScreen() {
     setAfterBet(false);
     setSeq((s) => s + 1);
     setFlyTo(null);
+    resetSort();
     busy.current = false;
     setPhase("decide");
   }
@@ -88,8 +172,9 @@ export function LineDemoScreen() {
       return;
     }
     busy.current = true;
+    showToast(`Perfect · ${step.betLabel}`, true);
     goodSound();
-    buzz(14);
+    buzz(15);
     setFlyTo({ x: 380, y: 0, rotate: 12 });
     show(streetIdx, true);
     // Let the range animation play before the explanation covers the zone.
@@ -109,6 +194,7 @@ export function LineDemoScreen() {
       return;
     }
     setFlyTo(null);
+    resetSort();
     show(streetIdx + 1, false);
     setPhase("decide");
   }
@@ -188,7 +274,7 @@ export function LineDemoScreen() {
       </div>
 
       <div className="flex flex-shrink-0 flex-col gap-1.5 rounded-xl p-1.5" style={{ background: "var(--panel)", border: "1px solid var(--line)" }}>
-        <LineMatrix snap={snap} prev={prev} seq={seq} />
+        <LineMatrix snap={snap} prev={prev} seq={seq} highlight={held} pulse={pulse} />
         <Legend snap={snap} />
       </div>
 
@@ -201,11 +287,11 @@ export function LineDemoScreen() {
             {(["left", "right"] as SwipeDirection[]).map((dir) => {
               const isBet = dir === "right";
               const color = isBet ? BET_COLOR[street] : colorOf("check");
-              const on = armed === swipes[dir];
+              const on = street === "turn" ? sortArmed === dir : armed === swipes[dir];
               return (
                 <div
                   key={dir}
-                  className={`absolute flex items-center border-[1.5px] font-[family-name:var(--font-display)] font-bold tracking-[0.08em] ${HINT_POS[dir]}`}
+                  className={`absolute flex items-center border-[1.5px] font-[family-name:var(--font-display)] font-bold tracking-[0.08em] ${street === "turn" ? SORT_POS[dir as SortDir] : HINT_POS[dir]}`}
                   style={{ borderColor: color, background: on ? color : "transparent", color: on ? "#10161B" : color }}
                 >
                   <ArrowIcon dir={dir} />
@@ -214,6 +300,29 @@ export function LineDemoScreen() {
                 </div>
               );
             })}
+            <Toast toast={toast} />
+            {street === "turn" ? (
+              <>
+                <div className="flex items-center gap-2.5" data-testid="sort-row">
+                  {TURN_PIECES.map((p, i) => (
+                    <SortPiece
+                      key={p.key}
+                      piece={p}
+                      delay={0.08 * i}
+                      onDrop={(d) => handleSortDrop(p, d)}
+                      onArm={setSortArmed}
+                      onHold={(h) => setHeld(h ? p.groups : null)}
+                      shakeSeq={shakes[p.key] ?? 0}
+                      flyTo={flying[p.key] ?? null}
+                      disabled={placed.includes(p.key)}
+                    />
+                  ))}
+                </div>
+                <span className="absolute top-2 left-1/2 -translate-x-1/2 whitespace-nowrap text-[11px]" style={{ color: "var(--muted)" }}>
+                  Drag each group to its plan
+                </span>
+              </>
+            ) : (
             <PieceCard
               key={`card-${street}-${seq}`}
               piece={{ ...PLAN_PIECE, label: `${street[0].toUpperCase()}${street.slice(1)}: your plan` }}
@@ -233,6 +342,7 @@ export function LineDemoScreen() {
               }
               subText="One plan for the whole range"
             />
+            )}
           </>
         )}
 
