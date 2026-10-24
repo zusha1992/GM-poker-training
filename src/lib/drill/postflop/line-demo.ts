@@ -21,12 +21,14 @@ export const STREETS: Street[] = ["flop", "turn", "river"];
 /** What a combo is on the current street, strongest first. "missed" only
  * exists on the river: a hand that was a draw on the turn and didn't get
  * there — the natural bluffs. */
-export type Group = "strong" | "draw" | "missed" | "medium" | "air";
-export const GROUP_ORDER: Group[] = ["strong", "draw", "missed", "medium", "air"];
+export type Group = "strong" | "draw" | "potential" | "missed" | "medium" | "air";
+export const GROUP_ORDER: Group[] = ["strong", "draw", "potential", "missed", "medium", "air"];
 
 export const GROUP_INFO: Record<Group, { name: string; color: string; pattern?: string }> = {
   strong: { name: "Strong", color: "#F2564B" },
   draw: { name: "Draws", color: "#22C4A1" },
+  // Flop only: no pair, but a backdoor straight and/or flush draw.
+  potential: { name: "Potential bluffs", color: "#9B7FEA" },
   missed: {
     name: "Missed draws",
     color: "#3E8C7E",
@@ -89,7 +91,7 @@ export const STEPS: Record<Street, StreetStep> = {
     betSize: "1.8bb",
     correct: "bet",
     why: "A dry K-7-2 with three suits favors BTN's range. The simple plan is a small bet with the whole range.",
-    keeps: ["strong", "draw", "missed", "medium", "air"],
+    keeps: ["strong", "draw", "potential", "missed", "medium", "air"],
     betsWho: "The whole range bets. BB calls.",
   },
   turn: {
@@ -140,6 +142,27 @@ function straightOuts(vals: Set<number>): number {
   return outs;
 }
 
+/** Backdoor flush draw: both hole cards share a suit with one flop card
+ * (three to a flush, needs that suit on both turn and river). */
+function backdoorFlush(hole: [Card, Card], board: Card[]): boolean {
+  const [a, b] = hole;
+  return a.s === b.s && board.filter((c) => c.s === a.s).length === 1;
+}
+
+/** Backdoor straight draw: hole + board put three different ranks inside
+ * one five-rank straight window (using at least one hole card), so two
+ * more cards could make the straight. */
+function backdoorStraight(hole: [Card, Card], board: Card[]): boolean {
+  const holeVals = hole.flatMap((c) => (c.r === 14 ? [14, 1] : [c.r]));
+  const vals = new Set([...hole, ...board].flatMap((c) => (c.r === 14 ? [14, 1] : [c.r])));
+  for (let lo = 1; lo <= 10; lo++) {
+    const inWindow = (v: number) => v >= lo && v <= lo + 4;
+    const count = [...vals].filter(inWindow).length;
+    if (count >= 3 && holeVals.some(inWindow)) return true;
+  }
+  return false;
+}
+
 /** The group a single combo falls in on a street. `wasDraw` = it was a
  * draw on the previous street (decides "missed" on the river). */
 export function groupOf(hole: [Card, Card], street: Street, wasDraw: boolean): Group {
@@ -176,6 +199,7 @@ export function groupOf(hole: [Card, Card], street: Street, wasDraw: boolean): G
   if (street !== "river") {
     const outs = straightOuts(vals);
     if (flushDraw || outs >= 1) return "draw";
+    if (street === "flop" && !paired && (backdoorFlush(hole, board) || backdoorStraight(hole, board))) return "potential";
   } else if (wasDraw && !paired) {
     // A draw that also had a pair keeps its pair on the river (medium).
     return "missed";
@@ -243,7 +267,7 @@ export type RangeSnapshot = {
 
 function snapshot(street: Street, live: { c: Combo; g: Group }[], basis: Map<string, number>): RangeSnapshot {
   const cells = new Map<string, Partial<Record<Group, number>>>();
-  const byGroup: Record<Group, number> = { strong: 0, draw: 0, missed: 0, medium: 0, air: 0 };
+  const byGroup: Record<Group, number> = { strong: 0, draw: 0, potential: 0, missed: 0, medium: 0, air: 0 };
   let total = 0;
   for (const { c, g } of live) {
     const cell = cells.get(c.hand) ?? {};
