@@ -59,7 +59,7 @@ const SORT_POS: Record<SortDir, string> = {
 /** The flop's single piece: the whole range as a 3×3 block, bet or checked as one. */
 const WHOLE_PIECE: SortPieceDef = {
   key: "whole",
-  label: "Bet small or check?",
+  label: "Small, big or check?",
   sub: "",
   desc: "",
   color: "#9AA6B1",
@@ -142,7 +142,7 @@ export function LineDemoScreen() {
     // "up" (the turn's small bet) is never right on this board — it's the believable mistake.
     const right = dir === (piece.target === "bet" ? "right" : "left");
     if (!right) {
-      showToast(dir === "up" ? "Not quite. Too small here" : "Not quite. Try again", false);
+      showToast(dir === "up" && step.altBet ? step.altBet.wrongMsg : "Not quite. Try again", false);
       badSound();
       buzz([30, 40, 30]);
       setShakes((s) => ({ ...s, [piece.key]: (s[piece.key] ?? 0) + 1 }));
@@ -222,6 +222,14 @@ export function LineDemoScreen() {
   /** The flop's whole-range piece was dropped left (check) or right (bet). */
   function handleSwipe(dir: SortDir) {
     if (busy.current || phase !== "decide") return;
+    if (dir === "up") {
+      // The wrong bet size: shake back and let the player try again.
+      showToast(step.altBet?.wrongMsg ?? "Not quite. Try again", false);
+      badSound();
+      buzz([30, 40, 30]);
+      setShakeSeq((s) => s + 1);
+      return;
+    }
     const choice = dir === "left" ? "check" : "bet";
     if (choice !== step.correct) {
       badSound();
@@ -341,7 +349,7 @@ export function LineDemoScreen() {
                   ? { label: "Check", size: "", color: colorOf("check") }
                   : dir === "right"
                     ? { label: step.betLabel, size: step.betSize, color: BET_COLOR[street] }
-                    : { label: step.altBet!.label, size: step.altBet!.size, color: colorOf("small") };
+                    : { label: step.altBet!.label, size: step.altBet!.size, color: step.altBet!.color };
               const on = sortArmed === dir;
               return (
                 <div
@@ -397,6 +405,7 @@ export function LineDemoScreen() {
                 shakeSeq={shakeSeq}
                 flyTo={flying.whole ?? null}
                 disabled={!!flying.whole}
+                allowUp={!!step.altBet}
               />
             )}
           </>

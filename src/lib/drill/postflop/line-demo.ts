@@ -88,7 +88,7 @@ export type StreetStep = {
   /** One line describing who bets, shown after the bet. */
   betsWho: string;
   /** A second, wrong-on-this-board bet size offered as a distractor (turn: small bet). */
-  altBet?: { label: string; size: string };
+  altBet?: { label: string; size: string; color: string; wrongMsg: string };
 };
 
 export const STEPS: Record<Street, StreetStep> = {
@@ -102,6 +102,7 @@ export const STEPS: Record<Street, StreetStep> = {
     why: "A dry K-7-2 with three suits favors BTN's range. The simple plan is a small bet with the whole range.",
     keeps: ["strong", "draw", "potential", "missed", "medium", "air"],
     betsWho: "The whole range bets. BB calls.",
+    altBet: { label: "Big bet", size: "4.1bb", color: "#F2564B", wrongMsg: "Not quite. Too big here" },
   },
   turn: {
     street: "turn",
@@ -113,7 +114,7 @@ export const STEPS: Record<Street, StreetStep> = {
     why: "The queen adds a flush draw. Go big and polar: strong hands bet for value, draws bet as semi-bluffs, and the medium hands check.",
     keeps: ["strong", "draw"],
     betsWho: "Value and bluffs overbet. The rest checks and leaves the line. BB calls.",
-    altBet: { label: "Small bet", size: "3bb" },
+    altBet: { label: "Small bet", size: "3bb", color: "#F2B33D", wrongMsg: "Not quite. Too small here" },
   },
   river: {
     street: "river",
