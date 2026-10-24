@@ -54,6 +54,14 @@ const DRILLS: DrillCard[] = [
     colors: ["var(--mix)", "var(--fold)", "var(--mix)", "var(--fold)"],
     href: "/drills/postflop/btn-vs-bb",
   },
+  {
+    key: "line",
+    title: "Flop to river (demo)",
+    sub: "BTN vs BB · one hand, three streets",
+    meta: "New",
+    colors: ["#F2564B", "#22C4A1", "#E9C58A", "#5A6670"],
+    href: "/drills/postflop/line",
+  },
 ];
 
 /** The app's home screen: pick a drill. Ported from the single-page HTML
