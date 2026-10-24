@@ -1,12 +1,11 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { PieceCard, type FlyTo } from "@/components/drill/PieceCard";
 import { FeedbackSheet } from "@/components/drill/FeedbackSheet";
 import { colorOf } from "@/lib/drill/colors";
 import { badSound, buzz, goodSound, tone } from "@/lib/drill/sound";
-import type { DrillPiece, SwipeDirection } from "@/lib/drill/types";
+import type { SwipeDirection } from "@/lib/drill/types";
 import { Toast, useToast } from "@/components/drill/Toast";
 import {
   boardUpTo,
@@ -26,7 +25,7 @@ import {
 } from "@/lib/drill/postflop/line-demo";
 import { LineMatrix } from "./LineMatrix";
 import { SortPiece, Tetromino, type SortDir } from "./SortPiece";
-import { ArrowIcon, HINT_POS } from "./bits";
+import { ArrowIcon } from "./bits";
 
 const LINE = buildLine();
 /** Turn and river are sorted, not swiped: ready-made groups the player
@@ -37,19 +36,55 @@ const SORT_PIECES: Record<Street, SortPieceDef[]> = {
   river: sortPieces("river", LINE.before.river),
 };
 
-type Phase = "intro" | "decide" | "resolved" | "wrong" | "final";
+/** "advancing" = right answer given: the bet animates in, then the next card deals itself. */
+type Phase = "intro" | "decide" | "advancing" | "resolved" | "wrong" | "final";
 
 const BET_COLOR: Record<Street, string> = { flop: colorOf("small"), turn: colorOf("big"), river: colorOf("big") };
 const NEXT_LABEL: Record<Street, string> = { flop: "Deal the turn", turn: "Deal the river", river: "See the whole line" };
+/** Shown while a right answer's bet animates in, just before the next card deals itself. */
+const ADVANCE_TEXT: Record<Street, string> = {
+  flop: "The whole range bets",
+  turn: "Value + bluffs overbet",
+  river: "Value + bluffs all-in",
+};
 const SUIT_GLYPH: Record<string, string> = { s: "♠", h: "♥", d: "♦", c: "♣" };
 
 /** On the turn the three pieces need the full width, so Check / Overbet sit in the bottom corners. */
 const SORT_POS: Record<SortDir, string> = {
   left: "left-2 bottom-2 flex-row gap-1 rounded-full px-2.5 py-1 text-[11.5px]",
   right: "right-2 bottom-2 flex-row gap-1 rounded-full px-2.5 py-1 text-[11.5px]",
+  up: "top-2 left-1/2 -translate-x-1/2 flex-row gap-1 rounded-full px-2.5 py-1 text-[11.5px]",
 };
 
-const PLAN_PIECE: DrillPiece = { key: "plan", label: "", sub: "", color: "#9AA6B1", hands: [], answer: "" };
+/** The flop's single piece: the whole range as a 3×3 block, bet or checked as one. */
+const WHOLE_PIECE: SortPieceDef = {
+  key: "whole",
+  label: "Bet small or check?",
+  sub: "",
+  desc: "",
+  color: "#9AA6B1",
+  groups: GROUP_ORDER,
+  target: "bet",
+  partMark: "",
+  hands: [],
+  entries: [],
+  pct: 100,
+};
+
+/** The 3×3 block's nine colors follow the flop range's real mix of groups,
+ * strongest first (largest-remainder rounding to nine blocks). */
+const WHOLE_COLORS: string[] = (() => {
+  const snap = LINE.before.flop;
+  const shares = GROUP_ORDER.map((g) => ({ g, exact: (snap.byGroup[g] / snap.total) * 9 }));
+  const counts = shares.map((s) => ({ ...s, n: Math.floor(s.exact) }));
+  let left = 9 - counts.reduce((s, c) => s + c.n, 0);
+  for (const c of [...counts].sort((a, b) => b.exact - b.n - (a.exact - a.n))) {
+    if (left <= 0) break;
+    c.n += 1;
+    left -= 1;
+  }
+  return counts.flatMap((c) => Array<string>(c.n).fill(GROUP_INFO[c.g].pattern ?? GROUP_INFO[c.g].color));
+})();
 
 const pctOf = (snap: RangeSnapshot) => Math.round((snap.total / LINE.start) * 100);
 
@@ -63,9 +98,7 @@ export function LineDemoScreen() {
   const [afterBet, setAfterBet] = useState(false);
   const [seq, setSeq] = useState(0);
   const [prev, setPrev] = useState<RangeSnapshot | undefined>(undefined);
-  const [flyTo, setFlyTo] = useState<FlyTo | null>(null);
   const [shakeSeq, setShakeSeq] = useState(0);
-  const [armed, setArmed] = useState<string | null>(null);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const busy = useRef(false);
   const generation = useRef(0);
@@ -79,7 +112,7 @@ export function LineDemoScreen() {
   const [sortArmed, setSortArmed] = useState<SortDir | null>(null);
   const [shakes, setShakes] = useState<Record<string, number>>({});
   const [flying, setFlying] = useState<Record<string, SortDir>>({});
-  const [pulse, setPulse] = useState<{ groups: Group[]; seq: number } | null>(null);
+  const [pulse, setPulse] = useState<{ groups: Group[]; seq: number; color?: string } | null>(null);
   const pulseSeq = useRef(0);
   const { toast, show: showToast } = useToast();
 
@@ -106,9 +139,10 @@ export function LineDemoScreen() {
   function handleSortDrop(piece: SortPieceDef, dir: SortDir) {
     if (busy.current || placed.includes(piece.key)) return;
     setHeld(null);
-    const right = (dir === "right") === (piece.target === "bet");
+    // "up" (the turn's small bet) is never right on this board — it's the believable mistake.
+    const right = dir === (piece.target === "bet" ? "right" : "left");
     if (!right) {
-      showToast("Not quite. Try again", false);
+      showToast(dir === "up" ? "Not quite. Too small here" : "Not quite. Try again", false);
       badSound();
       buzz([30, 40, 30]);
       setShakes((s) => ({ ...s, [piece.key]: (s[piece.key] ?? 0) + 1 }));
@@ -133,29 +167,45 @@ export function LineDemoScreen() {
 
     if (nextPlaced.length === pieces.length) {
       busy.current = true;
-      const gen = generation.current;
-      setTimeout(() => {
-        if (gen !== generation.current) return;
+      const fromIdx = streetIdx;
+      later(() => {
         tone(784, 0.1);
         setTimeout(() => tone(1046, 0.18), 90);
-        // The sorted range IS the overbet range; switch to it without replaying the narrowing.
+        // The sorted range IS the bet range; switch to it without replaying the narrowing.
         setPrev(LINE.after[street]);
         setAfterBet(true);
         setSortSnap(null);
         setPulse(null);
-        setPhase("resolved");
-        busy.current = false;
-      }, 800);
+        if (street === "river") {
+          // End of the hand: stop on the explanation, then the summary.
+          setPhase("resolved");
+          busy.current = false;
+        } else {
+          // Right answer: no button, show the bet going in and deal the next card.
+          setPhase("advancing");
+          later(() => dealNext(fromIdx), 1100);
+        }
+      }, 700);
     }
   }
 
-  const swipes = useMemo(() => ({ left: "check", right: step.betAction }) as Partial<Record<SwipeDirection, string>>, [step.betAction]);
+  /** Runs `fn` after `ms`, unless the player restarted in the meantime. */
+  function later(fn: () => void, ms: number) {
+    const gen = generation.current;
+    setTimeout(() => {
+      if (gen === generation.current) fn();
+    }, ms);
+  }
 
-  function show(nextStreetIdx: number, nextAfter: boolean) {
-    setPrev(snap);
-    setStreetIdx(nextStreetIdx);
-    setAfterBet(nextAfter);
+  /** Deal the next street's card: the range that bet becomes the range that arrives. */
+  function dealNext(fromIdx: number) {
+    resetSort();
+    setPrev(LINE.after[STREETS[fromIdx]]);
+    setStreetIdx(fromIdx + 1);
+    setAfterBet(false);
     setSeq((s) => s + 1);
+    setPhase("decide");
+    busy.current = false;
   }
 
   function start() {
@@ -164,16 +214,15 @@ export function LineDemoScreen() {
     setStreetIdx(0);
     setAfterBet(false);
     setSeq((s) => s + 1);
-    setFlyTo(null);
     resetSort();
     busy.current = false;
     setPhase("decide");
   }
 
-  function handleSwipe(dir: SwipeDirection) {
+  /** The flop's whole-range piece was dropped left (check) or right (bet). */
+  function handleSwipe(dir: SortDir) {
     if (busy.current || phase !== "decide") return;
     const choice = dir === "left" ? "check" : "bet";
-    setArmed(null);
     if (choice !== step.correct) {
       badSound();
       buzz([30, 40, 30]);
@@ -185,32 +234,22 @@ export function LineDemoScreen() {
     showToast(`Perfect · ${step.betLabel}`, true);
     goodSound();
     buzz(15);
-    setFlyTo({ x: 380, y: 0, rotate: 12 });
-    show(streetIdx, true);
-    // Let the range animation play before the explanation covers the zone.
-    // Ignored if the player restarted in the meantime.
-    const gen = generation.current;
-    setTimeout(() => {
-      if (gen !== generation.current) return;
-      setPhase("resolved");
-      busy.current = false;
-    }, 650);
+    setFlying((f) => ({ ...f, whole: "right" }));
+    // The whole range bets: one wave of the bet color across every hand.
+    pulseSeq.current += 1;
+    setPulse({ groups: GROUP_ORDER, seq: pulseSeq.current, color: BET_COLOR[street] });
+    setPhase("advancing");
+    const fromIdx = streetIdx;
+    later(() => dealNext(fromIdx), 1500);
   }
 
   function next() {
     if (busy.current) return;
-    if (street === "river") {
-      setPhase("final");
-      return;
-    }
-    setFlyTo(null);
-    resetSort();
-    show(streetIdx + 1, false);
-    setPhase("decide");
+    if (street === "river") setPhase("final");
   }
 
   function retryStreet() {
-    setFlyTo(null);
+    setFlying({});
     setPhase("decide");
   }
 
@@ -296,19 +335,24 @@ export function LineDemoScreen() {
 
         {phase === "decide" && !inspecting && (
           <>
-            {(["left", "right"] as SwipeDirection[]).map((dir) => {
-              const isBet = dir === "right";
-              const color = isBet ? BET_COLOR[street] : colorOf("check");
-              const on = sorting ? sortArmed === dir : armed === swipes[dir];
+            {(["left", "right", ...(step.altBet ? ["up"] : [])] as SortDir[]).map((dir) => {
+              const opt =
+                dir === "left"
+                  ? { label: "Check", size: "", color: colorOf("check") }
+                  : dir === "right"
+                    ? { label: step.betLabel, size: step.betSize, color: BET_COLOR[street] }
+                    : { label: step.altBet!.label, size: step.altBet!.size, color: colorOf("small") };
+              const on = sortArmed === dir;
               return (
                 <div
                   key={dir}
-                  className={`absolute flex items-center border-[1.5px] font-[family-name:var(--font-display)] font-bold tracking-[0.08em] ${sorting ? SORT_POS[dir as SortDir] : HINT_POS[dir]}`}
-                  style={{ borderColor: color, background: on ? color : "transparent", color: on ? "#10161B" : color }}
+                  className={`absolute flex items-center border-[1.5px] font-[family-name:var(--font-display)] font-bold tracking-[0.08em] ${SORT_POS[dir]}`}
+                  style={{ borderColor: opt.color, background: on ? opt.color : "transparent", color: on ? "#10161B" : opt.color }}
+                  data-testid={`target-${dir}`}
                 >
-                  <ArrowIcon dir={dir} />
-                  {isBet ? step.betLabel.toUpperCase() : "CHECK"}
-                  {isBet && <span className="text-[9.5px] font-semibold opacity-80">{step.betSize}</span>}
+                  <ArrowIcon dir={dir as SwipeDirection} />
+                  {opt.label.toUpperCase()}
+                  {opt.size && <span className="text-[9.5px] font-semibold opacity-80">{opt.size}</span>}
                 </div>
               );
             })}
@@ -329,35 +373,44 @@ export function LineDemoScreen() {
                       shakeSeq={shakes[p.key] ?? 0}
                       flyTo={flying[p.key] ?? null}
                       disabled={placed.includes(p.key)}
+                      allowUp={!!step.altBet}
                     />
                   ))}
                 </div>
-                <span className="absolute top-2 left-1/2 -translate-x-1/2 whitespace-nowrap text-[11px]" style={{ color: "var(--muted)" }}>
-                  Drag each group to its plan
-                </span>
+                {!step.altBet && (
+                  <span className="absolute top-2 left-1/2 -translate-x-1/2 whitespace-nowrap text-[11px]" style={{ color: "var(--muted)" }}>
+                    Drag each group to its plan
+                  </span>
+                )}
               </>
             ) : (
-            <PieceCard
-              key={`card-${street}-${seq}`}
-              piece={{ ...PLAN_PIECE, label: street === "flop" ? "Bet small or check?" : `${street[0].toUpperCase()}${street.slice(1)}: your plan` }}
-              swipes={swipes}
-              colorFor={(a) => (a === "check" ? colorOf("check") : BET_COLOR[street])}
-              onSwipe={handleSwipe}
-              onDragPreview={setArmed}
-              shakeSeq={shakeSeq}
-              flyTo={flyTo}
-              disabled={!!flyTo}
-              icon={
-                <div className="flex gap-1">
-                  {board.map((c, i) => (
-                    <BoardCard key={i} card={c} small />
-                  ))}
-                </div>
-              }
-              subText={street === "flop" ? "" : "One plan for the whole range"}
-            />
+              <SortPiece
+                key={`whole-${seq}`}
+                piece={WHOLE_PIECE}
+                blockColors={WHOLE_COLORS}
+                caption="The whole range"
+                delay={0}
+                onDrop={(d) => handleSwipe(d)}
+                onArm={setSortArmed}
+                onHold={() => {}}
+                onInspect={() => {}}
+                shakeSeq={shakeSeq}
+                flyTo={flying.whole ?? null}
+                disabled={!!flying.whole}
+              />
             )}
           </>
+        )}
+
+        {phase === "advancing" && (
+          <div className="flex flex-col items-center gap-1.5 text-center" style={{ animation: "rdIn 220ms ease-out both" }} data-testid="advancing">
+            <b className="font-[family-name:var(--font-display)] text-[22px] font-bold" style={{ color: BET_COLOR[street], animation: "ldBanner 520ms cubic-bezier(.3,1.4,.5,1) both" }}>
+              {ADVANCE_TEXT[street]}
+            </b>
+            <span className="text-[13px]" style={{ color: "var(--muted)" }}>
+              {step.betLabel} {step.betSize} · BB calls
+            </span>
+          </div>
         )}
 
         {phase === "resolved" && (

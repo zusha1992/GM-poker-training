@@ -87,6 +87,8 @@ export type StreetStep = {
   keepCombo?: (g: Group, cards: [Card, Card]) => boolean;
   /** One line describing who bets, shown after the bet. */
   betsWho: string;
+  /** A second, wrong-on-this-board bet size offered as a distractor (turn: small bet). */
+  altBet?: { label: string; size: string };
 };
 
 export const STEPS: Record<Street, StreetStep> = {
@@ -111,6 +113,7 @@ export const STEPS: Record<Street, StreetStep> = {
     why: "The queen adds a flush draw. Go big and polar: strong hands bet for value, draws bet as semi-bluffs, and the medium hands check.",
     keeps: ["strong", "draw"],
     betsWho: "Value and bluffs overbet. The rest checks and leaves the line. BB calls.",
+    altBet: { label: "Small bet", size: "3bb" },
   },
   river: {
     street: "river",
@@ -309,7 +312,8 @@ export function withoutGroups(snap: RangeSnapshot, groups: Group[]): RangeSnapsh
 
 /** A ready-made group the player drags into the bet or Check (turn and river). */
 export type SortPieceDef = {
-  key: "value" | "bluff" | "giveup" | "check";
+  /** "whole" = the flop's whole-range piece (range bet), not a sorted group. */
+  key: "value" | "bluff" | "giveup" | "check" | "whole";
   /** How a partly-included square is marked in the hand list ("♥" = only the both-hearts combo). */
   partMark: string;
   label: string;

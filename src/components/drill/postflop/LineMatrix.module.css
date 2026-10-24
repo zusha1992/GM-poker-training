@@ -141,6 +141,13 @@
   }
 }
 
+/* With a bet color (e.g. the flop range bet), the pop also floods the
+ * square with that color, so a diagonal wave of the bet sweeps the range. */
+.pop[style*="--pc"] {
+  background: color-mix(in srgb, var(--pc) 70%, transparent);
+  animation-duration: 1300ms;
+}
+
 /* The squares still in the line lift slightly as the others leave. */
 .kept {
   animation: lmKeep 520ms cubic-bezier(0.3, 1.45, 0.5, 1) var(--d, 0ms) both;

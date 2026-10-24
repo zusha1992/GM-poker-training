@@ -18,7 +18,7 @@ type LineMatrixProps = {
   /** While the player holds a piece: its hands get a ring, the rest dim. */
   highlight?: Group[] | null;
   /** A piece was just sent to the bet: its hands pop once (replays when seq changes). */
-  pulse?: { groups: Group[]; seq: number } | null;
+  pulse?: { groups: Group[]; seq: number; color?: string } | null;
 };
 
 const fillOf = (g: Group) => GROUP_INFO[g].pattern ?? GROUP_INFO[g].color;
@@ -78,7 +78,7 @@ function Row({
   narrowing: boolean;
   revealing: boolean;
   highlight: Group[] | null;
-  pulse: { groups: Group[]; seq: number } | null;
+  pulse: { groups: Group[]; seq: number; color?: string } | null;
 }) {
   const cells = MATRIX_HANDS.filter((c) => c.row === row);
   return (
@@ -132,7 +132,17 @@ function Row({
                 return <span key={g} className={styles.seg} style={{ height: `${(n / basis) * 100}%`, background: fillOf(g) }} />;
               })}
             </div>
-            {pop && <span key={`pop-${pulse!.seq}`} className={styles.pop} />}
+            {pop && (
+              <span
+                key={`pop-${pulse!.seq}`}
+                className={styles.pop}
+                style={
+                  pulse!.color
+                    ? ({ "--pc": pulse!.color, boxShadow: `0 0 0 2px ${pulse!.color}, 0 0 10px ${pulse!.color}` } as CSSProperties)
+                    : undefined
+                }
+              />
+            )}
             {ghost && (
               <span key={`ghost-${seq}`} className={styles.ghost} style={{ height: `${ghost.h}%`, background: ghost.fill }} />
             )}
