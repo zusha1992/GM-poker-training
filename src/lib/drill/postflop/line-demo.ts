@@ -21,18 +21,25 @@ export const STREETS: Street[] = ["flop", "turn", "river"];
 /** What a combo is on the current street, strongest first. "missed" only
  * exists on the river: a hand that was a draw on the turn and didn't get
  * there — the natural bluffs. */
-export type Group = "strong" | "draw" | "potential" | "missed" | "medium" | "air";
-export const GROUP_ORDER: Group[] = ["strong", "draw", "potential", "missed", "medium", "air"];
+export type Group = "strong" | "draw" | "potential" | "missed" | "giveup" | "medium" | "air";
+export const GROUP_ORDER: Group[] = ["strong", "draw", "potential", "missed", "giveup", "medium", "air"];
 
 export const GROUP_INFO: Record<Group, { name: string; color: string; pattern?: string }> = {
   strong: { name: "Strong", color: "#F2564B" },
   draw: { name: "Draws", color: "#22C4A1" },
   // Flop only: no pair, but a backdoor straight and/or flush draw.
   potential: { name: "Potential bluffs", color: "#9B7FEA" },
+  // River only. Missed draws with nothing to show down: the all-in bluffs.
   missed: {
-    name: "Missed draws",
+    name: "Bluffs",
     color: "#3E8C7E",
     pattern: "repeating-linear-gradient(135deg,#3E8C7E 0 3px,#2C6A5F 3px 6px)",
+  },
+  // River only. Missed draws with an ace: some showdown value, so they give up and check.
+  giveup: {
+    name: "Give-up bluffs",
+    color: "#7A8188",
+    pattern: "repeating-linear-gradient(135deg,#7A8188 0 3px,#545A60 3px 6px)",
   },
   medium: { name: "Medium", color: "#E9C58A" },
   air: { name: "Air", color: "#5A6670" },
@@ -112,12 +119,9 @@ export const STEPS: Record<Street, StreetStep> = {
     betLabel: "All-in",
     betSize: "82bb",
     correct: "bet",
-    why: "The 3 misses every draw. Shove the strongest hands for value and the missed draws as bluffs. Medium hands check.",
+    why: "The 3 misses every draw. Shove the strongest hands for value and the missed draws with no showdown value as bluffs. Ace-high misses and medium hands check.",
     keeps: ["strong", "missed"],
-    // Some bluffs, not all: missed draws with an ace can still win at
-    // showdown, so they check. The low missed draws are the bluffs.
-    keepCombo: (g, [a, b]) => g !== "missed" || (a.r !== 14 && b.r !== 14),
-    betsWho: "Strong hands go all-in for value, low missed draws as bluffs. Everything in between checks.",
+    betsWho: "Value and bluffs go all-in. Medium hands and the give-up bluffs check. BB calls.",
   },
 };
 
@@ -202,7 +206,9 @@ export function groupOf(hole: [Card, Card], street: Street, wasDraw: boolean): G
     if (street === "flop" && !paired && (backdoorFlush(hole, board) || backdoorStraight(hole, board))) return "potential";
   } else if (wasDraw && !paired) {
     // A draw that also had a pair keeps its pair on the river (medium).
-    return "missed";
+    // Missed draws with an ace can still win at showdown: they give up.
+    // The rest have nothing to show down: they are the all-in bluffs.
+    return a.r === 14 || b.r === 14 ? "giveup" : "missed";
   }
 
   if (paired) return "medium";
@@ -267,7 +273,7 @@ export type RangeSnapshot = {
 
 function snapshot(street: Street, live: { c: Combo; g: Group }[], basis: Map<string, number>): RangeSnapshot {
   const cells = new Map<string, Partial<Record<Group, number>>>();
-  const byGroup: Record<Group, number> = { strong: 0, draw: 0, potential: 0, missed: 0, medium: 0, air: 0 };
+  const byGroup: Record<Group, number> = { strong: 0, draw: 0, potential: 0, missed: 0, giveup: 0, medium: 0, air: 0 };
   let total = 0;
   for (const { c, g } of live) {
     const cell = cells.get(c.hand) ?? {};
@@ -301,34 +307,124 @@ export function withoutGroups(snap: RangeSnapshot, groups: Group[]): RangeSnapsh
   return { ...snap, cells, byGroup, total };
 }
 
-/** A ready-made group the player drags into Overbet or Check on the turn. */
+/** A ready-made group the player drags into the bet or Check (turn and river). */
 export type SortPieceDef = {
-  key: "value" | "bluff" | "check";
+  key: "value" | "bluff" | "giveup" | "check";
+  /** How a partly-included square is marked in the hand list ("♥" = only the both-hearts combo). */
+  partMark: string;
   label: string;
   sub: string;
   color: string;
   groups: Group[];
   target: "bet" | "check";
-  /** Squares with at least one combo in this piece (for its Tetris shape). */
+  /** Squares with at least one combo in this piece. */
   hands: string[];
+  /** Same squares with how much of each is in this piece (1 = all of it,
+   * 0.25 = e.g. only the both-hearts combo). For the "see the hands" view. */
+  entries: { hand: string; part: number }[];
+  /** One line on what's inside, shown when the player taps the piece. */
+  desc: string;
   /** Share of the range (0-100) this piece holds. */
   pct: number;
 };
 
-/** The three pieces for the turn overbet decision on this board: value
- * (strong hands, incl. KJ/KT), bluffs (AJ, AT, JT and every flush draw),
- * and everything else, which checks. */
-export function turnSortPieces(turn: RangeSnapshot): SortPieceDef[] {
-  const defs: Omit<SortPieceDef, "hands" | "pct">[] = [
-    { key: "value", label: "Value", sub: "Strong hands", color: GROUP_INFO.strong.color, groups: ["strong"], target: "bet" },
-    { key: "bluff", label: "Bluffs", sub: "Draws", color: GROUP_INFO.draw.color, groups: ["draw"], target: "bet" },
-    { key: "check", label: "The rest", sub: "Medium & air", color: GROUP_INFO.medium.color, groups: ["medium", "air"], target: "check" },
-  ];
-  return defs.map((d) => {
-    const hands = [...turn.cells].filter(([, cell]) => d.groups.some((g) => (cell[g] ?? 0) > 0)).map(([h]) => h);
-    const n = d.groups.reduce((s, g) => s + turn.byGroup[g], 0);
-    return { ...d, hands, pct: Math.round((n / turn.total) * 100) };
-  });
+type PieceSpec = Omit<SortPieceDef, "hands" | "entries" | "pct">;
+
+/** The ready-made pieces for each sorted street. Turn: value (strong hands,
+ * incl. KJ/KT), bluffs (AJ, AT, JT and every flush draw), and the rest.
+ * River: value, all-in bluffs, give-up bluffs, and medium hands. */
+const SORT_SPECS: Record<"turn" | "river", PieceSpec[]> = {
+  turn: [
+    {
+      key: "value",
+      label: "Value",
+      sub: "Strong hands",
+      desc: "Sets, two pair, aces and top pair with a good kicker.",
+      color: GROUP_INFO.strong.color,
+      groups: ["strong"],
+      target: "bet",
+      partMark: "some",
+    },
+    {
+      key: "bluff",
+      label: "Bluffs",
+      sub: "Draws",
+      desc: "Straight draws like AJ, AT and JT, plus every flush draw. ♥ means only the both-hearts combo.",
+      color: GROUP_INFO.draw.color,
+      groups: ["draw"],
+      target: "bet",
+      partMark: "♥",
+    },
+    {
+      key: "check",
+      label: "The rest",
+      sub: "Medium & air",
+      desc: "Weaker kings, second pairs, pocket pairs below the queen, and hands with nothing.",
+      color: GROUP_INFO.medium.color,
+      groups: ["medium", "air"],
+      target: "check",
+      partMark: "some",
+    },
+  ],
+  river: [
+    {
+      key: "value",
+      label: "Value",
+      sub: "Strong hands",
+      desc: "Sets, two pair, aces and AK. Strong enough to get called by worse.",
+      color: GROUP_INFO.strong.color,
+      groups: ["strong"],
+      target: "bet",
+      partMark: "some",
+    },
+    {
+      key: "bluff",
+      label: "Bluff",
+      sub: "All the way",
+      desc: "Missed draws with no ace, like JT, J9, T9 and the low flush draws. They can't win by checking, so they shove.",
+      color: GROUP_INFO.missed.pattern ?? GROUP_INFO.missed.color,
+      groups: ["missed"],
+      target: "bet",
+      partMark: "some",
+    },
+    {
+      key: "giveup",
+      label: "Give up",
+      sub: "Missed, ace-high",
+      desc: "Missed draws with an ace, like AJ, AT and the ace-high flush draws. Ace-high can still win at showdown, so they give up and check.",
+      color: GROUP_INFO.giveup.pattern ?? GROUP_INFO.giveup.color,
+      groups: ["giveup"],
+      target: "check",
+      partMark: "some",
+    },
+    {
+      key: "check",
+      label: "Medium",
+      sub: "One pair",
+      desc: "KJ, KT and other one-pair hands. Too weak to shove, good enough to check.",
+      color: GROUP_INFO.medium.color,
+      groups: ["medium", "air"],
+      target: "check",
+      partMark: "some",
+    },
+  ],
+};
+
+/** The pieces the player sorts on this street, measured on this snapshot. */
+export function sortPieces(street: "turn" | "river", snap: RangeSnapshot): SortPieceDef[] {
+  return SORT_SPECS[street]
+    .map((d) => {
+    const entries: { hand: string; part: number }[] = [];
+    for (const [hand, cell] of snap.cells) {
+      const mine = d.groups.reduce((s, g) => s + (cell[g] ?? 0), 0);
+      if (mine <= 0) continue;
+      const all = GROUP_ORDER.reduce((s, g) => s + (cell[g] ?? 0), 0);
+      entries.push({ hand, part: mine / all });
+    }
+    const n = d.groups.reduce((s, g) => s + snap.byGroup[g], 0);
+    return { ...d, entries, hands: entries.map((e) => e.hand), pct: Math.round((n / snap.total) * 100) };
+    })
+    .filter((p) => p.entries.length > 0);
 }
 
 /** Every picture the demo shows, in order:

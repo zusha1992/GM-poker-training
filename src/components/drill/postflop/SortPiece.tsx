@@ -2,11 +2,66 @@
 
 import { useEffect, useRef } from "react";
 import { animate, motion, useMotionValue, useTransform, type PanInfo } from "motion/react";
-import { PieceShape } from "@/components/drill/PieceShape";
 import { SWIPE_THRESHOLD } from "@/components/drill/PieceCard";
 import type { SortPieceDef } from "@/lib/drill/postflop/line-demo";
 
 export type SortDir = "left" | "right";
+
+/** Classic Tetris shapes, as [col, row] blocks. Abstract on purpose: the
+ * shape stands for the group, not for where its hands sit in the matrix. */
+const TETROMINO: Record<SortPieceDef["key"], [number, number][]> = {
+  value: [
+    [0, 0],
+    [1, 0],
+    [2, 0],
+    [1, 1],
+  ], // T
+  bluff: [
+    [1, 0],
+    [2, 0],
+    [0, 1],
+    [1, 1],
+  ], // S
+  check: [
+    [0, 0],
+    [0, 1],
+    [0, 2],
+    [1, 2],
+  ], // L
+  giveup: [
+    [0, 0],
+    [1, 0],
+    [1, 1],
+    [2, 1],
+  ], // Z — mirror of the all-in bluff's S: same family, opposite decision
+};
+
+const BLOCK = 19;
+const GAP = 2;
+
+export function Tetromino({ kind, color, block = BLOCK }: { kind: SortPieceDef["key"]; color: string; block?: number }) {
+  const cells = TETROMINO[kind];
+  const cols = Math.max(...cells.map(([c]) => c)) + 1;
+  const rows = Math.max(...cells.map(([, r]) => r)) + 1;
+  return (
+    <div className="relative" style={{ width: cols * (block + GAP) - GAP, height: rows * (block + GAP) - GAP }} aria-hidden="true">
+      {cells.map(([c, r]) => (
+        <i
+          key={`${c}-${r}`}
+          className="absolute rounded-[4px]"
+          style={{
+            left: c * (block + GAP),
+            top: r * (block + GAP),
+            width: block,
+            height: block,
+            background: color,
+            boxShadow: "inset 0 2px 0 rgba(255,255,255,.35), inset 0 -2px 0 rgba(0,0,0,.28), 0 3px 8px rgba(0,0,0,.35)",
+          }}
+        />
+      ))}
+    </div>
+  );
+}
 
 type SortPieceProps = {
   piece: SortPieceDef;
@@ -16,26 +71,31 @@ type SortPieceProps = {
   onArm: (dir: SortDir | null) => void;
   /** True while the finger holds this piece (to highlight its hands). */
   onHold: (held: boolean) => void;
+  /** A tap without dragging: show which hands are in this piece. */
+  onInspect: () => void;
   shakeSeq: number;
   /** Set when the drop was right: the piece flies off to that side. */
   flyTo: SortDir | null;
   disabled: boolean;
   /** Entrance stagger, seconds. */
   delay: number;
+  /** Smaller piece, for streets with four pieces in a row. */
+  compact?: boolean;
 };
 
 const dirOf = (dx: number, dy: number): SortDir | null =>
   Math.abs(dx) >= SWIPE_THRESHOLD && Math.abs(dx) > Math.abs(dy) ? (dx < 0 ? "left" : "right") : null;
 
-/** A compact, ready-made Tetris piece (Value / Bluffs / The rest) that the
- * player drags left to Check or right to Overbet. Same physics as the
- * preflop swipe card: follows the finger, tilts, snaps back, shakes on a
- * wrong answer and flies off on a right one. */
-export function SortPiece({ piece, onDrop, onArm, onHold, shakeSeq, flyTo, disabled, delay }: SortPieceProps) {
+/** A floating, ready-made Tetris piece (Value / Bluffs / The rest) that the
+ * player drags left to Check or right to Overbet, or taps to see its
+ * hands. Same physics as the preflop swipe card: follows the finger,
+ * tilts, snaps back, shakes on a wrong answer and flies off on a right one. */
+export function SortPiece({ piece, onDrop, onArm, onHold, onInspect, shakeSeq, flyTo, disabled, delay, compact = false }: SortPieceProps) {
   const x = useMotionValue(0);
   const y = useMotionValue(0);
-  const rotate = useTransform(x, (v) => v / 14);
+  const rotate = useTransform(x, (v) => v / 12);
   const armed = useRef<SortDir | null>(null);
+  const didDrag = useRef(false);
 
   useEffect(() => {
     if (!shakeSeq) return;
@@ -46,7 +106,7 @@ export function SortPiece({ piece, onDrop, onArm, onHold, shakeSeq, flyTo, disab
   useEffect(() => {
     if (!flyTo) return;
     void animate(x, flyTo === "left" ? -320 : 320, { duration: 0.38, ease: "easeIn" });
-    void animate(y, 30, { duration: 0.38, ease: "easeIn" });
+    void animate(y, 40, { duration: 0.38, ease: "easeIn" });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [flyTo]);
 
@@ -73,25 +133,34 @@ export function SortPiece({ piece, onDrop, onArm, onHold, shakeSeq, flyTo, disab
       dragElastic={0.65}
       dragMomentum={false}
       dragTransition={{ bounceStiffness: 300, bounceDamping: 28 }}
-      onDragStart={() => onHold(true)}
+      onDragStart={() => {
+        didDrag.current = true;
+        onHold(true);
+      }}
       onDrag={handleDrag}
       onDragEnd={handleDragEnd}
-      whileDrag={{ scale: 1.06, zIndex: 5 }}
-      style={{ x, y, rotate, background: "var(--panel-2)", borderColor: piece.color, touchAction: "none" }}
-      initial={{ y: 30, scale: 0.85, opacity: 0 }}
+      onTap={() => {
+        if (!disabled && !didDrag.current) onInspect();
+        didDrag.current = false;
+      }}
+      whileDrag={{ scale: 1.12, zIndex: 5 }}
+      whileTap={{ scale: 1.05 }}
+      style={{ x, y, rotate, touchAction: "none" }}
+      initial={{ y: 30, scale: 0.6, opacity: 0 }}
       animate={{ y: 0, scale: 1, opacity: 1 }}
       transition={{ duration: 0.45, delay, ease: [0.3, 1.3, 0.5, 1] }}
-      className="relative -mt-1 flex w-[78px] cursor-grab flex-col items-center gap-1 rounded-xl border-2 px-1 py-1.5 text-center select-none"
+      className={`relative flex ${compact ? "w-[70px]" : "w-[84px]"} cursor-grab flex-col items-center gap-1.5 text-center select-none`}
       data-testid={`sort-${piece.key}`}
+      role="button"
+      aria-label={`${piece.label}, ${piece.pct}% of the range. Drag left to check or right to overbet. Tap to see the hands.`}
     >
-      <div className="flex h-[38px] items-center justify-center">
-        <PieceShape hands={piece.hands} color={piece.color} maxSize={38} />
+      {/* Gentle bob so the pieces read as floating, not as fixed cards. */}
+      <div className="flex h-[64px] items-center justify-center" style={{ animation: `sortFloat 2.6s ease-in-out ${delay * 4}s infinite` }}>
+        <Tetromino kind={piece.key} color={piece.color} block={compact ? 15 : BLOCK} />
       </div>
       <b className="font-[family-name:var(--font-display)] text-[13.5px] leading-none">{piece.label}</b>
-      <span className="text-[10px] leading-tight" style={{ color: "var(--muted)" }}>
-        {piece.sub}
-        <br />
-        <b style={{ color: "var(--foreground)" }}>{piece.pct}%</b>
+      <span className="text-[10.5px] leading-none" style={{ color: "var(--muted)" }}>
+        {piece.pct}%{compact ? "" : " · tap to see"}
       </span>
     </motion.div>
   );

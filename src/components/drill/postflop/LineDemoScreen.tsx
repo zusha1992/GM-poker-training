@@ -16,7 +16,7 @@ import {
   rankChar,
   STEPS,
   STREETS,
-  turnSortPieces,
+  sortPieces,
   withoutGroups,
   type Card,
   type Group,
@@ -25,12 +25,17 @@ import {
   type Street,
 } from "@/lib/drill/postflop/line-demo";
 import { LineMatrix } from "./LineMatrix";
-import { SortPiece, type SortDir } from "./SortPiece";
+import { SortPiece, Tetromino, type SortDir } from "./SortPiece";
 import { ArrowIcon, HINT_POS } from "./bits";
 
 const LINE = buildLine();
-/** The turn is sorted, not swiped: three ready-made groups. */
-const TURN_PIECES = turnSortPieces(LINE.before.turn);
+/** Turn and river are sorted, not swiped: ready-made groups the player
+ * drags into the bet or Check. The flop is one swipe for the whole range. */
+const SORT_PIECES: Record<Street, SortPieceDef[]> = {
+  flop: [],
+  turn: sortPieces("turn", LINE.before.turn),
+  river: sortPieces("river", LINE.before.river),
+};
 
 type Phase = "intro" | "decide" | "resolved" | "wrong" | "final";
 
@@ -69,6 +74,8 @@ export function LineDemoScreen() {
   const [placed, setPlaced] = useState<SortPieceDef["key"][]>([]);
   const [sortSnap, setSortSnap] = useState<RangeSnapshot | null>(null);
   const [held, setHeld] = useState<Group[] | null>(null);
+  /** The piece whose hands the player is looking at (tapped), if any. */
+  const [inspecting, setInspecting] = useState<SortPieceDef | null>(null);
   const [sortArmed, setSortArmed] = useState<SortDir | null>(null);
   const [shakes, setShakes] = useState<Record<string, number>>({});
   const [flying, setFlying] = useState<Record<string, SortDir>>({});
@@ -80,13 +87,16 @@ export function LineDemoScreen() {
   const step = STEPS[street];
   const baseSnap = afterBet ? LINE.after[street] : LINE.before[street];
   // While sorting the turn, the matrix shows the range minus what has been sent to check so far.
-  const snap = street === "turn" && !afterBet && sortSnap ? sortSnap : baseSnap;
+  const snap = street !== "flop" && !afterBet && sortSnap ? sortSnap : baseSnap;
+  const pieces = SORT_PIECES[street];
+  const sorting = pieces.length > 0;
   const board = boardUpTo(street);
 
   function resetSort() {
     setPlaced([]);
     setSortSnap(null);
     setHeld(null);
+    setInspecting(null);
     setSortArmed(null);
     setShakes({});
     setFlying({});
@@ -104,7 +114,7 @@ export function LineDemoScreen() {
       setShakes((s) => ({ ...s, [piece.key]: (s[piece.key] ?? 0) + 1 }));
       return;
     }
-    showToast(piece.target === "bet" ? `Perfect · ${piece.label} overbet` : "Perfect · these check", true);
+    showToast(piece.target === "bet" ? `Perfect · ${piece.label}: ${step.betLabel.toLowerCase()}` : `Perfect · ${piece.label}: check`, true);
     goodSound();
     buzz(15);
     setFlying((f) => ({ ...f, [piece.key]: dir }));
@@ -121,7 +131,7 @@ export function LineDemoScreen() {
       setPulse({ groups: piece.groups, seq: pulseSeq.current });
     }
 
-    if (nextPlaced.length === TURN_PIECES.length) {
+    if (nextPlaced.length === pieces.length) {
       busy.current = true;
       const gen = generation.current;
       setTimeout(() => {
@@ -129,7 +139,7 @@ export function LineDemoScreen() {
         tone(784, 0.1);
         setTimeout(() => tone(1046, 0.18), 90);
         // The sorted range IS the overbet range; switch to it without replaying the narrowing.
-        setPrev(LINE.after.turn);
+        setPrev(LINE.after[street]);
         setAfterBet(true);
         setSortSnap(null);
         setPulse(null);
@@ -274,7 +284,7 @@ export function LineDemoScreen() {
       </div>
 
       <div className="flex flex-shrink-0 flex-col gap-1.5 rounded-xl p-1.5" style={{ background: "var(--panel)", border: "1px solid var(--line)" }}>
-        <LineMatrix snap={snap} prev={prev} seq={seq} highlight={held} pulse={pulse} />
+        <LineMatrix snap={snap} prev={prev} seq={seq} highlight={inspecting?.groups ?? held} pulse={pulse} />
         <Legend snap={snap} />
       </div>
 
@@ -282,16 +292,18 @@ export function LineDemoScreen() {
         className="relative mt-0.5 flex flex-shrink-0 items-center justify-center overflow-hidden rounded-2xl"
         style={{ height: phase === "final" ? 244 : 196, border: phase === "decide" ? "1px dashed var(--line)" : "1px solid var(--line)", background: phase === "decide" ? undefined : "var(--panel)", touchAction: "none" }}
       >
-        {phase === "decide" && (
+        {phase === "decide" && inspecting && <InspectPanel piece={inspecting} onBack={() => setInspecting(null)} />}
+
+        {phase === "decide" && !inspecting && (
           <>
             {(["left", "right"] as SwipeDirection[]).map((dir) => {
               const isBet = dir === "right";
               const color = isBet ? BET_COLOR[street] : colorOf("check");
-              const on = street === "turn" ? sortArmed === dir : armed === swipes[dir];
+              const on = sorting ? sortArmed === dir : armed === swipes[dir];
               return (
                 <div
                   key={dir}
-                  className={`absolute flex items-center border-[1.5px] font-[family-name:var(--font-display)] font-bold tracking-[0.08em] ${street === "turn" ? SORT_POS[dir as SortDir] : HINT_POS[dir]}`}
+                  className={`absolute flex items-center border-[1.5px] font-[family-name:var(--font-display)] font-bold tracking-[0.08em] ${sorting ? SORT_POS[dir as SortDir] : HINT_POS[dir]}`}
                   style={{ borderColor: color, background: on ? color : "transparent", color: on ? "#10161B" : color }}
                 >
                   <ArrowIcon dir={dir} />
@@ -301,17 +313,19 @@ export function LineDemoScreen() {
               );
             })}
             <Toast toast={toast} />
-            {street === "turn" ? (
+            {sorting ? (
               <>
                 <div className="flex items-center gap-2.5" data-testid="sort-row">
-                  {TURN_PIECES.map((p, i) => (
+                  {pieces.map((p, i) => (
                     <SortPiece
-                      key={p.key}
+                      key={`${street}-${p.key}`}
+                      compact={pieces.length > 3}
                       piece={p}
                       delay={0.08 * i}
                       onDrop={(d) => handleSortDrop(p, d)}
                       onArm={setSortArmed}
                       onHold={(h) => setHeld(h ? p.groups : null)}
+                      onInspect={() => setInspecting(p)}
                       shakeSeq={shakes[p.key] ?? 0}
                       flyTo={flying[p.key] ?? null}
                       disabled={placed.includes(p.key)}
@@ -325,7 +339,7 @@ export function LineDemoScreen() {
             ) : (
             <PieceCard
               key={`card-${street}-${seq}`}
-              piece={{ ...PLAN_PIECE, label: `${street[0].toUpperCase()}${street.slice(1)}: your plan` }}
+              piece={{ ...PLAN_PIECE, label: street === "flop" ? "Bet small or check?" : `${street[0].toUpperCase()}${street.slice(1)}: your plan` }}
               swipes={swipes}
               colorFor={(a) => (a === "check" ? colorOf("check") : BET_COLOR[street])}
               onSwipe={handleSwipe}
@@ -340,7 +354,7 @@ export function LineDemoScreen() {
                   ))}
                 </div>
               }
-              subText="One plan for the whole range"
+              subText={street === "flop" ? "" : "One plan for the whole range"}
             />
             )}
           </>
@@ -472,6 +486,42 @@ function Legend({ snap }: { snap: RangeSnapshot }) {
           <b style={{ color: "var(--foreground)", fontVariantNumeric: "tabular-nums" }}>{Math.round((snap.byGroup[g] / snap.total) * 100)}%</b>
         </span>
       ))}
+    </div>
+  );
+}
+
+/** "What's in this piece": the hands of a tapped turn piece, while the
+ * matrix above lights them up. Partial squares are marked: ♥ = only the
+ * both-hearts combo (a flush draw), "some" = only part of the square. */
+function InspectPanel({ piece, onBack }: { piece: SortPieceDef; onBack: () => void }) {
+  return (
+    <div className="flex h-full w-full flex-col gap-1.5 p-2.5" style={{ animation: "rdIn 200ms ease-out both" }} data-testid="inspect-panel">
+      <div className="flex items-center gap-2.5">
+        <Tetromino kind={piece.key} color={piece.color} block={11} />
+        <div className="min-w-0 flex-1">
+          <b className="font-[family-name:var(--font-display)] text-[15px]">
+            {piece.label} <span style={{ color: "var(--muted)", fontWeight: 500 }}>· {piece.pct}% of the range</span>
+          </b>
+          <p className="m-0 text-[11px] leading-tight" style={{ color: "var(--muted)" }}>
+            {piece.desc}
+          </p>
+        </div>
+      </div>
+      <div className="flex min-h-0 flex-1 flex-wrap content-start gap-1 overflow-y-auto">
+        {piece.entries.map(({ hand, part }) => (
+          <span
+            key={hand}
+            className="rounded-md px-1.5 py-0.5 font-[family-name:var(--font-display)] text-[11.5px] font-semibold"
+            style={{ background: part >= 0.99 ? piece.color : "transparent", color: part >= 0.99 ? "#10161B" : piece.color, border: `1px solid ${piece.color}` }}
+          >
+            {hand}
+            {part < 0.99 && <span className="ml-0.5 text-[9.5px] font-medium">{piece.partMark}</span>}
+          </span>
+        ))}
+      </div>
+      <button type="button" className="h-[36px] flex-shrink-0 cursor-pointer rounded-xl border text-[13px] font-semibold" style={{ borderColor: "var(--line)" }} onClick={onBack}>
+        Back to sorting
+      </button>
     </div>
   );
 }
