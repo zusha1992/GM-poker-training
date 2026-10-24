@@ -89,7 +89,7 @@ export type PostflopDeal = {
  * strategy" question for BTN's whole range.
  *
  * BTN's whole-range matrix is NOT board-dependent — it's literally BTN's
- * raise-first-in range (see finishedRfiColorByHand in preflop/rfi.ts),
+ * raise-first-in range (see BTN_RANGE in postflop/range-decision.ts),
  * unaffected by which flop comes down. Only BB's per-category drill and
  * the board display change per deal. Draft format, not reviewed by Uri:
  * category boundaries and the check/small/big read are illustrative. */

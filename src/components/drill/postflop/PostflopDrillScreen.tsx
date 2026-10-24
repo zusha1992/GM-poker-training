@@ -299,9 +299,7 @@ export function PostflopDrillScreen() {
 
       <PostflopFinishSheet
         open={finished && stage === "bb"}
-        stage="bb"
         pct={pct}
-        onContinueAsBb={() => beginStage("bb")}
         onReplay={() => beginStage("btn")}
         onLobby={() => router.push("/")}
         onClose={() => setFinished(false)}

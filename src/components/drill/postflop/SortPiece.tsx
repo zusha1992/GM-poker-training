@@ -113,9 +113,14 @@ type SortPieceProps = {
   caption?: string;
 };
 
+/** Which drop zone the piece is heading for. The "up" box sits at the top
+ * centre while pieces start left/centre/right, so reaching it is often a
+ * diagonal: a clear lift counts as "up" even when the sideways move is up to
+ * twice as large. Check / the main bet sit in the bottom corners, so a
+ * mostly-sideways move (not lifted much) goes left or right. */
 function dirOf(dx: number, dy: number, allowUp: boolean): SortDir | null {
-  if (allowUp && dy <= -SWIPE_THRESHOLD && Math.abs(dy) > Math.abs(dx)) return "up";
-  return Math.abs(dx) >= SWIPE_THRESHOLD && Math.abs(dx) > Math.abs(dy) ? (dx < 0 ? "left" : "right") : null;
+  if (allowUp && dy <= -SWIPE_THRESHOLD && -dy * 2 >= Math.abs(dx)) return "up";
+  return Math.abs(dx) >= SWIPE_THRESHOLD ? (dx < 0 ? "left" : "right") : null;
 }
 
 /** A floating, ready-made Tetris piece (Value / Bluffs / The rest) that the

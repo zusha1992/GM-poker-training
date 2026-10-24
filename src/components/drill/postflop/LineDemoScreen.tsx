@@ -73,7 +73,6 @@ function randomHandIndex(current: number): number {
 type Phase = "intro" | "decide" | "advancing" | "resolved" | "wrong" | "final";
 
 const BET_COLOR: Record<Street, string> = { flop: colorOf("small"), turn: colorOf("big"), river: colorOf("big") };
-const NEXT_LABEL: Record<Street, string> = { flop: "Deal the turn", turn: "Deal the river", river: "See the whole line" };
 /** Shown while a right answer's bet animates in, just before the next card deals itself. */
 type BetOption = { label: string; size: string; color: string };
 
@@ -274,7 +273,13 @@ export function LineDemoScreen() {
   /** Deal a hand from the flop: a new random one, or the same one again. */
   function start(which: "new" | "same" = "same") {
     generation.current += 1;
-    if (which === "new") setHand(handFor(randomHandIndex(hand.index)));
+    if (which === "new") {
+      // `?hand=N` (0-19) opens one specific hand — for testing and for
+      // pointing at a runout in feedback. Otherwise a random one.
+      const forced = Number(new URLSearchParams(window.location.search).get("hand"));
+      const valid = Number.isInteger(forced) && forced >= 0 && forced < SCENARIOS.length && window.location.search.includes("hand=");
+      setHand(handFor(valid ? forced : randomHandIndex(hand.index)));
+    }
     setPrev(undefined);
     setStreetIdx(0);
     setAfterBet(false);
@@ -341,8 +346,8 @@ export function LineDemoScreen() {
             </p>
           </div>
           <div className="flex flex-col gap-1.5 rounded-2xl p-3 text-[13px]" style={{ background: "var(--panel)", border: "1px solid var(--line)" }}>
-            <Row label="Flop" text="Small bet or check" />
-            <Row label="Turn" text="Overbet or check" />
+            <Row label="Flop" text="Small bet, big bet or check" />
+            <Row label="Turn" text="Overbet, 66% or check" />
             <Row label="River" text="All-in or check" />
           </div>
           <button type="button" className="h-[52px] cursor-pointer rounded-2xl border-0 text-[16px] font-bold active:scale-[0.98]" style={{ background: "var(--mix)", color: "#2B1C02" }} onClick={() => start("new")}>
@@ -491,7 +496,7 @@ export function LineDemoScreen() {
             <p className="m-0 text-[11.5px] leading-[1.35]" style={{ color: "var(--muted)" }}>
               {why}
             </p>
-            <PrimaryButton onClick={next}>{NEXT_LABEL[street]}</PrimaryButton>
+            <PrimaryButton onClick={next}>See the whole line</PrimaryButton>
           </Panel>
         )}
 
@@ -580,12 +585,13 @@ function StreetTrack({ current, done }: { current: number; done: boolean }) {
   );
 }
 
-function BoardCard({ card, fresh = false, small = false }: { card: Card; fresh?: boolean; small?: boolean }) {
+/** A board card in the top panel; `fresh` = just dealt (flip-in + glow). */
+function BoardCard({ card, fresh = false }: { card: Card; fresh?: boolean }) {
   const red = card.s === "h" || card.s === "d";
   const r = rankChar(card.r);
   return (
     <span
-      className={`flex flex-shrink-0 flex-col items-center justify-center rounded-[4px] font-[family-name:var(--font-display)] font-bold leading-none ${small ? "h-8 w-[23px] text-[11px]" : "h-9 w-[26px] text-[12px]"}`}
+      className="flex h-9 w-[26px] flex-shrink-0 flex-col items-center justify-center rounded-[4px] font-[family-name:var(--font-display)] text-[12px] font-bold leading-none"
       style={{
         background: "#F7F4EC",
         color: red ? "#C62F28" : "#16191C",

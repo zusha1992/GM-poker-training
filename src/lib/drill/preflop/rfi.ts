@@ -1,5 +1,4 @@
 import { combosOf } from "@/lib/drill/matrix";
-import { colorOf, FOLD_DIM, mixGradient } from "@/lib/drill/colors";
 import type { DrillPiece } from "@/lib/drill/types";
 import { FAMS, FAM_BY_KEY, FAMILY_DESC, nearFolds, type Family } from "./families";
 import { SEAT_NAME, type Seat } from "./seats";
@@ -177,27 +176,4 @@ export function rfiSpot(seat: Seat): RfiSpot {
   const spot = RFI_SPOTS.find((s) => s.key === seat);
   if (!spot) throw new Error(`Unknown RFI seat: ${seat}`);
   return spot;
-}
-
-/** The exact picture the matrix shows once this seat's RFI drill is
- * finished: every raised/mixed/folded hand in its answered color, with
- * anything left over (true trash, never asked) dimmed as a guaranteed fold.
- * Used to carry a seat's opening range into later streets unchanged. */
-export function finishedRfiColorByHand(spot: RfiSpot): Map<string, string> {
-  const map = new Map<string, string>();
-  for (const h of spot.drill.preFilled) map.set(h, colorOf("raise"));
-  for (const piece of spot.drill.pieces) {
-    const color =
-      piece.answer === "mix" && piece.mixSplit
-        ? mixGradient(colorOf(piece.mixSplit[0]), colorOf(piece.mixSplit[1]), piece.mixSplit[2])
-        : colorOf(piece.answer);
-    for (const h of piece.hands) map.set(h, color);
-    for (const h of piece.reveal ?? []) map.set(h, colorOf("raise"));
-  }
-  for (const g of FAMS) {
-    for (const h of g.hands) {
-      if (!map.has(h)) map.set(h, FOLD_DIM);
-    }
-  }
-  return map;
 }

@@ -117,16 +117,16 @@ const FLOPS: FlopSpec[] = [
         card: "Q♥",
         why: "The queen is a good card for BTN and adds a heart flush draw and straight draws like AJ and JT. Overbet polar: value plus draws, medium hands check.",
         rivers: [
-          { card: "3♣", why: "The 3 misses every draw. Shove value and the missed draws with no ace. Ace-high misses and medium hands check." },
-          { card: "9♥", why: "The 9♥ completes the flush and gives JT a straight. So many draws got there that the ace-high misses like AJ and AT have to bluff too." },
+          { card: "3♣", why: "The 3 misses every draw." },
+          { card: "9♥", why: "The 9♥ completes the flush and gives JT a straight." },
         ],
       },
       {
         card: "A♦",
         why: "The ace hits BTN far harder than BB and adds a diamond flush draw. Overbet polar with a big value part.",
         rivers: [
-          { card: "6♣", why: "The 6 misses the draws. Shove value and the missed draws with no showdown value. One-pair hands check." },
-          { card: "5♦", why: "The 5♦ completes the diamond flush and gives 43 a wheel. Draws that hit join the value." },
+          { card: "6♣", why: "The 6 misses the draws." },
+          { card: "5♦", why: "The 5♦ completes the diamond flush and gives 43 a wheel." },
         ],
       },
     ],
@@ -140,16 +140,16 @@ const FLOPS: FlopSpec[] = [
         card: "9♦",
         why: "The 9 connects with the 8, and BB holds more 9x, T7 and 76 than BTN. This card helps BB, so the overbet is too big: bet 66% with value and draws, medium hands check.",
         rivers: [
-          { card: "2♠", why: "The deuce misses everything. Shove value and the missed draws. The rest checks." },
-          { card: "6♦", why: "The 6♦ completes the flush and the straights for 75 and T7. Many draws are now value; only the misses bluff." },
+          { card: "2♠", why: "The deuce misses everything." },
+          { card: "6♦", why: "The 6♦ completes the flush and the straights for 75 and T7." },
         ],
       },
       {
         card: "K♣",
         why: "The king is a good card for BTN and adds a club flush draw and broadway draws like QJ and JT. Overbet polar.",
         rivers: [
-          { card: "7♥", why: "The 7 misses the draws. Shove value and the missed draws. One-pair hands check." },
-          { card: "Q♣", why: "The Q♣ completes the clubs and gives JT the nut straight. Almost every draw got there, so there are hardly any bluffs left." },
+          { card: "7♥", why: "The 7 misses the draws." },
+          { card: "5♣", why: "The 5♣ completes the clubs, but the straight draws miss." },
         ],
       },
     ],
@@ -163,16 +163,16 @@ const FLOPS: FlopSpec[] = [
         card: "8♦",
         why: "The 8♦ completes the diamond flush and connects with the 6. That helps BB's calling range, so the overbet is too big: bet 66% with value and draws.",
         rivers: [
-          { card: "K♠", why: "The king is an overcard but completes no draw. Shove value and the missed draws. The rest checks." },
-          { card: "4♦", why: "The 4♦ puts a fourth diamond out and gives 75 a straight. Draws that hit join the value." },
+          { card: "K♠", why: "The king is an overcard but completes no draw." },
+          { card: "4♦", why: "The 4♦ puts a fourth diamond out and gives 75 a straight." },
         ],
       },
       {
         card: "J♣",
         why: "The jack adds broadway draws like KT, AK and T9 to the diamond draws, and it's a good card for BTN. Overbet polar.",
         rivers: [
-          { card: "2♥", why: "The deuce misses everything. Shove value and the missed draws with no ace." },
-          { card: "T♦", why: "The T♦ completes the diamonds and gives AK and K9 a straight. Almost every draw got there, so there are very few bluffs left." },
+          { card: "2♥", why: "The deuce misses everything." },
+          { card: "2♦", why: "The 2♦ completes the diamonds, but the broadway straight draws miss." },
         ],
       },
     ],
@@ -186,16 +186,16 @@ const FLOPS: FlopSpec[] = [
         card: "9♠",
         why: "The 9♠ adds a spade flush draw and straight draws like J8, 87 and QJ, and keeps BTN ahead. Overbet polar.",
         rivers: [
-          { card: "3♣", why: "The 3 misses the draws. Shove value and the missed draws. One-pair hands check." },
-          { card: "Q♠", why: "The Q♠ completes the spades and gives KJ and J8 a straight. Draws that hit join the value." },
+          { card: "3♣", why: "The 3 misses the draws." },
+          { card: "Q♠", why: "The Q♠ completes the spades and gives KJ and J8 a straight." },
         ],
       },
       {
         card: "A♦",
         why: "The ace is good for BTN, but the A♦ also completes the diamond flush, and BB has plenty of suited diamonds. Size down: bet 66% with value and draws.",
         rivers: [
-          { card: "K♣", why: "The king misses the draws. Shove value and the missed draws with no ace." },
-          { card: "7♦", why: "The 7♦ puts a fourth diamond out: every single-diamond draw now has a flush. Draws that hit join the value." },
+          { card: "K♣", why: "The king misses the draws." },
+          { card: "7♦", why: "The 7♦ puts a fourth diamond out: every single-diamond draw now has a flush." },
         ],
       },
     ],
@@ -209,30 +209,34 @@ const FLOPS: FlopSpec[] = [
         card: "J♥",
         why: "The jack is a good card for BTN: it adds a heart flush draw and straight draws, and gives QT the nut straight. Overbet polar.",
         rivers: [
-          { card: "6♣", why: "The 6 misses the draws. Shove value and the missed draws. One-pair hands check." },
-          { card: "9♥", why: "The 9♥ completes the hearts. Flush draws join the value; missed straight draws bluff." },
+          { card: "6♣", why: "The 6 misses the draws." },
+          { card: "9♥", why: "The 9♥ completes the hearts." },
         ],
       },
       {
         card: "5♠",
         why: "The 5 connects with the 4 and gives BB more two pairs and straight draws like 65, 53 and 43. Size down: bet 66% with value and draws, medium hands check.",
         rivers: [
-          { card: "Q♦", why: "The queen misses the draws. Shove value and the missed draws with no ace." },
-          { card: "8♠", why: "The 8♠ completes the spades and gives 76 a straight. Draws that hit join the value." },
+          { card: "Q♦", why: "The queen misses the draws." },
+          { card: "8♠", why: "The 8♠ completes the spades and gives 76 a straight." },
         ],
       },
     ],
   },
 ];
 
-export const SCENARIOS: Scenario[] = FLOPS.flatMap((f) =>
+/** The river plan is the same on every hand; each river's own line only says what the card did. */
+const RIVER_PLAN =
+  "Shove value plus the weakest missed draws as bluffs. The missed draws with the best cards give up, and medium hands check.";
+
+export const SCENARIOS: Scenario[] =FLOPS.flatMap((f) =>
   f.turns.flatMap((t) =>
     t.rivers.map((rv) => {
       const reasons = turnFavorsBB(f.cards.map(card), card(t.card));
       return {
         id: `${f.name} · ${t.card} · ${rv.card}`,
         board: { flop: f.cards.map(card), turn: [card(t.card)], river: [card(rv.card)] },
-        why: { flop: f.why, turn: t.why, river: rv.why },
+        why: { flop: f.why, turn: t.why, river: `${rv.why} ${RIVER_PLAN}` },
         turnBet: reasons.length ? ("twoThirds" as const) : ("overbet" as const),
         turnReasons: reasons,
       };
@@ -247,24 +251,24 @@ export function boardUpTo(street: Street, sc: Scenario = SCENARIOS[0]): Card[] {
   return out;
 }
 
+/** What's the same on every hand for one street: sizes, who stays in the
+ * line, and the alternative (wrong-or-right-by-card) size. The per-hand
+ * explanation lives on the Scenario. */
 export type StreetStep = {
   street: Street;
-  /** Shown above the board. */
+  /** Pot before BTN acts (the river's depends on the turn size: riverMoney). */
   pot: string;
-  betAction: string;
+  /** The main bet: drop zone on the right. */
   betLabel: string;
   betSize: string;
-  /** The right answer for this street (draft: always the betting option). */
+  /** The right answer for the flop's whole-range piece (check ends the line). */
   correct: "bet" | "check";
-  /** One-sentence why. DRAFT — Noam to replace with his own words. */
-  why: string;
   /** Which groups stay in the line when BTN bets. */
   keeps: Group[];
-  /** Optional extra rule on top of `keeps`, per combo. */
-  keepCombo?: (g: Group, cards: [Card, Card]) => boolean;
   /** One line describing who bets, shown after the bet. */
   betsWho: string;
-  /** A second, wrong-on-this-board bet size offered as a distractor (turn: small bet). */
+  /** The other bet size, drop zone at the top: flop big bet (always wrong),
+   * turn 66% (right when the turn helps BB, see turnFavorsBB). */
   altBet?: { label: string; size: string; color: string; wrongMsg: string };
 };
 
@@ -272,11 +276,9 @@ export const STEPS: Record<Street, StreetStep> = {
   flop: {
     street: "flop",
     pot: "5.5bb",
-    betAction: "small",
     betLabel: "Small bet",
     betSize: "1.8bb",
     correct: "bet",
-    why: "A dry K-7-2 with three suits favors BTN's range. The simple plan is a small bet with the whole range.",
     keeps: ["strong", "draw", "potential", "missed", "medium", "air"],
     betsWho: "The whole range bets. BB calls.",
     altBet: { label: "Big bet", size: "4.1bb", color: "#F2564B", wrongMsg: "Not quite. Too big here" },
@@ -284,24 +286,19 @@ export const STEPS: Record<Street, StreetStep> = {
   turn: {
     street: "turn",
     pot: "9.1bb",
-    betAction: "overbet",
     betLabel: "Overbet",
     betSize: "13.7bb",
     correct: "bet",
-    why: "The queen adds a flush draw. Go big and polar: strong hands bet for value, draws bet as semi-bluffs, and the medium hands check.",
     keeps: ["strong", "draw"],
     betsWho: "Value and bluffs bet. The rest checks and leaves the line. BB calls.",
-    // Right on turns that help BB (see turnFavorsBB); wrong on turns that help BTN.
     altBet: { label: "Bet 66%", size: "6bb", color: "#F2853D", wrongMsg: "Not quite. Go bigger here" },
   },
   river: {
     street: "river",
     pot: "36.5bb",
-    betAction: "allin",
     betLabel: "All-in",
     betSize: "82bb",
     correct: "bet",
-    why: "The 3 misses every draw. Shove the strongest hands for value and the missed draws with no showdown value as bluffs. Ace-high misses and medium hands check.",
     keeps: ["strong", "missed"],
     betsWho: "Value and bluffs go all-in. Medium hands and the give-up bluffs check. BB calls.",
   },
@@ -397,9 +394,9 @@ export function groupOf(hole: [Card, Card], street: Street, wasDraw: boolean, sc
     if (street === "flop" && !paired && (backdoorFlush(hole, board) || backdoorStraight(hole, board))) return "potential";
   } else if (wasDraw && !paired) {
     // A draw that also had a pair keeps its pair on the river (medium).
-    // Missed draws with an ace can still win at showdown: they give up.
-    // The rest have nothing to show down: they are the all-in bluffs.
-    return a.r === 14 || b.r === 14 ? "giveup" : "missed";
+    // Every other missed draw is "missed"; splitBluffs then decides which
+    // of them shove as bluffs and which give up.
+    return "missed";
   }
 
   if (paired) return "medium";
@@ -574,7 +571,7 @@ const SORT_SPECS: Record<"turn" | "river", PieceSpec[]> = {
       key: "bluff",
       label: "Bluff",
       sub: "All the way",
-      desc: "Missed draws with no ace. They can't win by checking, so they shove.",
+      desc: "The weakest missed draws. They can't win by checking, so they shove.",
       color: GROUP_INFO.missed.pattern ?? GROUP_INFO.missed.color,
       groups: ["missed"],
       target: "bet",
@@ -583,8 +580,8 @@ const SORT_SPECS: Record<"turn" | "river", PieceSpec[]> = {
     {
       key: "giveup",
       label: "Give up",
-      sub: "Missed, ace-high",
-      desc: "Missed draws with an ace. Ace-high can still win at showdown, so they give up and check.",
+      sub: "Missed, best cards",
+      desc: "The missed draws with the highest cards. They can still win at showdown sometimes, so they give up and check.",
       color: GROUP_INFO.giveup.pattern ?? GROUP_INFO.giveup.color,
       groups: ["giveup"],
       target: "check",
@@ -622,7 +619,33 @@ export function sortPieces(street: "turn" | "river", snap: RangeSnapshot): SortP
 
 /** Every picture the demo shows, in order:
  *  [flop, flop after bet, turn, turn after bet, river, river after bet]. */
-export type Line = { before: Record<Street, RangeSnapshot>; after: Record<Street, RangeSnapshot>; start: number };
+/** River bluff selection (draft rule, every river gets both kinds):
+ * the missed draws are ranked by showdown value (highest card first, then
+ * kicker). The weakest ones — no chance to win by checking — become the
+ * all-in bluffs, up to half the value hands' weight (a 2:1 value-to-bluff
+ * shove) and never more than 75% of the misses. The rest, the misses with the
+ * most showdown value, always give up and check. */
+const BLUFF_TO_VALUE = 0.5;
+const MAX_BLUFF_SHARE_OF_MISSES = 0.75;
+
+function splitBluffs<T extends { c: Combo; g: Group }>(live: T[]): T[] {
+  const weightOf = (g: Group) => live.reduce((s, x) => s + (x.g === g ? x.c.weight : 0), 0);
+  const missedTotal = weightOf("missed");
+  if (missedTotal <= 0) return live;
+  const budget = Math.min(weightOf("strong") * BLUFF_TO_VALUE, missedTotal * MAX_BLUFF_SHARE_OF_MISSES);
+  const showdown = (x: T) => Math.max(x.c.cards[0].r, x.c.cards[1].r) * 15 + Math.min(x.c.cards[0].r, x.c.cards[1].r);
+  const weakestFirst = live.filter((x) => x.g === "missed").sort((p, q) => showdown(p) - showdown(q));
+  const bluffs = new Set<T>();
+  let used = 0;
+  for (const x of weakestFirst) {
+    if (used >= budget) break;
+    bluffs.add(x);
+    used += x.c.weight;
+  }
+  return live.map((x) => (x.g === "missed" && !bluffs.has(x) ? { ...x, g: "giveup" as Group } : x));
+}
+
+export type Line ={ before: Record<Street, RangeSnapshot>; after: Record<Street, RangeSnapshot>; start: number };
 
 export function buildLine(sc: Scenario = SCENARIOS[0]): Line {
   const { combos, basis } = btnCombos(sc);
@@ -635,21 +658,10 @@ export function buildLine(sc: Scenario = SCENARIOS[0]): Line {
       const g = groupOf(x.c.cards, street, x.wasDraw, sc);
       return { c: x.c, g, wasDraw: x.wasDraw };
     });
-    if (street === "river") {
-      // When the draws mostly got there, the natural bluffs (missed draws
-      // with no ace) are too few for a polar shove. Then the ace-high misses
-      // bluff too instead of giving up — you need bluffs from somewhere.
-      const w = (g: Group) => live.reduce((s, x) => s + (x.g === g ? x.c.weight : 0), 0);
-      if (w("missed") < 0.3 * w("strong")) {
-        live = live.map((x) => (x.g === "giveup" ? { ...x, g: "missed" as Group } : x));
-      }
-    }
+    if (street === "river") live = splitBluffs(live);
     before[street] = snapshot(street, live, basis);
-    const step = STEPS[street];
-    const keeps = new Set(step.keeps);
-    live = live
-      .filter((x) => keeps.has(x.g) && (step.keepCombo?.(x.g, x.c.cards) ?? true))
-      .map((x) => ({ ...x, wasDraw: x.g === "draw" }));
+    const keeps = new Set(STEPS[street].keeps);
+    live = live.filter((x) => keeps.has(x.g)).map((x) => ({ ...x, wasDraw: x.g === "draw" }));
     after[street] = snapshot(street, live, basis);
   }
   return { before, after, start: before.flop.total };
