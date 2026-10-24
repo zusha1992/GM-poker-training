@@ -59,7 +59,37 @@ export type Scenario = {
   board: Record<Street, Card[]>;
   /** DRAFT explanations — Noam / Uri to replace. */
   why: Record<Street, string>;
+  /** The right turn size, from `turnFavorsBB`: overbet when the turn is good
+   * for BTN, 66% when it's good for BB's calling range. */
+  turnBet: "overbet" | "twoThirds";
+  /** Why the turn was judged good for BB (empty when it's good for BTN). */
+  turnReasons: string[];
 };
+
+/** Draft rule (agreed with Noam 2026-10-24) for a turn card that's better
+ * for BB than for BTN, so the overbet gets too big and 66% is right:
+ *  1. it puts a third card of one suit out (completes a flush),
+ *  2. it leaves four board cards inside one five-rank window (many straights),
+ *  3. it's a 9 or lower that pairs or sits right next to another low card
+ *     (BB holds far more of the small two pairs and straights). */
+export function turnFavorsBB(flop: Card[], turn: Card): string[] {
+  const board = [...flop, turn];
+  const reasons: string[] = [];
+  for (const s of ["s", "h", "d", "c"] as Suit[]) {
+    if (board.filter((bc) => bc.s === s).length >= 3) reasons.push("completes a flush");
+  }
+  const ranks = new Set(board.flatMap((bc) => (bc.r === 14 ? [14, 1] : [bc.r])));
+  for (let lo = 1; lo <= 10; lo++) {
+    if ([...ranks].filter((v) => v >= lo && v <= lo + 4).length >= 4) {
+      reasons.push("four cards close together");
+      break;
+    }
+  }
+  if (turn.r <= 9 && flop.some((fc) => fc.r <= 9 && Math.abs(fc.r - turn.r) <= 1)) {
+    reasons.push("low card that connects with the board");
+  }
+  return reasons;
+}
 
 const SUIT_CH: Record<Suit, string> = { s: "♠", h: "♥", d: "♦", c: "♣" };
 
@@ -85,7 +115,7 @@ const FLOPS: FlopSpec[] = [
     turns: [
       {
         card: "Q♥",
-        why: "The queen adds a heart flush draw and straight draws like AJ and JT. Overbet polar: value plus draws, medium hands check.",
+        why: "The queen is a good card for BTN and adds a heart flush draw and straight draws like AJ and JT. Overbet polar: value plus draws, medium hands check.",
         rivers: [
           { card: "3♣", why: "The 3 misses every draw. Shove value and the missed draws with no ace. Ace-high misses and medium hands check." },
           { card: "9♥", why: "The 9♥ completes the flush and gives JT a straight. So many draws got there that the ace-high misses like AJ and AT have to bluff too." },
@@ -108,7 +138,7 @@ const FLOPS: FlopSpec[] = [
     turns: [
       {
         card: "9♦",
-        why: "The 9♦ adds a diamond flush draw and straight draws like T7, JT and 76. Overbet polar: value plus draws.",
+        why: "The 9 connects with the 8, and BB holds more 9x, T7 and 76 than BTN. This card helps BB, so the overbet is too big: bet 66% with value and draws, medium hands check.",
         rivers: [
           { card: "2♠", why: "The deuce misses everything. Shove value and the missed draws. The rest checks." },
           { card: "6♦", why: "The 6♦ completes the flush and the straights for 75 and T7. Many draws are now value; only the misses bluff." },
@@ -116,7 +146,7 @@ const FLOPS: FlopSpec[] = [
       },
       {
         card: "K♣",
-        why: "The king adds a club flush draw and broadway draws like QJ and JT. Overbet polar.",
+        why: "The king is a good card for BTN and adds a club flush draw and broadway draws like QJ and JT. Overbet polar.",
         rivers: [
           { card: "7♥", why: "The 7 misses the draws. Shove value and the missed draws. One-pair hands check." },
           { card: "Q♣", why: "The Q♣ completes the clubs and gives JT the nut straight. Almost every draw got there, so there are hardly any bluffs left." },
@@ -126,46 +156,46 @@ const FLOPS: FlopSpec[] = [
   },
   {
     name: "Q63",
-    cards: ["Q♠", "6♦", "3♣"],
-    why: "A dry queen-high flop with three suits favors BTN. Bet small with the whole range.",
+    cards: ["Q♠", "6♦", "3♦"],
+    why: "A queen-high flop with two diamonds still favors BTN. Bet small with the whole range.",
     turns: [
       {
         card: "8♦",
-        why: "The 8♦ adds a diamond flush draw and straight draws like 75, 54 and T9. Overbet polar.",
+        why: "The 8♦ completes the diamond flush and connects with the 6. That helps BB's calling range, so the overbet is too big: bet 66% with value and draws.",
         rivers: [
           { card: "K♠", why: "The king is an overcard but completes no draw. Shove value and the missed draws. The rest checks." },
-          { card: "4♦", why: "The 4♦ completes the diamond flush and the 75 straight. Draws that hit join the value." },
+          { card: "4♦", why: "The 4♦ puts a fourth diamond out and gives 75 a straight. Draws that hit join the value." },
         ],
       },
       {
         card: "J♣",
-        why: "The jack adds a club flush draw and broadway draws like KT, AK and T9. Overbet polar.",
+        why: "The jack adds broadway draws like KT, AK and T9 to the diamond draws, and it's a good card for BTN. Overbet polar.",
         rivers: [
           { card: "2♥", why: "The deuce misses everything. Shove value and the missed draws with no ace." },
-          { card: "T♣", why: "The T♣ completes the clubs and gives AK and K9 a straight. Almost every draw got there, so there are very few bluffs left." },
+          { card: "T♦", why: "The T♦ completes the diamonds and gives AK and K9 a straight. Almost every draw got there, so there are very few bluffs left." },
         ],
       },
     ],
   },
   {
     name: "T52",
-    cards: ["T♠", "5♦", "2♣"],
-    why: "A dry ten-high flop with three suits. BTN's high cards and overpairs let it bet small with the whole range.",
+    cards: ["T♠", "5♦", "2♦"],
+    why: "A ten-high flop with two diamonds. BTN's high cards and overpairs let it bet small with the whole range.",
     turns: [
       {
         card: "9♠",
-        why: "The 9♠ adds a spade flush draw and straight draws like J8, 87 and QJ. Overbet polar.",
+        why: "The 9♠ adds a spade flush draw and straight draws like J8, 87 and QJ, and keeps BTN ahead. Overbet polar.",
         rivers: [
-          { card: "3♦", why: "The 3 misses the draws. Shove value and the missed draws. One-pair hands check." },
+          { card: "3♣", why: "The 3 misses the draws. Shove value and the missed draws. One-pair hands check." },
           { card: "Q♠", why: "The Q♠ completes the spades and gives KJ and J8 a straight. Draws that hit join the value." },
         ],
       },
       {
         card: "A♦",
-        why: "The ace is great for BTN, gives 43 a wheel and adds a diamond flush draw. Overbet polar.",
+        why: "The ace is good for BTN, but the A♦ also completes the diamond flush, and BB has plenty of suited diamonds. Size down: bet 66% with value and draws.",
         rivers: [
           { card: "K♣", why: "The king misses the draws. Shove value and the missed draws with no ace." },
-          { card: "7♦", why: "The 7♦ completes the diamond flush. Flush draws join the value; missed straight draws bluff." },
+          { card: "7♦", why: "The 7♦ puts a fourth diamond out: every single-diamond draw now has a flush. Draws that hit join the value." },
         ],
       },
     ],
@@ -177,7 +207,7 @@ const FLOPS: FlopSpec[] = [
     turns: [
       {
         card: "J♥",
-        why: "The jack adds a heart flush draw and straight draws, and gives QT the nut straight. Overbet polar.",
+        why: "The jack is a good card for BTN: it adds a heart flush draw and straight draws, and gives QT the nut straight. Overbet polar.",
         rivers: [
           { card: "6♣", why: "The 6 misses the draws. Shove value and the missed draws. One-pair hands check." },
           { card: "9♥", why: "The 9♥ completes the hearts. Flush draws join the value; missed straight draws bluff." },
@@ -185,7 +215,7 @@ const FLOPS: FlopSpec[] = [
       },
       {
         card: "5♠",
-        why: "The 5♠ adds a spade flush draw. Overbet polar: value plus draws, medium hands check.",
+        why: "The 5 connects with the 4 and gives BB more two pairs and straight draws like 65, 53 and 43. Size down: bet 66% with value and draws, medium hands check.",
         rivers: [
           { card: "Q♦", why: "The queen misses the draws. Shove value and the missed draws with no ace." },
           { card: "8♠", why: "The 8♠ completes the spades and gives 76 a straight. Draws that hit join the value." },
@@ -197,11 +227,16 @@ const FLOPS: FlopSpec[] = [
 
 export const SCENARIOS: Scenario[] = FLOPS.flatMap((f) =>
   f.turns.flatMap((t) =>
-    t.rivers.map((rv) => ({
-      id: `${f.name} · ${t.card} · ${rv.card}`,
-      board: { flop: f.cards.map(card), turn: [card(t.card)], river: [card(rv.card)] },
-      why: { flop: f.why, turn: t.why, river: rv.why },
-    })),
+    t.rivers.map((rv) => {
+      const reasons = turnFavorsBB(f.cards.map(card), card(t.card));
+      return {
+        id: `${f.name} · ${t.card} · ${rv.card}`,
+        board: { flop: f.cards.map(card), turn: [card(t.card)], river: [card(rv.card)] },
+        why: { flop: f.why, turn: t.why, river: rv.why },
+        turnBet: reasons.length ? ("twoThirds" as const) : ("overbet" as const),
+        turnReasons: reasons,
+      };
+    }),
   ),
 );
 
@@ -255,8 +290,9 @@ export const STEPS: Record<Street, StreetStep> = {
     correct: "bet",
     why: "The queen adds a flush draw. Go big and polar: strong hands bet for value, draws bet as semi-bluffs, and the medium hands check.",
     keeps: ["strong", "draw"],
-    betsWho: "Value and bluffs overbet. The rest checks and leaves the line. BB calls.",
-    altBet: { label: "Small bet", size: "3bb", color: "#F2B33D", wrongMsg: "Not quite. Too small here" },
+    betsWho: "Value and bluffs bet. The rest checks and leaves the line. BB calls.",
+    // Right on turns that help BB (see turnFavorsBB); wrong on turns that help BTN.
+    altBet: { label: "Bet 66%", size: "6bb", color: "#F2853D", wrongMsg: "Not quite. Go bigger here" },
   },
   river: {
     street: "river",
@@ -270,6 +306,12 @@ export const STEPS: Record<Street, StreetStep> = {
     betsWho: "Value and bluffs go all-in. Medium hands and the give-up bluffs check. BB calls.",
   },
 };
+
+/** River pot and all-in size depend on the turn size that was bet:
+ * overbet 13.7bb into 9.1bb, or 66% = 6bb (100bb stacks, 2.5bb open, 1.8bb flop bet). */
+export function riverMoney(sc: Scenario): { pot: string; allIn: string } {
+  return sc.turnBet === "overbet" ? { pot: "36.5bb", allIn: "82bb" } : { pot: "21.1bb", allIn: "89.7bb" };
+}
 
 // ---------- hand evaluation (simple, rule-based) ----------
 

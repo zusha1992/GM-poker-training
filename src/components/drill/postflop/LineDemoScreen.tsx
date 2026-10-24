@@ -13,6 +13,7 @@ import {
   GROUP_INFO,
   GROUP_ORDER,
   rankChar,
+  riverMoney,
   SCENARIOS,
   STEPS,
   STREETS,
@@ -74,6 +75,24 @@ type Phase = "intro" | "decide" | "advancing" | "resolved" | "wrong" | "final";
 const BET_COLOR: Record<Street, string> = { flop: colorOf("small"), turn: colorOf("big"), river: colorOf("big") };
 const NEXT_LABEL: Record<Street, string> = { flop: "Deal the turn", turn: "Deal the river", river: "See the whole line" };
 /** Shown while a right answer's bet animates in, just before the next card deals itself. */
+type BetOption = { label: string; size: string; color: string };
+
+/** What each drop zone means on a street: left = Check, right = the main
+ * bet (flop small, turn overbet, river all-in), up = the alternative size
+ * (flop big bet, turn 66%). */
+function optionOf(st: Street, dir: SortDir, sc: Scenario): BetOption {
+  const step = STEPS[st];
+  if (dir === "left") return { label: "Check", size: "", color: colorOf("check") };
+  if (dir === "up" && step.altBet) return { label: step.altBet.label, size: step.altBet.size, color: step.altBet.color };
+  return { label: step.betLabel, size: st === "river" ? riverMoney(sc).allIn : step.betSize, color: BET_COLOR[st] };
+}
+
+/** Where the betting pieces belong on this street of this hand. On the turn
+ * that depends on the card: overbet when it helps BTN, 66% when it helps BB. */
+function betDir(st: Street, sc: Scenario): SortDir {
+  return st === "turn" && sc.turnBet === "twoThirds" ? "up" : "right";
+}
+
 const ADVANCE_TEXT: Record<Street, string> = {
   flop: "The whole range bets",
   turn: "Value + bluffs overbet",
@@ -159,6 +178,8 @@ export function LineDemoScreen() {
   const sorting = pieces.length > 0;
   const board = boardUpTo(street, hand.sc);
   const why = hand.sc.why[street];
+  const correctBetDir = betDir(street, hand.sc);
+  const betOpt = optionOf(street, correctBetDir, hand.sc);
 
   function resetSort() {
     setPlaced([]);
@@ -175,15 +196,22 @@ export function LineDemoScreen() {
     if (busy.current || placed.includes(piece.key)) return;
     setHeld(null);
     // "up" (the turn's small bet) is never right on this board — it's the believable mistake.
-    const right = dir === (piece.target === "bet" ? "right" : "left");
+    const right = dir === (piece.target === "bet" ? correctBetDir : "left");
     if (!right) {
-      showToast(dir === "up" && step.altBet ? step.altBet.wrongMsg : "Not quite. Try again", false);
+      // A betting piece put into the other bet size gets a size hint.
+      const wrongSize = piece.target === "bet" && dir !== "left";
+      const msg = !wrongSize
+        ? "Not quite. Try again"
+        : dir === "right"
+          ? "Not quite. Too big on this turn"
+          : (step.altBet?.wrongMsg ?? "Not quite. Try again");
+      showToast(msg, false);
       badSound();
       buzz([30, 40, 30]);
       setShakes((s) => ({ ...s, [piece.key]: (s[piece.key] ?? 0) + 1 }));
       return;
     }
-    showToast(piece.target === "bet" ? `Perfect · ${piece.label}: ${step.betLabel.toLowerCase()}` : `Perfect · ${piece.label}: check`, true);
+    showToast(piece.target === "bet" ? `Perfect · ${piece.label}: ${betOpt.label.toLowerCase()}` : `Perfect · ${piece.label}: check`, true);
     goodSound();
     buzz(15);
     setFlying((f) => ({ ...f, [piece.key]: dir }));
@@ -276,13 +304,13 @@ export function LineDemoScreen() {
       return;
     }
     busy.current = true;
-    showToast(`Perfect · ${step.betLabel}`, true);
+    showToast(`Perfect · ${betOpt.label}`, true);
     goodSound();
     buzz(15);
     setFlying((f) => ({ ...f, whole: "right" }));
     // The whole range bets: one wave of the bet color across every hand.
     pulseSeq.current += 1;
-    setPulse({ groups: GROUP_ORDER, seq: pulseSeq.current, color: BET_COLOR[street] });
+    setPulse({ groups: GROUP_ORDER, seq: pulseSeq.current, color: betOpt.color });
     setPhase("advancing");
     const fromIdx = streetIdx;
     later(() => dealNext(fromIdx), 1500);
@@ -358,7 +386,7 @@ export function LineDemoScreen() {
         </div>
         <div className="flex flex-col items-end gap-0.5 text-right">
           <span className="font-[family-name:var(--font-display)] text-[11px]" style={{ color: "var(--muted)" }}>
-            Pot <b style={{ color: "var(--mix)" }}>{step.pot}</b>
+            Pot <b style={{ color: "var(--mix)" }}>{street === "river" ? riverMoney(hand.sc).pot : step.pot}</b>
           </span>
           <span className="text-[11px]" style={{ color: "var(--muted)" }}>
             Range left{" "}
@@ -383,12 +411,7 @@ export function LineDemoScreen() {
         {phase === "decide" && !inspecting && (
           <>
             {(["left", "right", ...(step.altBet ? ["up"] : [])] as SortDir[]).map((dir) => {
-              const opt =
-                dir === "left"
-                  ? { label: "Check", size: "", color: colorOf("check") }
-                  : dir === "right"
-                    ? { label: step.betLabel, size: step.betSize, color: BET_COLOR[street] }
-                    : { label: step.altBet!.label, size: step.altBet!.size, color: step.altBet!.color };
+              const opt = optionOf(street, dir, hand.sc);
               const on = sortArmed === dir;
               return (
                 <div
@@ -452,18 +475,18 @@ export function LineDemoScreen() {
 
         {phase === "advancing" && (
           <div className="flex flex-col items-center gap-1.5 text-center" style={{ animation: "rdIn 220ms ease-out both" }} data-testid="advancing">
-            <b className="font-[family-name:var(--font-display)] text-[22px] font-bold" style={{ color: BET_COLOR[street], animation: "ldBanner 520ms cubic-bezier(.3,1.4,.5,1) both" }}>
-              {ADVANCE_TEXT[street]}
+            <b className="font-[family-name:var(--font-display)] text-[22px] font-bold" style={{ color: betOpt.color, animation: "ldBanner 520ms cubic-bezier(.3,1.4,.5,1) both" }}>
+              {street === "turn" ? `Value + bluffs ${betOpt.label === "Overbet" ? "overbet" : "bet 66%"}` : ADVANCE_TEXT[street]}
             </b>
             <span className="text-[13px]" style={{ color: "var(--muted)" }}>
-              {step.betLabel} {step.betSize} · BB calls
+              {betOpt.label} {betOpt.size} · BB calls
             </span>
           </div>
         )}
 
         {phase === "resolved" && (
           <Panel>
-            <Verdict ok title={`${step.betLabel} · ${step.betSize}`} color={BET_COLOR[street]} />
+            <Verdict ok title={`${betOpt.label} · ${betOpt.size}`} color={betOpt.color} />
             <p className="m-0 text-[13px] leading-[1.4]">{step.betsWho}</p>
             <p className="m-0 text-[11.5px] leading-[1.35]" style={{ color: "var(--muted)" }}>
               {why}
@@ -476,7 +499,7 @@ export function LineDemoScreen() {
           <Panel>
             <Verdict ok={false} title="Checking ends the line here" color={colorOf("check")} />
             <p className="m-0 text-[12.5px] leading-[1.4]">
-              The plan on this {street}: <b style={{ color: BET_COLOR[street] }}>{step.betLabel}</b>. {why}
+              The plan on this {street}: <b style={{ color: betOpt.color }}>{betOpt.label}</b>. {why}
             </p>
             <div className="flex gap-2">
               <PrimaryButton onClick={retryStreet}>Try the {street} again</PrimaryButton>
@@ -495,7 +518,7 @@ export function LineDemoScreen() {
                 <div key={s} className="flex min-w-0 flex-col gap-1">
                   <LineMatrix snap={LINE.after[s]} mini />
                   <span className="text-center text-[10.5px] leading-tight" style={{ color: "var(--muted)" }}>
-                    {STEPS[s].betLabel} <b style={{ color: "var(--foreground)" }}>{pctOf(LINE.after[s], LINE)}%</b>
+                    {optionOf(s, betDir(s, hand.sc), hand.sc).label} <b style={{ color: "var(--foreground)" }}>{pctOf(LINE.after[s], LINE)}%</b>
                   </span>
                 </div>
               ))}
