@@ -57,7 +57,7 @@ const DRILLS: DrillCard[] = [
   {
     key: "line",
     title: "Flop to river (demo)",
-    sub: "BTN vs BB · one hand, three streets",
+    sub: "BTN vs BB · 20 random hands, flop to river",
     meta: "New",
     colors: ["#F2564B", "#22C4A1", "#E9C58A", "#5A6670"],
     href: "/drills/postflop/line",

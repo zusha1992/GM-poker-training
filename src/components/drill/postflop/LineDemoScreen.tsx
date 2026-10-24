@@ -13,13 +13,16 @@ import {
   GROUP_INFO,
   GROUP_ORDER,
   rankChar,
+  SCENARIOS,
   STEPS,
   STREETS,
   sortPieces,
   withoutGroups,
   type Card,
   type Group,
+  type Line,
   type RangeSnapshot,
+  type Scenario,
   type SortPieceDef,
   type Street,
 } from "@/lib/drill/postflop/line-demo";
@@ -27,14 +30,43 @@ import { LineMatrix } from "./LineMatrix";
 import { SortPiece, Tetromino, type SortDir } from "./SortPiece";
 import { ArrowIcon } from "./bits";
 
-const LINE = buildLine();
-/** Turn and river are sorted, not swiped: ready-made groups the player
- * drags into the bet or Check. The flop is one swipe for the whole range. */
-const SORT_PIECES: Record<Street, SortPieceDef[]> = {
-  flop: [],
-  turn: sortPieces("turn", LINE.before.turn),
-  river: sortPieces("river", LINE.before.river),
+/** Everything one dealt hand needs, worked out once per hand and cached. */
+type Hand = {
+  index: number;
+  sc: Scenario;
+  line: Line;
+  /** Turn and river are sorted, not swiped: ready-made groups the player
+   * drags into a bet or Check. The flop is one piece for the whole range. */
+  pieces: Record<Street, SortPieceDef[]>;
+  /** Colors of the flop's 3×3 whole-range piece. */
+  wholeColors: string[];
 };
+
+const HAND_CACHE = new Map<number, Hand>();
+
+function handFor(index: number): Hand {
+  const cached = HAND_CACHE.get(index);
+  if (cached) return cached;
+  const sc = SCENARIOS[index];
+  const line = buildLine(sc);
+  const hand: Hand = {
+    index,
+    sc,
+    line,
+    pieces: { flop: [], turn: sortPieces("turn", line.before.turn), river: sortPieces("river", line.before.river) },
+    wholeColors: wholeColorsOf(line.before.flop),
+  };
+  HAND_CACHE.set(index, hand);
+  return hand;
+}
+
+/** A random hand, never the same one twice in a row. */
+function randomHandIndex(current: number): number {
+  if (SCENARIOS.length < 2) return 0;
+  let i = current;
+  while (i === current) i = Math.floor(Math.random() * SCENARIOS.length);
+  return i;
+}
 
 /** "advancing" = right answer given: the bet animates in, then the next card deals itself. */
 type Phase = "intro" | "decide" | "advancing" | "resolved" | "wrong" | "final";
@@ -73,8 +105,7 @@ const WHOLE_PIECE: SortPieceDef = {
 
 /** The 3×3 block's nine colors follow the flop range's real mix of groups,
  * strongest first (largest-remainder rounding to nine blocks). */
-const WHOLE_COLORS: string[] = (() => {
-  const snap = LINE.before.flop;
+function wholeColorsOf(snap: RangeSnapshot): string[] {
   const shares = GROUP_ORDER.map((g) => ({ g, exact: (snap.byGroup[g] / snap.total) * 9 }));
   const counts = shares.map((s) => ({ ...s, n: Math.floor(s.exact) }));
   let left = 9 - counts.reduce((s, c) => s + c.n, 0);
@@ -84,15 +115,18 @@ const WHOLE_COLORS: string[] = (() => {
     left -= 1;
   }
   return counts.flatMap((c) => Array<string>(c.n).fill(GROUP_INFO[c.g].pattern ?? GROUP_INFO[c.g].color));
-})();
+}
 
-const pctOf = (snap: RangeSnapshot) => Math.round((snap.total / LINE.start) * 100);
+const pctOf = (snap: RangeSnapshot, line: Line) => Math.round((snap.total / line.start) * 100);
 
-/** Flop-to-river demo: one BTN line on one board (K♠7♥2♦ · Q♥ · 3♣), BB
- * only calls. Each street the player picks the plan for the whole range;
- * the matrix shows the range changing and shrinking street by street. */
+/** Flop-to-river demo: one BTN line (small bet, overbet, all-in), BB only
+ * calls, on one of 20 hands (5 flops × 2 turns × 2 rivers) dealt at random.
+ * Each street the player picks the plan for the whole range; the matrix
+ * shows the range changing and shrinking street by street. */
 export function LineDemoScreen() {
   const router = useRouter();
+  const [hand, setHand] = useState<Hand>(() => handFor(0));
+  const LINE = hand.line;
   const [phase, setPhase] = useState<Phase>("intro");
   const [streetIdx, setStreetIdx] = useState(0);
   const [afterBet, setAfterBet] = useState(false);
@@ -121,9 +155,10 @@ export function LineDemoScreen() {
   const baseSnap = afterBet ? LINE.after[street] : LINE.before[street];
   // While sorting the turn, the matrix shows the range minus what has been sent to check so far.
   const snap = street !== "flop" && !afterBet && sortSnap ? sortSnap : baseSnap;
-  const pieces = SORT_PIECES[street];
+  const pieces = hand.pieces[street];
   const sorting = pieces.length > 0;
-  const board = boardUpTo(street);
+  const board = boardUpTo(street, hand.sc);
+  const why = hand.sc.why[street];
 
   function resetSort() {
     setPlaced([]);
@@ -208,8 +243,10 @@ export function LineDemoScreen() {
     busy.current = false;
   }
 
-  function start() {
+  /** Deal a hand from the flop: a new random one, or the same one again. */
+  function start(which: "new" | "same" = "same") {
     generation.current += 1;
+    if (which === "new") setHand(handFor(randomHandIndex(hand.index)));
     setPrev(undefined);
     setStreetIdx(0);
     setAfterBet(false);
@@ -271,7 +308,7 @@ export function LineDemoScreen() {
             </span>
             <b className="font-[family-name:var(--font-display)] text-[26px] font-bold">Flop to river</b>
             <p className="m-0 max-w-[330px] text-[13.5px] leading-[1.5]" style={{ color: "var(--muted)" }}>
-              BTN opened, BB called. Play one hand to the river. On every street you pick one plan for your whole
+              BTN opened, BB called. You get one of {SCENARIOS.length} hands at random and play it to the river. On every street you pick one plan for your whole
               range. BB always calls. Watch how each plan shapes the range you take to the next street.
             </p>
           </div>
@@ -280,7 +317,7 @@ export function LineDemoScreen() {
             <Row label="Turn" text="Overbet or check" />
             <Row label="River" text="All-in or check" />
           </div>
-          <button type="button" className="h-[52px] cursor-pointer rounded-2xl border-0 text-[16px] font-bold active:scale-[0.98]" style={{ background: "var(--mix)", color: "#2B1C02" }} onClick={start}>
+          <button type="button" className="h-[52px] cursor-pointer rounded-2xl border-0 text-[16px] font-bold active:scale-[0.98]" style={{ background: "var(--mix)", color: "#2B1C02" }} onClick={() => start("new")}>
             Start the hand
           </button>
           <button type="button" className="h-[44px] cursor-pointer rounded-xl border text-[14px] font-semibold" style={{ borderColor: "var(--line)" }} onClick={() => router.push("/")}>
@@ -299,10 +336,12 @@ export function LineDemoScreen() {
           <path d="M6 10v10h12V10" />
         </IconButton>
         <div className="min-w-0 flex-1">
-          <b className="block truncate font-[family-name:var(--font-display)] text-[14px] font-bold">BTN vs BB · flop to river</b>
+          <b className="block truncate font-[family-name:var(--font-display)] text-[14px] font-bold">
+            BTN vs BB <span className="font-medium" style={{ color: "var(--muted)" }} data-testid="hand-id">· {hand.sc.id}</span>
+          </b>
           <StreetTrack current={streetIdx} done={phase === "final"} />
         </div>
-        <IconButton label="Start over" onClick={start}>
+        <IconButton label="Start over" onClick={() => start("same")}>
           <path d="M20 12a8 8 0 1 1-2.3-5.6" />
           <path d="M20 4v5h-5" />
         </IconButton>
@@ -324,7 +363,7 @@ export function LineDemoScreen() {
           <span className="text-[11px]" style={{ color: "var(--muted)" }}>
             Range left{" "}
             <b className="font-[family-name:var(--font-display)] text-[15px]" style={{ color: "var(--foreground)", fontVariantNumeric: "tabular-nums" }} data-testid="range-left">
-              {pctOf(snap)}%
+              {pctOf(snap, LINE)}%
             </b>
           </span>
         </div>
@@ -393,9 +432,9 @@ export function LineDemoScreen() {
               </>
             ) : (
               <SortPiece
-                key={`whole-${seq}`}
+                key={`whole-${hand.index}-${seq}`}
                 piece={WHOLE_PIECE}
-                blockColors={WHOLE_COLORS}
+                blockColors={hand.wholeColors}
                 caption="The whole range"
                 delay={0}
                 onDrop={(d) => handleSwipe(d)}
@@ -427,7 +466,7 @@ export function LineDemoScreen() {
             <Verdict ok title={`${step.betLabel} · ${step.betSize}`} color={BET_COLOR[street]} />
             <p className="m-0 text-[13px] leading-[1.4]">{step.betsWho}</p>
             <p className="m-0 text-[11.5px] leading-[1.35]" style={{ color: "var(--muted)" }}>
-              {step.why}
+              {why}
             </p>
             <PrimaryButton onClick={next}>{NEXT_LABEL[street]}</PrimaryButton>
           </Panel>
@@ -437,11 +476,11 @@ export function LineDemoScreen() {
           <Panel>
             <Verdict ok={false} title="Checking ends the line here" color={colorOf("check")} />
             <p className="m-0 text-[12.5px] leading-[1.4]">
-              The plan on this {street}: <b style={{ color: BET_COLOR[street] }}>{step.betLabel}</b>. {step.why}
+              The plan on this {street}: <b style={{ color: BET_COLOR[street] }}>{step.betLabel}</b>. {why}
             </p>
             <div className="flex gap-2">
               <PrimaryButton onClick={retryStreet}>Try the {street} again</PrimaryButton>
-              <button type="button" className="h-[44px] flex-1 cursor-pointer rounded-xl border text-[13px] font-semibold" style={{ borderColor: "var(--line)" }} onClick={start}>
+              <button type="button" className="h-[44px] flex-1 cursor-pointer rounded-xl border text-[13px] font-semibold" style={{ borderColor: "var(--line)" }} onClick={() => start("same")}>
                 Start over
               </button>
             </div>
@@ -456,15 +495,15 @@ export function LineDemoScreen() {
                 <div key={s} className="flex min-w-0 flex-col gap-1">
                   <LineMatrix snap={LINE.after[s]} mini />
                   <span className="text-center text-[10.5px] leading-tight" style={{ color: "var(--muted)" }}>
-                    {STEPS[s].betLabel} <b style={{ color: "var(--foreground)" }}>{pctOf(LINE.after[s])}%</b>
+                    {STEPS[s].betLabel} <b style={{ color: "var(--foreground)" }}>{pctOf(LINE.after[s], LINE)}%</b>
                   </span>
                 </div>
               ))}
             </div>
             <div className="flex gap-2">
-              <PrimaryButton onClick={start}>Play again</PrimaryButton>
-              <button type="button" className="h-[44px] flex-1 cursor-pointer rounded-xl border text-[13px] font-semibold" style={{ borderColor: "var(--line)" }} onClick={() => router.push("/")}>
-                Lobby
+              <PrimaryButton onClick={() => start("new")}>Next hand</PrimaryButton>
+              <button type="button" className="h-[44px] flex-1 cursor-pointer rounded-xl border text-[13px] font-semibold" style={{ borderColor: "var(--line)" }} onClick={() => start("same")}>
+                Replay
               </button>
             </div>
           </Panel>
@@ -474,8 +513,8 @@ export function LineDemoScreen() {
       <FeedbackSheet
         open={feedbackOpen}
         onClose={() => setFeedbackOpen(false)}
-        drillTag={`postflop:line-demo:${street}`}
-        drillLabel={`Flop to river · ${street}`}
+        drillTag={`postflop:line-demo:${hand.sc.id}:${street}`}
+        drillLabel={`Flop to river · ${hand.sc.id} · ${street}`}
         pageUrl="/drills/postflop/line"
       />
     </Shell>
