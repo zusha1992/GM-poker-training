@@ -2,10 +2,12 @@
 
 import { PieceShape } from "./PieceShape";
 import type { DrillAction, DrillPiece, SwipeDirection } from "@/lib/drill/types";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { animate, motion, useMotionValue, useTransform, type PanInfo } from "motion/react";
 
-const THRESHOLD = 55;
+/** How far (px) the card must travel before a release counts as a swipe. */
+export const SWIPE_THRESHOLD = 55;
+const THRESHOLD = SWIPE_THRESHOLD;
 
 function directionOf(dx: number, dy: number): SwipeDirection | null {
   if (Math.abs(dx) < THRESHOLD && Math.abs(dy) < THRESHOLD) return null;
@@ -21,6 +23,9 @@ type PieceCardProps = {
   colorFor: (action: DrillAction) => string;
   onSwipe: (direction: SwipeDirection) => void;
   onDragPreview?: (action: DrillAction | null) => void;
+  /** Raw finger offset on every drag frame (and 0,0 on release) — for
+   * screens that want a continuous preview, not just the threshold one. */
+  onDragMove?: (dx: number, dy: number) => void;
   onTap?: () => void;
   /** Bump this to retrigger the "wrong answer" shake, even for repeats. */
   shakeSeq?: number;
@@ -28,6 +33,12 @@ type PieceCardProps = {
    * correct answer) instead of following the pointer. */
   flyTo?: FlyTo | null;
   disabled?: boolean;
+  /** Replaces the default footprint-shape icon — for pieces that don't
+   * represent a hand-matrix shape (e.g. "the whole range" as one card). */
+  icon?: ReactNode;
+  /** Replaces the auto "{sub} · {N} combos" line — for pieces where a raw
+   * hand-key count isn't a meaningful number (e.g. "the whole range"). */
+  subText?: string;
 };
 
 /** The swipeable "Tetris piece" the player drags toward an action. Drag
@@ -39,10 +50,13 @@ export function PieceCard({
   colorFor,
   onSwipe,
   onDragPreview,
+  onDragMove,
   onTap,
   shakeSeq = 0,
   flyTo = null,
   disabled = false,
+  icon,
+  subText,
 }: PieceCardProps) {
   const x = useMotionValue(0);
   const y = useMotionValue(0);
@@ -74,6 +88,7 @@ export function PieceCard({
   function handleDrag(_: unknown, info: PanInfo) {
     const next = { dx: info.offset.x, dy: info.offset.y };
     setLiveOffset(next);
+    onDragMove?.(next.dx, next.dy);
     onDragPreview?.(directionOf(next.dx, next.dy) ? swipes[directionOf(next.dx, next.dy)!] ?? null : null);
   }
 
@@ -82,6 +97,7 @@ export function PieceCard({
     onDragPreview?.(null);
     const dir = directionOf(info.offset.x, info.offset.y);
     if (dir && swipes[dir]) onSwipe(dir);
+    else onDragMove?.(0, 0);
   }
 
   const longLabel = piece.label.length > 18;
@@ -106,7 +122,7 @@ export function PieceCard({
       transition={{ duration: 0.5, ease: [0.3, 1.3, 0.5, 1] }}
       className="flex min-w-[112px] max-w-[calc(100%-156px)] cursor-grab touch-none flex-col items-center gap-2 rounded-2xl border-2 px-3 py-2.5 text-center select-none"
     >
-      <PieceShape hands={piece.hands} color={piece.color} maxSize={52} />
+      {icon ?? <PieceShape hands={piece.hands} color={piece.color} maxSize={52} />}
       <div
         className="font-[family-name:var(--font-display)] font-bold"
         style={{ fontSize: longLabel ? 13.5 : 15.5 }}
@@ -114,7 +130,7 @@ export function PieceCard({
         {piece.label}
       </div>
       <div className="text-[11.5px]" style={{ color: "var(--muted)" }}>
-        {piece.sub} &middot; {piece.hands.length} combos
+        {subText ?? `${piece.sub} · ${piece.hands.length} combos`}
       </div>
       {onTap && (
         <div className="text-[11px]" style={{ color: "var(--muted)" }}>

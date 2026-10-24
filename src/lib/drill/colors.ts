@@ -4,9 +4,11 @@ export const ACTION_COLORS: Record<string, string> = {
   call: "#35C277",
   fold: "#3D7EF0",
   mix: "#F2B33D",
-  // Postflop reuses the same two colors under different names.
+  // Postflop reuses the same colors under different names.
   small: "#F2B33D",
   check: "#3D7EF0",
+  big: "#F2564B",
+  polar: "#F2564B",
 };
 
 export const FOLD_DIM = "#1F3354";
