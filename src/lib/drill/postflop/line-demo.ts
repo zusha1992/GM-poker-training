@@ -29,17 +29,19 @@ export const GROUP_INFO: Record<Group, { name: string; color: string; pattern?: 
   draw: { name: "Draws", color: "#22C4A1" },
   // Flop only: no pair, but a backdoor straight and/or flush draw.
   potential: { name: "Potential bluffs", color: "#9B7FEA" },
-  // River only. Missed draws with nothing to show down: the all-in bluffs.
+  // River only: the two groups of missed draws. "missed" is the group that
+  // shoves, "giveup" the one that checks — but on screen each is named by
+  // what it holds (see RiverSplit), never by what to do, and both get a
+  // neutral bluff color so the answer isn't in the question.
   missed: {
-    name: "Bluffs",
+    name: "Missed draws",
     color: "#3E8C7E",
     pattern: "repeating-linear-gradient(135deg,#3E8C7E 0 3px,#2C6A5F 3px 6px)",
   },
-  // River only. Missed draws with an ace: some showdown value, so they give up and check.
   giveup: {
-    name: "Give-up bluffs",
-    color: "#7A8188",
-    pattern: "repeating-linear-gradient(135deg,#7A8188 0 3px,#545A60 3px 6px)",
+    name: "Missed draws",
+    color: "#8A6FD6",
+    pattern: "repeating-linear-gradient(135deg,#8A6FD6 0 3px,#644CAE 3px 6px)",
   },
   medium: { name: "Medium", color: "#E9C58A" },
   air: { name: "Air", color: "#5A6670" },
@@ -225,18 +227,15 @@ const FLOPS: FlopSpec[] = [
   },
 ];
 
-/** The river plan is the same on every hand; each river's own line only says what the card did. */
-const RIVER_PLAN =
-  "Shove value plus the weakest missed draws as bluffs. The missed draws with the best cards give up, and medium hands check.";
-
-export const SCENARIOS: Scenario[] =FLOPS.flatMap((f) =>
+export const SCENARIOS: Scenario[] = FLOPS.flatMap((f) =>
   f.turns.flatMap((t) =>
     t.rivers.map((rv) => {
       const reasons = turnFavorsBB(f.cards.map(card), card(t.card));
       return {
         id: `${f.name} · ${t.card} · ${rv.card}`,
         board: { flop: f.cards.map(card), turn: [card(t.card)], river: [card(rv.card)] },
-        why: { flop: f.why, turn: t.why, river: `${rv.why} ${RIVER_PLAN}` },
+        // The river's plan sentence depends on how its bluffs split; buildLine adds it (Line.riverPlan).
+        why: { flop: f.why, turn: t.why, river: rv.why },
         turnBet: reasons.length ? ("twoThirds" as const) : ("overbet" as const),
         turnReasons: reasons,
       };
@@ -458,6 +457,8 @@ export type RangeSnapshot = {
   total: number;
   /** Weighted combos per group. */
   byGroup: Record<Group, number>;
+  /** River only: neutral names for the two missed-draw groups. */
+  split?: RiverSplit;
 };
 
 function snapshot(street: Street, live: { c: Combo; g: Group }[], basis: Map<string, number>): RangeSnapshot {
@@ -567,11 +568,13 @@ const SORT_SPECS: Record<"turn" | "river", PieceSpec[]> = {
       target: "bet",
       partMark: "some",
     },
+    // The two bluff groups. Label / sub / desc are replaced per hand from the
+    // river snapshot's split (RiverSplit) so they describe the hands, not the answer.
     {
       key: "bluff",
-      label: "Bluff",
-      sub: "All the way",
-      desc: "The weakest missed draws. They can't win by checking, so they shove.",
+      label: "Missed draws",
+      sub: "",
+      desc: "",
       color: GROUP_INFO.missed.pattern ?? GROUP_INFO.missed.color,
       groups: ["missed"],
       target: "bet",
@@ -579,9 +582,9 @@ const SORT_SPECS: Record<"turn" | "river", PieceSpec[]> = {
     },
     {
       key: "giveup",
-      label: "Give up",
-      sub: "Missed, best cards",
-      desc: "The missed draws with the highest cards. They can still win at showdown sometimes, so they give up and check.",
+      label: "Missed draws",
+      sub: "",
+      desc: "",
       color: GROUP_INFO.giveup.pattern ?? GROUP_INFO.giveup.color,
       groups: ["giveup"],
       target: "check",
@@ -612,57 +615,148 @@ export function sortPieces(street: "turn" | "river", snap: RangeSnapshot): SortP
       entries.push({ hand, part: mine / all });
     }
     const n = d.groups.reduce((s, g) => s + snap.byGroup[g], 0);
-    return { ...d, entries, hands: entries.map((e) => e.hand), pct: Math.round((n / snap.total) * 100) };
+    const named = snap.split && (d.key === "bluff" || d.key === "giveup") ? snap.split[d.key === "bluff" ? "shove" : "giveUp"] : null;
+    return {
+      ...d,
+      ...(named ? { label: named.label, sub: named.sub, desc: named.desc } : {}),
+      entries,
+      hands: entries.map((e) => e.hand),
+      pct: Math.round((n / snap.total) * 100),
+    };
     })
     .filter((p) => p.entries.length > 0);
 }
 
-/** Every picture the demo shows, in order:
- *  [flop, flop after bet, turn, turn after bet, river, river after bet]. */
-/** River bluff selection (draft rule, every river gets both kinds):
- * the missed draws are ranked by showdown value (highest card first, then
- * kicker). The weakest ones — no chance to win by checking — become the
- * all-in bluffs, up to half the value hands' weight (a 2:1 value-to-bluff
- * shove) and never more than 75% of the misses. The rest, the misses with the
- * most showdown value, always give up and check. */
-const BLUFF_TO_VALUE = 0.5;
-const MAX_BLUFF_SHARE_OF_MISSES = 0.75;
+// ---------- river bluffs: two groups, split by blockers ----------
 
-function splitBluffs<T extends { c: Combo; g: Group }>(live: T[]): T[] {
-  const weightOf = (g: Group) => live.reduce((s, x) => s + (x.g === g ? x.c.weight : 0), 0);
-  const missedTotal = weightOf("missed");
-  if (missedTotal <= 0) return live;
-  const budget = Math.min(weightOf("strong") * BLUFF_TO_VALUE, missedTotal * MAX_BLUFF_SHARE_OF_MISSES);
-  const showdown = (x: T) => Math.max(x.c.cards[0].r, x.c.cards[1].r) * 15 + Math.min(x.c.cards[0].r, x.c.cards[1].r);
-  const weakestFirst = live.filter((x) => x.g === "missed").sort((p, q) => showdown(p) - showdown(q));
-  const bluffs = new Set<T>();
-  let used = 0;
-  for (const x of weakestFirst) {
-    if (used >= budget) break;
-    bluffs.add(x);
-    used += x.c.weight;
+type DrawKind = "flush" | "straight";
+
+/** What kind of draw a combo had on the turn (a combo draw counts as a flush draw). */
+function drawKindOf(hole: [Card, Card], board: Card[]): DrawKind {
+  const all = [...hole, ...board];
+  for (const s of ["s", "h", "d", "c"] as Suit[]) {
+    if (all.filter((x) => x.s === s).length === 4 && hole.some((h) => h.s === s)) return "flush";
   }
-  return live.map((x) => (x.g === "missed" && !bluffs.has(x) ? { ...x, g: "giveup" as Group } : x));
+  return "straight";
 }
 
-export type Line ={ before: Record<Street, RangeSnapshot>; after: Record<Street, RangeSnapshot>; start: number };
+type SplitSide = { label: string; sub: string; desc: string };
 
+/** How a river's missed draws split into the group that shoves and the group
+ * that gives up, with neutral names (what the hands are, not what to do). */
+export type RiverSplit = {
+  rule: "flush-blocker" | "brick" | "cards";
+  shove: SplitSide;
+  giveUp: SplitSide;
+  /** Shown after the answer: why this split. */
+  plan: string;
+};
+
+/** Draft blocker rule (Noam, 2026-10-27 — "it's a lot about blockers"):
+ *  - a flush is on the river board → missed draws holding one card of that
+ *    suit (they block BB's flushes) shove; the ones without it give up;
+ *  - otherwise (the river bricked the flush) → missed straight draws shove,
+ *    missed flush draws give up;
+ *  - if that leaves either group empty, split by cards instead: the lowest
+ *    cards (no showdown value) shove, the highest give up.
+ * Both groups always exist when there are at least two missed combos. */
+function splitRiverBluffs<T extends { c: Combo; g: Group; kind: DrawKind | null }>(
+  live: T[],
+  sc: Scenario,
+): { live: T[]; split: RiverSplit } {
+  const board = boardUpTo("river", sc);
+  const flushSuit = (["s", "h", "d", "c"] as Suit[]).find((s) => board.filter((x) => x.s === s).length >= 3);
+  const missed = live.filter((x) => x.g === "missed");
+  const weight = (xs: T[]) => xs.reduce((s, x) => s + x.c.weight, 0);
+  const pick = (shoves: (x: T) => boolean) => {
+    const a = missed.filter(shoves);
+    const b = missed.filter((x) => !shoves(x));
+    return weight(a) > 0 && weight(b) > 0 ? new Set(a) : null;
+  };
+
+  let shoveSet: Set<T> | null = null;
+  let split: RiverSplit | null = null;
+
+  if (flushSuit) {
+    const g = SUIT_CH[flushSuit];
+    shoveSet = pick((x) => x.c.cards.some((h) => h.s === flushSuit));
+    split = {
+      rule: "flush-blocker",
+      shove: { label: `With a ${g}`, sub: "Missed draws", desc: `Missed draws that hold one ${g}.` },
+      giveUp: { label: `No ${g}`, sub: "Missed draws", desc: `Missed draws with no ${g}.` },
+      plan: `With the ${g} flush on board, bluff with the missed draws that hold a ${g}: they block BB's flushes. Missed draws without one give up. Medium hands check.`,
+    };
+  } else {
+    shoveSet = pick((x) => x.kind === "straight");
+    split = {
+      rule: "brick",
+      shove: { label: "Straight draws", sub: "Missed", desc: "Straight draws that missed (no flush draw)." },
+      giveUp: { label: "Flush draws", sub: "Missed", desc: "Flush draws that missed, including combo draws." },
+      plan: "The flush draws missed: the missed straight draws bluff all-in, the missed flush draws give up. Medium hands check.",
+    };
+  }
+
+  if (!shoveSet) {
+    // Fallback: half by weight, lowest cards first.
+    const showdown = (x: T) => Math.max(x.c.cards[0].r, x.c.cards[1].r) * 15 + Math.min(x.c.cards[0].r, x.c.cards[1].r);
+    const lowFirst = [...missed].sort((p, q) => showdown(p) - showdown(q));
+    const half = weight(missed) / 2;
+    shoveSet = new Set<T>();
+    let used = 0;
+    for (const x of lowFirst) {
+      if (used >= half) break;
+      shoveSet.add(x);
+      used += x.c.weight;
+    }
+    split = {
+      rule: "cards",
+      shove: { label: "Low cards", sub: "Missed draws", desc: "Missed draws with the lowest cards." },
+      giveUp: { label: "High cards", sub: "Missed draws", desc: "Missed draws with the highest cards." },
+      plan: "Bluff with the missed draws that have the lowest cards: they can never win by checking. The ones with high cards give up. Medium hands check.",
+    };
+  }
+
+  const shove = shoveSet;
+  return { live: live.map((x) => (x.g === "missed" && !shove.has(x) ? { ...x, g: "giveup" as Group } : x)), split: split! };
+}
+
+export type Line = {
+  before: Record<Street, RangeSnapshot>;
+  after: Record<Street, RangeSnapshot>;
+  start: number;
+  /** Shown after the river answer: how this hand's bluffs split. */
+  riverPlan: string;
+};
+
+/** Every picture the demo shows: before / after BTN's bet on each street. */
 export function buildLine(sc: Scenario = SCENARIOS[0]): Line {
   const { combos, basis } = btnCombos(sc);
   const before = {} as Record<Street, RangeSnapshot>;
   const after = {} as Record<Street, RangeSnapshot>;
+  let riverPlan = "";
 
-  let live: { c: Combo; g: Group; wasDraw: boolean }[] = combos.map((c) => ({ c, g: "air", wasDraw: false }));
+  let live: { c: Combo; g: Group; wasDraw: boolean; kind: DrawKind | null }[] = combos.map((c) => ({
+    c,
+    g: "air",
+    wasDraw: false,
+    kind: null,
+  }));
   for (const street of STREETS) {
-    live = live.map((x) => {
-      const g = groupOf(x.c.cards, street, x.wasDraw, sc);
-      return { c: x.c, g, wasDraw: x.wasDraw };
-    });
-    if (street === "river") live = splitBluffs(live);
-    before[street] = snapshot(street, live, basis);
+    live = live.map((x) => ({ ...x, g: groupOf(x.c.cards, street, x.wasDraw, sc) }));
+    let split: RiverSplit | undefined;
+    if (street === "river") {
+      const r = splitRiverBluffs(live, sc);
+      live = r.live;
+      split = r.split;
+      riverPlan = r.split.plan;
+    }
+    before[street] = { ...snapshot(street, live, basis), split };
     const keeps = new Set(STEPS[street].keeps);
-    live = live.filter((x) => keeps.has(x.g)).map((x) => ({ ...x, wasDraw: x.g === "draw" }));
-    after[street] = snapshot(street, live, basis);
+    const board = boardUpTo(street, sc);
+    live = live
+      .filter((x) => keeps.has(x.g))
+      .map((x) => ({ ...x, wasDraw: x.g === "draw", kind: x.g === "draw" ? drawKindOf(x.c.cards, board) : null }));
+    after[street] = { ...snapshot(street, live, basis), split };
   }
-  return { before, after, start: before.flop.total };
+  return { before, after, start: before.flop.total, riverPlan };
 }

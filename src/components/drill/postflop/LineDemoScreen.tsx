@@ -176,7 +176,7 @@ export function LineDemoScreen() {
   const pieces = hand.pieces[street];
   const sorting = pieces.length > 0;
   const board = boardUpTo(street, hand.sc);
-  const why = hand.sc.why[street];
+  const why = street === "river" ? `${hand.sc.why.river} ${LINE.riverPlan}` : hand.sc.why[street];
   const correctBetDir = betDir(street, hand.sc);
   const betOpt = optionOf(street, correctBetDir, hand.sc);
 
@@ -612,7 +612,7 @@ function Legend({ snap }: { snap: RangeSnapshot }) {
       {present.map((g) => (
         <span key={g} className="flex items-center gap-1">
           <i className="inline-block h-[8px] w-[8px] rounded-[2px]" style={{ background: GROUP_INFO[g].pattern ?? GROUP_INFO[g].color }} />
-          {GROUP_INFO[g].name}
+          {g === "missed" && snap.split ? snap.split.shove.label : g === "giveup" && snap.split ? snap.split.giveUp.label : GROUP_INFO[g].name}
           <b style={{ color: "var(--foreground)", fontVariantNumeric: "tabular-nums" }}>{Math.round((snap.byGroup[g] / snap.total) * 100)}%</b>
         </span>
       ))}
