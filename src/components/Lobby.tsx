@@ -62,6 +62,14 @@ const DRILLS: DrillCard[] = [
     colors: ["#F2564B", "#22C4A1", "#E9C58A", "#5A6670"],
     href: "/drills/postflop/line",
   },
+  {
+    key: "price",
+    title: "How many big blinds?",
+    sub: "BTN vs BB · what each hand group wants, flop to river",
+    meta: "New",
+    colors: ["#3FA9F5", "#22C4A1", "#9B7FEA", "#FFC94A"],
+    href: "/drills/postflop/price",
+  },
 ];
 
 /** The app's home screen: pick a drill. Ported from the single-page HTML

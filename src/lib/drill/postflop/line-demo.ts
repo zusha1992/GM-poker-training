@@ -96,7 +96,7 @@ export function turnFavorsBB(flop: Card[], turn: Card): string[] {
 const SUIT_CH: Record<Suit, string> = { s: "♠", h: "♥", d: "♦", c: "♣" };
 
 /** "Q♥" → card. Rank chars: A K Q J T 9..2. */
-function card(code: string): Card {
+export function card(code: string): Card {
   const suit = (Object.keys(SUIT_CH) as Suit[]).find((s) => SUIT_CH[s] === code.slice(1))!;
   return { r: rankVal(code[0]), s: suit };
 }
@@ -311,7 +311,7 @@ export function riverMoney(sc: Scenario): { pot: string; allIn: string } {
 
 // ---------- hand evaluation (simple, rule-based) ----------
 
-function hasStraight(vals: Iterable<number>): boolean {
+export function hasStraight(vals: Iterable<number>): boolean {
   const s = new Set(vals);
   if (s.has(14)) s.add(1);
   for (let lo = 1; lo <= 10; lo++) {
@@ -422,11 +422,15 @@ function combosForHand(hand: string, allBoard: Card[]): [Card, Card][] {
   return out.filter(([x, y]) => !allBoard.some((bc) => sameCard(bc, x) || sameCard(bc, y)));
 }
 
-type Combo = { hand: string; cards: [Card, Card]; weight: number };
+export type Combo = { hand: string; cards: [Card, Card]; weight: number };
 
-/** BTN's opening range, as the finished Raise First In drill paints it. */
 function btnCombos(sc: Scenario): { combos: Combo[]; basis: Map<string, number> } {
-  const allBoard = boardUpTo("river", sc);
+  return btnRangeCombos(boardUpTo("river", sc));
+}
+
+/** BTN's opening range, as the finished Raise First In drill paints it,
+ * minus the combos that use a card of `allBoard` (the whole runout). */
+export function btnRangeCombos(allBoard: Card[]): { combos: Combo[]; basis: Map<string, number> } {
   const strat = rfiSpot("BTN").position.strat;
   const famOf = new Map<string, string>();
   for (const f of FAMS) for (const h of f.hands) famOf.set(h, f.key);

@@ -3,14 +3,17 @@
 import { useEffect, useRef } from "react";
 import { animate, motion, useMotionValue, useTransform, type PanInfo } from "motion/react";
 import { SWIPE_THRESHOLD } from "@/components/drill/PieceCard";
-import type { SortPieceDef } from "@/lib/drill/postflop/line-demo";
 
 /** left = Check, right = the street's main bet, up = the alternative bet (turn: small bet). */
 export type SortDir = "left" | "right" | "up";
 
+/** What a floating piece needs to show itself. `shape` picks the Tetris
+ * shape (defaults to `key`). */
+export type PieceView = { key: string; label: string; pct: number; color: string; shape?: string };
+
 /** Classic Tetris shapes, as [col, row] blocks. Abstract on purpose: the
  * shape stands for the group, not for where its hands sit in the matrix. */
-const TETROMINO: Record<SortPieceDef["key"], [number, number][]> = {
+const TETROMINO: Record<string, [number, number][]> = {
   value: [
     [0, 0],
     [1, 0],
@@ -47,6 +50,38 @@ const TETROMINO: Record<SortPieceDef["key"], [number, number][]> = {
     [1, 2],
     [2, 2],
   ],
+  // Extra shapes for the "how many big blinds" drill, one per hand group.
+  block6: [
+    [0, 0],
+    [1, 0],
+    [2, 0],
+    [0, 1],
+    [1, 1],
+    [2, 1],
+  ],
+  O: [
+    [0, 0],
+    [1, 0],
+    [0, 1],
+    [1, 1],
+  ],
+  I: [
+    [0, 0],
+    [1, 0],
+    [2, 0],
+    [3, 0],
+  ],
+  J: [
+    [1, 0],
+    [1, 1],
+    [0, 2],
+    [1, 2],
+  ],
+  V: [
+    [0, 0],
+    [0, 1],
+    [1, 1],
+  ],
 };
 
 const BLOCK = 19;
@@ -58,7 +93,7 @@ export function Tetromino({
   block = BLOCK,
   colors,
 }: {
-  kind: SortPieceDef["key"];
+  kind: string;
   color: string;
   block?: number;
   /** Optional color per block (in shape order), e.g. the whole range's mix of groups. */
@@ -87,24 +122,32 @@ export function Tetromino({
   );
 }
 
-type SortPieceProps = {
-  piece: SortPieceDef;
-  /** Called once the piece is released past the threshold to one side. */
-  onDrop: (dir: SortDir) => void;
+type SortPieceProps<D extends string> = {
+  piece: PieceView;
+  /** Called once the piece is released past the threshold to one side
+   * (or, with `zoneAt`, over a drop box). */
+  onDrop: (dir: D) => void;
   /** Which side the finger is currently heading to (past the threshold), or null. */
-  onArm: (dir: SortDir | null) => void;
+  onArm: (dir: D | null) => void;
+  /** Drop boxes found by finger position instead of drag direction: returns
+   * the box under this viewport point, or null. */
+  zoneAt?: (x: number, y: number) => D | null;
+  /** With `zoneAt`: where the piece flies on a right answer (the box's rect). */
+  flyRect?: DOMRect | null;
   /** True while the finger holds this piece (to highlight its hands). */
   onHold: (held: boolean) => void;
   /** A tap without dragging: show which hands are in this piece. */
   onInspect: () => void;
   shakeSeq: number;
   /** Set when the drop was right: the piece flies off to that side. */
-  flyTo: SortDir | null;
+  flyTo: D | null;
   disabled: boolean;
   /** Entrance stagger, seconds. */
   delay: number;
   /** Smaller piece, for streets with four pieces in a row. */
   compact?: boolean;
+  /** Smaller still, for five pieces in a row. */
+  tiny?: boolean;
   /** Per-block colors (whole-range piece). */
   blockColors?: string[];
   /** Allow dragging up (a third option above the pieces). */
@@ -127,10 +170,12 @@ function dirOf(dx: number, dy: number, allowUp: boolean): SortDir | null {
  * player drags left to Check or right to Overbet, or taps to see its
  * hands. Same physics as the preflop swipe card: follows the finger,
  * tilts, snaps back, shakes on a wrong answer and flies off on a right one. */
-export function SortPiece({
+export function SortPiece<D extends string = SortDir>({
   piece,
   onDrop,
   onArm,
+  zoneAt,
+  flyRect,
   onHold,
   onInspect,
   shakeSeq,
@@ -138,15 +183,18 @@ export function SortPiece({
   disabled,
   delay,
   compact = false,
+  tiny = false,
   blockColors,
   caption,
   allowUp = false,
-}: SortPieceProps) {
+}: SortPieceProps<D>) {
   const x = useMotionValue(0);
   const y = useMotionValue(0);
   const rotate = useTransform(x, (v) => v / 12);
-  const armed = useRef<SortDir | null>(null);
+  const armed = useRef<D | null>(null);
   const didDrag = useRef(false);
+  const self = useRef<HTMLDivElement>(null);
+  const intoBox = !!flyTo && !!flyRect;
 
   useEffect(() => {
     if (!shakeSeq) return;
@@ -156,13 +204,27 @@ export function SortPiece({
 
   useEffect(() => {
     if (!flyTo) return;
+    if (flyRect && self.current) {
+      // Fly into the box it was dropped on, shrinking as it lands.
+      const me = self.current.getBoundingClientRect();
+      const dx = flyRect.left + flyRect.width / 2 - (me.left + me.width / 2);
+      const dy = flyRect.top + flyRect.height / 2 - (me.top + me.height / 2);
+      void animate(x, x.get() + dx, { duration: 0.34, ease: "easeIn" });
+      void animate(y, y.get() + dy, { duration: 0.34, ease: "easeIn" });
+      return;
+    }
     void animate(x, flyTo === "left" ? -320 : flyTo === "right" ? 320 : 0, { duration: 0.38, ease: "easeIn" });
     void animate(y, flyTo === "up" ? -260 : 40, { duration: 0.38, ease: "easeIn" });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [flyTo]);
 
+  function target(info: PanInfo): D | null {
+    if (zoneAt) return zoneAt(info.point.x - window.scrollX, info.point.y - window.scrollY);
+    return dirOf(info.offset.x, info.offset.y, allowUp) as D | null;
+  }
+
   function handleDrag(_: unknown, info: PanInfo) {
-    const d = dirOf(info.offset.x, info.offset.y, allowUp);
+    const d = target(info);
     if (d !== armed.current) {
       armed.current = d;
       onArm(d);
@@ -173,12 +235,16 @@ export function SortPiece({
     armed.current = null;
     onArm(null);
     onHold(false);
-    const d = dirOf(info.offset.x, info.offset.y, allowUp);
+    const d = target(info);
     if (d) onDrop(d);
   }
 
+  const width = tiny ? "w-[62px]" : compact ? "w-[70px]" : caption ? "w-[150px]" : "w-[84px]";
+  const shape = piece.shape ?? piece.key;
+
   return (
     <motion.div
+      ref={self}
       drag={!disabled && !flyTo}
       dragSnapToOrigin
       dragElastic={0.65}
@@ -200,19 +266,30 @@ export function SortPiece({
       initial={{ y: 30, scale: 0.6, opacity: 0 }}
       animate={{ y: 0, scale: 1, opacity: 1 }}
       transition={{ duration: 0.45, delay, ease: [0.3, 1.3, 0.5, 1] }}
-      className={`relative flex ${compact ? "w-[70px]" : caption ? "w-[150px]" : "w-[84px]"} cursor-grab flex-col items-center gap-1.5 text-center select-none`}
+      className={`relative flex ${width} cursor-grab flex-col items-center ${tiny ? "gap-1" : "gap-1.5"} text-center select-none`}
       data-testid={`sort-${piece.key}`}
       role="button"
-      aria-label={`${piece.label}, ${piece.pct}% of the range. Drag left to check or right to overbet. Tap to see the hands.`}
+      aria-label={`${piece.label}, ${piece.pct}% of the range. ${zoneAt ? "Drag it to a box" : "Drag left to check or right to overbet"}. Tap to see the hands.`}
     >
-      {/* Gentle bob so the pieces read as floating, not as fixed cards. */}
-      <div className={`flex ${piece.key === "whole" ? "h-[76px]" : "h-[64px]"} items-center justify-center`} style={{ animation: `sortFloat 2.6s ease-in-out ${delay * 4}s infinite` }}>
-        <Tetromino kind={piece.key} color={piece.color} block={compact ? 15 : BLOCK + (piece.key === "whole" ? 4 : 0)} colors={blockColors} />
-      </div>
-      <b className={`font-[family-name:var(--font-display)] leading-none ${caption ? "text-[15.5px]" : "text-[13.5px]"}`}>{piece.label}</b>
-      <span className="text-[10.5px] leading-none" style={{ color: "var(--muted)" }}>
-        {caption ?? `${piece.pct}%${compact ? "" : " · tap to see"}`}
-      </span>
+      <motion.div
+        className={`flex w-full flex-col items-center ${tiny ? "gap-1" : "gap-1.5"}`}
+        animate={intoBox ? { scale: 0.3, opacity: 0 } : { scale: 1, opacity: 1 }}
+        transition={{ duration: 0.34, ease: "easeIn" }}
+      >
+        {/* Gentle bob so the pieces read as floating, not as fixed cards. */}
+        <div
+          className={`flex ${piece.key === "whole" ? "h-[76px]" : tiny ? "h-[50px]" : "h-[64px]"} items-center justify-center`}
+          style={{ animation: `sortFloat 2.6s ease-in-out ${delay * 4}s infinite` }}
+        >
+          <Tetromino kind={shape} color={piece.color} block={tiny ? 12 : compact ? 15 : BLOCK + (piece.key === "whole" ? 4 : 0)} colors={blockColors} />
+        </div>
+        <b className={`font-[family-name:var(--font-display)] ${tiny ? "text-[11.5px] leading-[1.1]" : "leading-none"} ${caption ? "text-[15.5px]" : tiny ? "" : "text-[13.5px]"}`}>
+          {piece.label}
+        </b>
+        <span className="text-[10.5px] leading-none" style={{ color: "var(--muted)" }}>
+          {caption ?? `${piece.pct}%${compact || tiny ? "" : " · tap to see"}`}
+        </span>
+      </motion.div>
     </motion.div>
   );
 }
