@@ -8,8 +8,10 @@ import { badSound, buzz, goodSound, tone } from "@/lib/drill/sound";
 import { STREETS } from "@/lib/drill/postflop/line-demo";
 import {
   BUCKET_COLOR,
+  BUCKET_RANK,
   BUCKETS,
   bucketLabel,
+  bucketShort,
   buildRunout,
   PGROUP_INFO,
   PGROUP_ORDER,
@@ -17,20 +19,21 @@ import {
   type Bucket,
   type PGroup,
   type PricePiece,
-  type PriceStreet,
   type Runout,
 } from "@/lib/drill/postflop/price-hands";
 import { LineMatrix, type MatrixPalette } from "./LineMatrix";
 import { SortPiece } from "./SortPiece";
 import { BoardCard, IconButton, InspectPanel, PrimaryButton, Row, Shell, StreetTrack } from "./drill-ui";
 
-const PALETTE: MatrixPalette = { order: PGROUP_ORDER, fill: (g) => PGROUP_INFO[g as PGroup].color };
+/** The boxes along the top: money. Bluffs and showdown value sit on the sides. */
+const MONEY_BUCKETS: Bucket[] = ["5", "15", "40", "all"];
+
+/** Matrix color of a group nobody has answered yet on this street. */
+const UNSEEN = "#46525C";
 
 /** "deal" = a card just came: its story shows and the obvious groups place
  * themselves. "advancing" = every group placed: BTN bets, BB calls, next card. */
 type Phase = "intro" | "deal" | "decide" | "advancing" | "final";
-
-const BUCKET_RANK: Record<Bucket, number> = { "0": 0, "5": 1, "15": 2, "40": 3, all: 4 };
 
 /** A random runout, never the same one twice in a row. `?runout=N` (0-5) forces one. */
 function pickRunout(current: number): number {
@@ -42,24 +45,33 @@ function pickRunout(current: number): number {
   return i;
 }
 
-/** "How many big blinds?" — on every street, drag each of BTN's hand groups
- * into how many more big blinds it wants to put in from here. Same pieces,
- * matrix and feel as the flop-to-river demo; hands never leave the matrix,
- * they re-sort into new groups on every card. */
+function shuffled<T>(xs: T[]): T[] {
+  const out = [...xs];
+  for (let i = out.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [out[i], out[j]] = [out[j], out[i]];
+  }
+  return out;
+}
+
+/** "How many big blinds?" — on every street, BTN's hand groups come one at a
+ * time (mixed order) and the player drags each into what it's worth from
+ * here. The matrix starts grey and fills with money colors as groups are
+ * answered, so each street ends as a map of where BTN's money goes. */
 export function PriceScreen() {
   const router = useRouter();
   const [runout, setRunout] = useState<Runout>(() => buildRunout(0));
   const [phase, setPhase] = useState<Phase>("intro");
   const [streetIdx, setStreetIdx] = useState(0);
   const [placed, setPlaced] = useState<Partial<Record<PGroup, Bucket>>>({});
+  /** This street's pieces in the order they're asked. */
+  const [queue, setQueue] = useState<PricePiece[]>([]);
   /** Pieces answered wrong at least once, as "street:group". */
   const [missed, setMissed] = useState<Set<string>>(new Set());
   const [armed, setArmed] = useState<Bucket | null>(null);
-  const [held, setHeld] = useState<PGroup | null>(null);
-  const [inspecting, setInspecting] = useState<PricePiece | null>(null);
-  const [shakes, setShakes] = useState<Record<string, number>>({});
-  const [flying, setFlying] = useState<Partial<Record<PGroup, Bucket>>>({});
-  const [flyRects, setFlyRects] = useState<Partial<Record<PGroup, DOMRect>>>({});
+  const [inspecting, setInspecting] = useState(false);
+  const [shake, setShake] = useState(0);
+  const [flying, setFlying] = useState<{ key: PGroup; bucket: Bucket; rect: DOMRect | null } | null>(null);
   const [pulse, setPulse] = useState<{ groups: PGroup[]; seq: number; color?: string } | null>(null);
   const [seq, setSeq] = useState(0);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
@@ -69,8 +81,34 @@ export function PriceScreen() {
   const boxes = useRef<Partial<Record<Bucket, HTMLDivElement | null>>>({});
   const { toast, show: showToast } = useToast();
 
+  const box = (b: Bucket, tall = false) => (
+    <BucketBox
+      key={b}
+      bucket={b}
+      behind={st.behind}
+      tall={tall}
+      armed={armed === b}
+      groups={PGROUP_ORDER.filter((g) => placed[g] === b)}
+      boxRef={(el) => {
+        boxes.current[b] = el;
+      }}
+    />
+  );
+
   const st = runout.streets[streetIdx];
+  const current = queue.find((p) => !placed[p.key]) ?? null;
+  const done = queue.filter((p) => placed[p.key]).length;
   const prevSnap = streetIdx > 0 ? runout.streets[streetIdx - 1].snap : undefined;
+
+  // Unanswered groups grey, the current one in its own color, answered ones in their money color.
+  const palette: MatrixPalette = {
+    order: PGROUP_ORDER,
+    fill: (g) => {
+      if (phase === "decide" && current?.key === g) return PGROUP_INFO[g as PGroup].color;
+      const b = placed[g as PGroup];
+      return b ? BUCKET_COLOR[b] : UNSEEN;
+    },
+  };
 
   /** Runs `fn` after `ms`, unless the player restarted in the meantime. */
   function later(fn: () => void, ms: number) {
@@ -85,33 +123,30 @@ export function PriceScreen() {
     setPulse({ groups, seq: pulseSeq.current, color });
   }
 
-  /** A new card: show its story, then the obvious groups drop into their buckets. */
+  /** A new card: show its story, then the obvious groups drop into their boxes. */
   function enterStreet(i: number, r: Runout = runout) {
     busy.current = true;
+    const s = r.streets[i];
     setStreetIdx(i);
     setPlaced({});
-    setFlying({});
-    setFlyRects({});
-    setShakes({});
-    setInspecting(null);
-    setHeld(null);
+    setQueue(shuffled(s.pieces));
+    setFlying(null);
+    setInspecting(false);
     setPulse(null);
-    setSeq((s) => s + 1);
+    setSeq((n) => n + 1);
     setPhase("deal");
-    const s = r.streets[i];
     later(() => {
       const auto: Partial<Record<PGroup, Bucket>> = {};
       for (const g of s.auto) auto[g] = s.answers[g]!.bucket;
       setPlaced(auto);
-      // Ring the strong ones as they land; flashing every no-pair hand is just noise.
-      pop(s.auto.filter((g) => g !== "nopair"));
+      pop(s.auto);
       tone(523, 0.08);
       setTimeout(() => tone(659, 0.12), 80);
     }, 900);
     later(() => {
       setPhase("decide");
       busy.current = false;
-    }, 1900);
+    }, 2000);
   }
 
   function start(which: "new" | "same") {
@@ -125,48 +160,51 @@ export function PriceScreen() {
   function zoneAt(x: number, y: number): Bucket | null {
     for (const b of BUCKETS) {
       const r = boxes.current[b]?.getBoundingClientRect();
-      if (r && x >= r.left - 6 && x <= r.right + 6 && y >= r.top - 14 && y <= r.bottom + 14) return b;
+      if (r && x >= r.left - 4 && x <= r.right + 4 && y >= r.top - 6 && y <= r.bottom + 6) return b;
     }
     return null;
   }
 
   function handleDrop(p: PricePiece, b: Bucket) {
     if (busy.current || placed[p.key]) return;
-    setHeld(null);
     if (b !== p.answer.bucket) {
-      // Never reveal the bucket: only whether it wants more or less money.
+      // Never reveal the box: only whether the group is worth more or less.
       const more = BUCKET_RANK[p.answer.bucket] > BUCKET_RANK[b];
-      showToast(more ? "Not quite. It wants more" : "Not quite. It wants less", false);
+      showToast(more ? "Not quite. It's worth more" : "Not quite. It's worth less", false);
       badSound();
       buzz([30, 40, 30]);
-      setShakes((s) => ({ ...s, [p.key]: (s[p.key] ?? 0) + 1 }));
+      setShake((n) => n + 1);
       setMissed((m) => new Set(m).add(`${st.street}:${p.key}`));
       return;
     }
-    showToast(`Perfect · ${p.label}: ${b === "all" ? "all-in" : b === "0" ? "0" : `+${b}bb`}`, true);
+    busy.current = true;
+    showToast(`Perfect · ${p.label}: ${bucketShort(b)}`, true);
     goodSound();
     buzz(15);
-    const rect = boxes.current[b]?.getBoundingClientRect();
-    if (rect) setFlyRects((f) => ({ ...f, [p.key]: rect }));
-    setFlying((f) => ({ ...f, [p.key]: b }));
-    const next = { ...placed, [p.key]: b };
-    setPlaced(next);
+    setFlying({ key: p.key, bucket: b, rect: boxes.current[b]?.getBoundingClientRect() ?? null });
     pop([p.key], BUCKET_COLOR[b]);
-
-    if (st.pieces.every((q) => next[q.key])) {
-      busy.current = true;
-      later(() => {
-        tone(784, 0.1);
-        setTimeout(() => tone(1046, 0.18), 90);
-        if (streetIdx === STREETS.length - 1) {
-          setPhase("final");
-          busy.current = false;
-        } else {
-          setPhase("advancing");
-          later(() => enterStreet(streetIdx + 1), 1500);
-        }
-      }, 650);
-    }
+    const next = { ...placed, [p.key]: b };
+    // Let the piece land before the next one appears.
+    later(() => {
+      setPlaced(next);
+      setFlying(null);
+      setShake(0);
+      if (queue.every((q) => next[q.key])) {
+        later(() => {
+          tone(784, 0.1);
+          setTimeout(() => tone(1046, 0.18), 90);
+          if (streetIdx === STREETS.length - 1) {
+            setPhase("final");
+            busy.current = false;
+          } else {
+            setPhase("advancing");
+            later(() => enterStreet(streetIdx + 1), 1500);
+          }
+        }, 500);
+      } else {
+        busy.current = false;
+      }
+    }, 380);
   }
 
   if (phase === "intro") {
@@ -179,13 +217,13 @@ export function PriceScreen() {
             </span>
             <b className="font-[family-name:var(--font-display)] text-[26px] font-bold">How many big blinds?</b>
             <p className="m-0 max-w-[330px] text-[13.5px] leading-[1.5]" style={{ color: "var(--muted)" }}>
-              BTN opened, BB called, 100bb deep. On every street, drag each hand group into how many more big blinds it wants to put in from here, if the
+              BTN opened, BB called, 100bb deep. On every street your hand groups come one at a time: drag each into what it&apos;s worth from here, if the
               rest of the board bricks. BB calls every bet.
             </p>
           </div>
           <div className="flex flex-col gap-1.5 rounded-2xl p-3 text-[13px]" style={{ background: "var(--panel)", border: "1px solid var(--line)" }}>
             <Row label="Board" text={`A♣ 7♦ 2♠ · ${RUNOUTS.length} runouts`} />
-            <Row label="Buckets" text="0 · +5 · +15 · +40 · all-in" />
+            <Row label="Boxes" text="Bluffs · Showdown · +5 · +15 · +40 · All-in" />
             <Row label="Streets" text="Flop, turn and river" />
           </div>
           <button type="button" className="h-[52px] cursor-pointer rounded-2xl border-0 text-[16px] font-bold active:scale-[0.98]" style={{ background: "var(--mix)", color: "#2B1C02" }} onClick={() => start("new")}>
@@ -241,41 +279,26 @@ export function PriceScreen() {
         <Summary runout={runout} missed={missed} onNext={() => start("new")} onReplay={() => start("same")} />
       ) : (
         <>
-          <div className="flex flex-shrink-0 flex-col gap-1.5 rounded-xl p-1.5" style={{ background: "var(--panel)", border: "1px solid var(--line)" }}>
-            <LineMatrix
-              snap={st.snap}
-              prev={prevSnap}
-              seq={seq}
-              palette={PALETTE}
-              highlight={inspecting ? [inspecting.key] : held ? [held] : null}
-              pulse={pulse}
-            />
-            <Legend st={st} />
+          <div className="flex flex-shrink-0 flex-col gap-1 rounded-xl p-1.5" style={{ background: "var(--panel)", border: "1px solid var(--line)" }}>
+            {/* Shrinks on short phones so the boxes always fit below it. */}
+            <div className="mx-auto w-full" style={{ maxWidth: "max(220px, calc(100dvh - 400px))" }}>
+              <LineMatrix snap={st.snap} prev={prevSnap} seq={seq} palette={palette} pulse={pulse} />
+            </div>
+            <MoneyLegend />
           </div>
 
-          <div className="relative mt-0.5 flex min-h-[226px] flex-1 flex-col gap-1.5 overflow-hidden rounded-2xl p-1.5" style={{ border: "1px dashed var(--line)", touchAction: "none" }}>
-            {inspecting ? (
-              <InspectPanel
-                piece={{ ...inspecting, label: PGROUP_INFO[inspecting.key].name }}
-                onBack={() => setInspecting(null)}
-              />
+          <div className="relative mt-0.5 flex min-h-[236px] flex-1 flex-col gap-1.5 overflow-hidden rounded-2xl p-1.5" style={{ border: "1px dashed var(--line)", touchAction: "none" }}>
+            {inspecting && current ? (
+              <InspectPanel piece={{ ...current, label: current.name, desc: current.label }} onBack={() => setInspecting(false)} backLabel="Back" />
             ) : (
               <>
-                <div className="grid flex-shrink-0 grid-cols-5 gap-1" data-testid="buckets">
-                  {BUCKETS.map((b) => (
-                    <BucketBox
-                      key={b}
-                      bucket={b}
-                      behind={st.behind}
-                      armed={armed === b}
-                      groups={PGROUP_ORDER.filter((g) => placed[g] === b)}
-                      boxRef={(el) => {
-                        boxes.current[b] = el;
-                      }}
-                    />
-                  ))}
+                {/* Money boxes across the top; Potential bluffs down the left side, Showdown value down the right. */}
+                <div className="grid flex-shrink-0 grid-cols-4 gap-1" data-testid="buckets">
+                  {MONEY_BUCKETS.map((b) => box(b))}
                 </div>
 
+                <div className="flex min-h-0 flex-1 gap-1.5">
+                  {box("bluff", true)}
                 <div className="relative flex min-h-0 flex-1 items-center justify-center">
                   <Toast toast={toast} />
                   {phase === "deal" && (
@@ -288,26 +311,29 @@ export function PriceScreen() {
                       </span>
                     </div>
                   )}
-                  {phase === "decide" && (
-                    <div className="flex items-end justify-center gap-1" data-testid="sort-row">
-                      {st.pieces.map((p, i) => (
-                        <SortPiece<Bucket>
-                          key={`${st.street}-${p.key}`}
-                          tiny={st.pieces.length > 4}
-                          compact={st.pieces.length <= 4}
-                          piece={p}
-                          delay={0.08 * i}
-                          zoneAt={zoneAt}
-                          flyRect={flyRects[p.key] ?? null}
-                          onDrop={(b) => handleDrop(p, b)}
-                          onArm={setArmed}
-                          onHold={(h) => setHeld(h ? p.key : null)}
-                          onInspect={() => setInspecting(p)}
-                          shakeSeq={shakes[p.key] ?? 0}
-                          flyTo={flying[p.key] ?? null}
-                          disabled={!!placed[p.key]}
-                        />
-                      ))}
+                  {phase === "decide" && current && (
+                    <div className="flex flex-col items-center gap-1" data-testid="sort-row">
+                      <span className="text-[10.5px] font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--muted)" }} data-testid="piece-count">
+                        {done + 1} of {queue.length}
+                      </span>
+                      <SortPiece<Bucket>
+                        key={`${st.street}-${current.key}`}
+                        piece={current}
+                        caption={`${current.pct}% of the range · tap to see`}
+                        delay={0}
+                        zoneAt={zoneAt}
+                        flyRect={flying?.key === current.key ? flying.rect : null}
+                        onDrop={(b) => handleDrop(current, b)}
+                        onArm={setArmed}
+                        onHold={() => {}}
+                        onInspect={() => setInspecting(true)}
+                        shakeSeq={shake}
+                        flyTo={flying?.key === current.key ? flying.bucket : null}
+                        disabled={!!flying}
+                      />
+                      <span className="text-center text-[10.5px] leading-tight" style={{ color: "var(--muted)" }}>
+                        What is it worth from here?
+                      </span>
                     </div>
                   )}
                   {phase === "advancing" && (
@@ -321,10 +347,8 @@ export function PriceScreen() {
                     </div>
                   )}
                 </div>
-
-                <span className="flex-shrink-0 text-center text-[11px]" style={{ color: "var(--muted)" }}>
-                  {phase === "decide" ? "How many more bb does each group want? Tap a piece to see its hands." : " "}
-                </span>
+                  {box("sd", true)}
+                </div>
               </>
             )}
           </div>
@@ -342,50 +366,55 @@ export function PriceScreen() {
   );
 }
 
-/** One money bucket. Lights up while a piece hovers over it; holds a chip
- * for every group placed in it. */
+/** One box. Lights up while the piece hovers over it; holds a chip for
+ * every group placed in it. */
 function BucketBox({
   bucket,
   behind,
+  tall = false,
   armed,
   groups,
   boxRef,
 }: {
   bucket: Bucket;
   behind: number;
+  /** A side box: full height, narrow, label in the middle. */
+  tall?: boolean;
   armed: boolean;
   groups: PGroup[];
   boxRef: (el: HTMLDivElement | null) => void;
 }) {
   const color = BUCKET_COLOR[bucket];
   const { big, small } = bucketLabel(bucket, behind);
+  const word = bucket === "bluff" || bucket === "sd";
   return (
     <div
       ref={boxRef}
-      className="flex h-[70px] min-w-0 flex-col items-center justify-start gap-0.5 rounded-xl border-[1.5px] pt-1.5 transition-[transform,background] duration-150"
+      className={`flex min-w-0 flex-shrink-0 flex-col items-center gap-0.5 rounded-xl border-[1.5px] transition-[transform,background] duration-150 ${
+        tall ? "w-[78px] justify-center px-1 text-center" : "h-[54px] justify-start pt-1.5"
+      }`}
       style={{
         borderColor: color,
         background: armed ? color : `color-mix(in srgb, ${color} 14%, transparent)`,
-        transform: armed ? "scale(1.06)" : undefined,
+        transform: armed ? "scale(1.05)" : undefined,
         boxShadow: bucket === "all" ? `0 0 12px color-mix(in srgb, ${color} 35%, transparent)` : undefined,
       }}
       data-testid={`bucket-${bucket}`}
     >
       <b
-        className={`font-[family-name:var(--font-display)] leading-none ${bucket === "all" ? "text-[13px]" : "text-[19px]"}`}
+        className={`font-[family-name:var(--font-display)] leading-none ${word ? "text-[12.5px]" : bucket === "all" ? "text-[14px]" : "text-[17px]"}`}
         style={{ color: armed ? "#10161B" : color, fontVariantNumeric: "tabular-nums" }}
       >
         {big}
       </b>
-      <span className="text-[9.5px] leading-none" style={{ color: armed ? "#10161B" : "var(--muted)" }}>
+      <span className={`leading-none ${word ? "text-[11px] font-semibold" : "text-[9.5px]"}`} style={{ color: armed ? "#10161B" : word ? color : "var(--muted)" }}>
         {small}
       </span>
       <div className="mt-0.5 flex flex-wrap justify-center gap-[3px] px-1">
         {groups.map((g) => (
           <i
             key={g}
-            title={PGROUP_INFO[g].label}
-            className="inline-block h-[10px] w-[10px] rounded-[2.5px]"
+            className="inline-block h-[8px] w-[8px] rounded-[2px]"
             style={{ background: PGROUP_INFO[g].color, boxShadow: "inset 0 1px 0 rgba(255,255,255,.35)", animation: "ldDeal 380ms cubic-bezier(.3,1.4,.5,1) both" }}
           />
         ))}
@@ -394,35 +423,37 @@ function BucketBox({
   );
 }
 
-function Legend({ st }: { st: PriceStreet }) {
-  const present = PGROUP_ORDER.filter((g) => st.snap.byGroup[g] > 0.01);
+/** The matrix shows money, not groups: one swatch per box, plus "not asked yet". */
+function MoneyLegend() {
   return (
-    <div className="flex min-h-[14px] flex-wrap justify-center gap-x-2.5 gap-y-0.5 text-[10.5px]" style={{ color: "var(--muted)" }} data-testid="price-legend">
-      {present.map((g) => (
-        <span key={g} className="flex items-center gap-1">
-          <i className="inline-block h-[8px] w-[8px] rounded-[2px]" style={{ background: PGROUP_INFO[g].color }} />
-          {PGROUP_INFO[g].label}
-          <b style={{ color: "var(--foreground)", fontVariantNumeric: "tabular-nums" }}>{Math.round((st.snap.byGroup[g] / st.snap.total) * 100)}%</b>
+    <div className="flex flex-wrap justify-center gap-x-2 gap-y-0.5 text-[10px]" style={{ color: "var(--muted)" }} data-testid="price-legend">
+      <span className="flex items-center gap-1">
+        <i className="inline-block h-[8px] w-[8px] rounded-[2px]" style={{ background: UNSEEN, outline: "1px solid var(--line)" }} />
+        Not yet
+      </span>
+      {BUCKETS.map((b) => (
+        <span key={b} className="flex items-center gap-1">
+          <i className="inline-block h-[8px] w-[8px] rounded-[2px]" style={{ background: BUCKET_COLOR[b] }} />
+          {b === "bluff" ? "Bluffs" : b === "sd" ? "Showdown" : b === "all" ? "All-in" : `+${b}`}
         </span>
       ))}
     </div>
   );
 }
 
-/** End of the runout: every group's bucket on every street, side by side,
- * so the player sees what the turn and river did to each group. Tap a cell
- * for the reason. */
+/** End of the runout: every street's groups with what they were worth, so
+ * the player sees what each card did. Tap a chip for the reason. */
 function Summary({ runout, missed, onNext, onReplay }: { runout: Runout; missed: Set<string>; onNext: () => void; onReplay: () => void }) {
   const [picked, setPicked] = useState<{ street: number; g: PGroup } | null>(null);
-  const groups = PGROUP_ORDER.filter((g) => runout.streets.some((s) => s.answers[g]));
   const asked = runout.streets.reduce((n, s) => n + s.pieces.length, 0);
   const firstTry = asked - missed.size;
-  const pickedAns = picked ? runout.streets[picked.street].answers[picked.g] : undefined;
+  const pickedSt = picked ? runout.streets[picked.street] : undefined;
+  const pickedAns = picked ? pickedSt?.answers[picked.g] : undefined;
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto rounded-2xl p-3" style={{ background: "var(--panel)", border: "1px solid var(--line)", animation: "rdIn 220ms ease-out both" }} data-testid="price-summary">
+    <div className="flex min-h-0 flex-1 flex-col gap-2 rounded-2xl p-3" style={{ background: "var(--panel)", border: "1px solid var(--line)", animation: "rdIn 220ms ease-out both" }} data-testid="price-summary">
       <div className="flex items-baseline justify-between gap-2">
-        <b className="font-[family-name:var(--font-display)] text-[17px]">What each group wanted</b>
+        <b className="font-[family-name:var(--font-display)] text-[16px]">What each group was worth</b>
         <span className="text-[12.5px]" style={{ color: "var(--muted)" }}>
           <b style={{ color: "var(--call)" }}>
             {firstTry}/{asked}
@@ -431,85 +462,59 @@ function Summary({ runout, missed, onNext, onReplay }: { runout: Runout; missed:
         </span>
       </div>
 
-      <div className="grid grid-cols-[1fr_repeat(3,54px)] items-center gap-x-1.5 gap-y-1 text-[12px]">
-        <span />
-        {runout.streets.map((s) => (
-          <span key={s.street} className="text-center text-[10.5px] font-semibold uppercase tracking-[0.06em]" style={{ color: "var(--muted)" }}>
-            {s.street}
-            {s.street !== "flop" && <span className="block normal-case tracking-normal">{s.story.split(" · ")[0]}</span>}
-          </span>
-        ))}
-        {groups.map((g) => (
-          <SummaryRow key={g} g={g} runout={runout} missed={missed} picked={picked} onPick={(street) => setPicked({ street, g })} />
+      <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto">
+        {runout.streets.map((s, i) => (
+          <div key={s.street} className="flex flex-col gap-1">
+            <span className="text-[10.5px] font-semibold uppercase tracking-[0.06em]" style={{ color: "var(--muted)" }}>
+              {s.street}
+              {s.street !== "flop" && ` · ${s.story.split(" · ")[0]} · ${s.kind}`}
+            </span>
+            <div className="flex flex-wrap gap-1">
+              {PGROUP_ORDER.filter((g) => s.answers[g]).map((g) => {
+                const ans = s.answers[g]!;
+                const color = BUCKET_COLOR[ans.bucket];
+                const on = picked?.street === i && picked.g === g;
+                const wrong = missed.has(`${s.street}:${g}`);
+                return (
+                  <button
+                    key={g}
+                    type="button"
+                    className="relative flex cursor-pointer items-center gap-1 rounded-md border px-1.5 py-0.5 text-[11.5px]"
+                    style={{ borderColor: on ? "var(--foreground)" : color, background: `color-mix(in srgb, ${color} ${ans.auto ? 8 : 20}%, transparent)`, opacity: ans.auto ? 0.65 : 1 }}
+                    onClick={() => setPicked({ street: i, g })}
+                  >
+                    <i className="inline-block h-[8px] w-[8px] rounded-[2px]" style={{ background: PGROUP_INFO[g].color }} />
+                    {s.labels[g]}
+                    <b className="font-[family-name:var(--font-display)]" style={{ color }}>
+                      {ans.bucket === "bluff" ? "Bluff" : ans.bucket === "sd" ? "SD" : ans.bucket === "all" ? "All-in" : `+${ans.bucket}`}
+                    </b>
+                    {wrong && <span style={{ color: "var(--raise)" }}>✕</span>}
+                    {!ans.sure && <span className="inline-block h-[5px] w-[5px] rounded-full" style={{ background: "var(--mix)" }} />}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
         ))}
       </div>
 
       <p className="m-0 min-h-[34px] text-[12px] leading-snug" style={{ color: "var(--muted)" }} data-testid="summary-why">
-        {pickedAns ? (
+        {pickedAns && pickedSt ? (
           <>
-            <b style={{ color: PGROUP_INFO[picked!.g].color }}>{PGROUP_INFO[picked!.g].name}</b> on the {STREETS[picked!.street]}: {pickedAns.why}
+            <b style={{ color: PGROUP_INFO[picked!.g].color }}>{pickedSt.labels[picked!.g]}</b> on the {pickedSt.street}: {pickedAns.why}
             {!pickedAns.sure && <span style={{ color: "var(--mix)" }}> (draft, Uri to check)</span>}
           </>
         ) : (
-          <>Tap any box to see why. A dot marks a draft answer for Uri to check.</>
+          <>Tap a group to see why. A gold dot marks a draft answer for Uri to check. SD = showdown value.</>
         )}
       </p>
 
-      <div className="mt-auto flex gap-2">
+      <div className="flex gap-2">
         <PrimaryButton onClick={onNext}>Next runout</PrimaryButton>
         <button type="button" className="h-[44px] flex-1 cursor-pointer rounded-xl border text-[13px] font-semibold" style={{ borderColor: "var(--line)" }} onClick={onReplay}>
           Replay
         </button>
       </div>
     </div>
-  );
-}
-
-function SummaryRow({
-  g,
-  runout,
-  missed,
-  picked,
-  onPick,
-}: {
-  g: PGroup;
-  runout: Runout;
-  missed: Set<string>;
-  picked: { street: number; g: PGroup } | null;
-  onPick: (street: number) => void;
-}) {
-  return (
-    <>
-      <span className="flex min-w-0 items-center gap-1.5">
-        <i className="inline-block h-[10px] w-[10px] flex-shrink-0 rounded-[2.5px]" style={{ background: PGROUP_INFO[g].color }} />
-        <span className="truncate">{PGROUP_INFO[g].label}</span>
-      </span>
-      {runout.streets.map((s, i) => {
-        const ans = s.answers[g];
-        if (!ans) return <span key={s.street} className="text-center" style={{ color: "var(--line)" }}>–</span>;
-        const color = BUCKET_COLOR[ans.bucket];
-        const wrong = missed.has(`${s.street}:${g}`);
-        const on = picked?.street === i && picked.g === g;
-        return (
-          <button
-            key={s.street}
-            type="button"
-            className="relative h-[26px] cursor-pointer rounded-md border font-[family-name:var(--font-display)] text-[12.5px] font-bold"
-            style={{
-              borderColor: on ? "var(--foreground)" : color,
-              background: `color-mix(in srgb, ${color} ${ans.auto ? 10 : 24}%, transparent)`,
-              color,
-              opacity: ans.auto ? 0.6 : 1,
-            }}
-            onClick={() => onPick(i)}
-            aria-label={`${PGROUP_INFO[g].label} on the ${s.street}: ${ans.bucket === "all" ? "all-in" : `${ans.bucket}bb more`}`}
-          >
-            {ans.bucket === "all" ? "All" : ans.bucket === "0" ? "0" : `+${ans.bucket}`}
-            {wrong && <span className="absolute -top-1.5 -left-1.5 text-[10px]" style={{ color: "var(--raise)" }}>✕</span>}
-            {!ans.sure && <span className="absolute top-0.5 right-1 inline-block h-[5px] w-[5px] rounded-full" style={{ background: "var(--mix)" }} />}
-          </button>
-        );
-      })}
-    </>
   );
 }
