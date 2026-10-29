@@ -143,7 +143,7 @@ export function PriceScreen() {
       setMissed((m) => new Set(m).add(`${st.street}:${p.key}`));
       return;
     }
-    showToast(`Perfect · ${p.label}: ${b === "all" ? "all-in" : `${b}bb`}`, true);
+    showToast(`Perfect · ${p.label}: ${b === "all" ? "all-in" : b === "0" ? "0" : `+${b}bb`}`, true);
     goodSound();
     buzz(15);
     const rect = boxes.current[b]?.getBoundingClientRect();
@@ -185,7 +185,7 @@ export function PriceScreen() {
           </div>
           <div className="flex flex-col gap-1.5 rounded-2xl p-3 text-[13px]" style={{ background: "var(--panel)", border: "1px solid var(--line)" }}>
             <Row label="Board" text={`A♣ 7♦ 2♠ · ${RUNOUTS.length} runouts`} />
-            <Row label="Buckets" text="0 · 5 · 15 · 40 · all-in" />
+            <Row label="Buckets" text="0 · +5 · +15 · +40 · all-in" />
             <Row label="Streets" text="Flop, turn and river" />
           </div>
           <button type="button" className="h-[52px] cursor-pointer rounded-2xl border-0 text-[16px] font-bold active:scale-[0.98]" style={{ background: "var(--mix)", color: "#2B1C02" }} onClick={() => start("new")}>
@@ -502,9 +502,9 @@ function SummaryRow({
               opacity: ans.auto ? 0.6 : 1,
             }}
             onClick={() => onPick(i)}
-            aria-label={`${PGROUP_INFO[g].label} on the ${s.street}: ${ans.bucket === "all" ? "all-in" : `${ans.bucket}bb`}`}
+            aria-label={`${PGROUP_INFO[g].label} on the ${s.street}: ${ans.bucket === "all" ? "all-in" : `${ans.bucket}bb more`}`}
           >
-            {ans.bucket === "all" ? "All" : ans.bucket}
+            {ans.bucket === "all" ? "All" : ans.bucket === "0" ? "0" : `+${ans.bucket}`}
             {wrong && <span className="absolute -top-1.5 -left-1.5 text-[10px]" style={{ color: "var(--raise)" }}>✕</span>}
             {!ans.sure && <span className="absolute top-0.5 right-1 inline-block h-[5px] w-[5px] rounded-full" style={{ background: "var(--mix)" }} />}
           </button>

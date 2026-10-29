@@ -403,7 +403,8 @@ function snapshotOf(street: Street, combos: Combo[], basis: Map<string, number>,
   return { street, cells, basis, total, byGroup };
 }
 
-/** "40bb", or the stack that's left for all-in. */
+/** "+40" bb (always MORE from here), or the stack that's left for all-in. */
 export function bucketLabel(b: Bucket, behind: number): { big: string; small: string } {
-  return b === "all" ? { big: "All-in", small: `${behind}bb` } : { big: b, small: "bb" };
+  if (b === "all") return { big: "All-in", small: `${behind}bb` };
+  return { big: b === "0" ? "0" : `+${b}`, small: "bb" };
 }
