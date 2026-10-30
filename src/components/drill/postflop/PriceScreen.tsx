@@ -3,15 +3,17 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { FeedbackSheet } from "@/components/drill/FeedbackSheet";
+import type { FeedbackContext } from "@/lib/drill/feedback";
 import { Toast, useToast } from "@/components/drill/Toast";
 import { badSound, buzz, goodSound, tone } from "@/lib/drill/sound";
-import { STREETS } from "@/lib/drill/postflop/line-demo";
+import { rankChar, STREETS, type Card } from "@/lib/drill/postflop/line-demo";
 import {
   BUCKET_COLOR,
   BUCKET_RANK,
   BUCKETS,
   bucketLabel,
   bucketShort,
+  bucketTiny,
   buildRunout,
   PGROUP_INFO,
   PGROUP_ORDER,
@@ -26,7 +28,7 @@ import { SortPiece } from "./SortPiece";
 import { BoardCard, IconButton, InspectPanel, PrimaryButton, Row, Shell, StreetTrack } from "./drill-ui";
 
 /** The boxes along the top: money. Bluffs and showdown value sit on the sides. */
-const MONEY_BUCKETS: Bucket[] = ["5", "15", "40", "all"];
+const MONEY_BUCKETS: Bucket[] = ["little", "20", "50", "all"];
 
 /** Matrix color of a group nobody has answered yet on this street. */
 const UNSEEN = "#46525C";
@@ -57,6 +59,9 @@ function linkedStreet(): number {
   return Math.max(0, i);
 }
 
+const SUIT_GLYPH: Record<string, string> = { s: "♠", h: "♥", d: "♦", c: "♣" };
+const cardText = (c: Card) => `${rankChar(c.r)}${SUIT_GLYPH[c.s]}`;
+
 function shuffled<T>(xs: T[]): T[] {
   const out = [...xs];
   for (let i = out.length - 1; i > 0; i--) {
@@ -80,6 +85,8 @@ export function PriceScreen() {
   const [queue, setQueue] = useState<PricePiece[]>([]);
   /** Pieces answered wrong at least once, as "street:group". */
   const [missed, setMissed] = useState<Set<string>>(new Set());
+  /** The last wrong box tried for each group on this street (saved with feedback notes). */
+  const [tries, setTries] = useState<Partial<Record<PGroup, Bucket>>>({});
   const [armed, setArmed] = useState<Bucket | null>(null);
   const [inspecting, setInspecting] = useState(false);
   const [shake, setShake] = useState(0);
@@ -128,6 +135,16 @@ export function PriceScreen() {
     },
   };
 
+  // What a feedback note written right now is about: the spot, and the group on screen.
+  const focusPiece = phase === "decide" ? current : null;
+  const feedbackContext: FeedbackContext = {
+    drill: "How many big blinds",
+    spot: `${st.board.map(cardText).join(" ")} · ${st.street[0].toUpperCase() + st.street.slice(1)}${st.kind === "flop" ? "" : ` (${st.kind})`}`,
+    focus: focusPiece ? `${focusPiece.label} · ${focusPiece.name}` : phase === "final" ? "End-of-hand summary" : undefined,
+    app: focusPiece ? bucketShort(focusPiece.answer.bucket) : undefined,
+    player: focusPiece && tries[focusPiece.key] ? `${bucketShort(tries[focusPiece.key]!)} (wrong)` : undefined,
+  };
+
   /** Runs `fn` after `ms`, unless the player restarted in the meantime. */
   function later(fn: () => void, ms: number) {
     const gen = generation.current;
@@ -147,6 +164,7 @@ export function PriceScreen() {
     const s = r.streets[i];
     setStreetIdx(i);
     setPlaced({});
+    setTries({});
     setQueue(shuffled(s.pieces));
     setFlying(null);
     setInspecting(false);
@@ -193,6 +211,7 @@ export function PriceScreen() {
       buzz([30, 40, 30]);
       setShake((n) => n + 1);
       setMissed((m) => new Set(m).add(`${st.street}:${p.key}`));
+      setTries((t) => ({ ...t, [p.key]: b }));
       return;
     }
     busy.current = true;
@@ -241,7 +260,7 @@ export function PriceScreen() {
           </div>
           <div className="flex flex-col gap-1.5 rounded-2xl p-3 text-[13px]" style={{ background: "var(--panel)", border: "1px solid var(--line)" }}>
             <Row label="Board" text={`A♣ 7♦ 2♠ · ${RUNOUTS.length} runouts`} />
-            <Row label="Boxes" text="Bluffs · Showdown · +5 · +15 · +40 · All-in" />
+            <Row label="Boxes" text="Bluffs · Showdown · A little · ~20% · ~50% · All-in" />
             <Row label="Streets" text="Flop, turn and river" />
           </div>
           <button type="button" className="h-[52px] cursor-pointer rounded-2xl border-0 text-[16px] font-bold active:scale-[0.98]" style={{ background: "var(--mix)", color: "#2B1C02" }} onClick={() => start("new")}>
@@ -374,6 +393,8 @@ export function PriceScreen() {
       )}
 
       <FeedbackSheet
+        context={feedbackContext}
+        hideAppAnswer={phase === "decide" && !!current && !placed[current.key]}
         open={feedbackOpen}
         onClose={() => setFeedbackOpen(false)}
         drillTag={`postflop:price:${runout.id}:${st.street}`}
@@ -452,7 +473,7 @@ function MoneyLegend() {
       {BUCKETS.map((b) => (
         <span key={b} className="flex items-center gap-1">
           <i className="inline-block h-[8px] w-[8px] rounded-[2px]" style={{ background: BUCKET_COLOR[b] }} />
-          {b === "bluff" ? "Bluffs" : b === "sd" ? "Showdown" : b === "all" ? "All-in" : `+${b}`}
+          {bucketTiny(b)}
         </span>
       ))}
     </div>
@@ -504,7 +525,7 @@ function Summary({ runout, missed, onNext, onReplay }: { runout: Runout; missed:
                     <i className="inline-block h-[8px] w-[8px] rounded-[2px]" style={{ background: PGROUP_INFO[g].color }} />
                     {s.labels[g]}
                     <b className="font-[family-name:var(--font-display)]" style={{ color }}>
-                      {ans.bucket === "bluff" ? "Bluff" : ans.bucket === "sd" ? "SD" : ans.bucket === "all" ? "All-in" : `+${ans.bucket}`}
+                      {ans.bucket === "sd" ? "SD" : bucketTiny(ans.bucket)}
                     </b>
                     {wrong && <span style={{ color: "var(--raise)" }}>✕</span>}
                     {!ans.sure && <span className="inline-block h-[5px] w-[5px] rounded-full" style={{ background: "var(--mix)" }} />}

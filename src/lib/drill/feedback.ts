@@ -4,11 +4,38 @@ export type FeedbackRow = {
   drillLabel: string | null;
   pageUrl: string | null;
   parentId: string | null;
+  /** JSON of a FeedbackContext, or null (older notes, replies). */
+  context?: string | null;
   author: string;
   message: string;
   createdAt: string;
   updatedAt: string | null;
 };
+
+/** Exactly where a note was written, so Noam and Uri (and Claude, reading
+ * the notes later) know what it's about without guessing. Plain strings so
+ * every drill can fill it its own way. */
+export type FeedbackContext = {
+  /** e.g. "How many big blinds" */
+  drill: string;
+  /** e.g. "A♣ 7♦ 2♠ 6♦ · Turn (dynamic)" */
+  spot: string;
+  /** The hand group on screen, e.g. "AT–A8 · Top pair, medium kicker" */
+  focus?: string;
+  /** The app's answer for it, e.g. "~20% of stack" */
+  app?: string;
+  /** What the writer last tried for it, e.g. "~50% of stack (wrong)" */
+  player?: string;
+};
+
+export function parseContext(row: Pick<FeedbackRow, "context">): FeedbackContext | null {
+  if (!row.context) return null;
+  try {
+    return JSON.parse(row.context) as FeedbackContext;
+  } catch {
+    return null;
+  }
+}
 
 export const FEEDBACK_NAME_KEY = "gmpt_feedback_name";
 

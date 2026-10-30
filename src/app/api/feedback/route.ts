@@ -29,6 +29,8 @@ export async function POST(request: Request) {
     parentId?: string | null;
     author?: string;
     message?: string;
+    /** What was on screen (FeedbackContext); stored as JSON. */
+    context?: unknown;
   };
 
   const message = (body.message ?? "").trim();
@@ -44,6 +46,7 @@ export async function POST(request: Request) {
     drillLabel: (body.drillLabel ?? "").trim() || drill,
     pageUrl: (body.pageUrl ?? "").trim() || "/",
     parentId: body.parentId ?? null,
+    context: body.context ? JSON.stringify(body.context).slice(0, 4000) : null,
     author: (body.author ?? "Uri").trim() || "Uri",
     message,
     createdAt: new Date().toISOString(),

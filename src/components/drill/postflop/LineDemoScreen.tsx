@@ -541,6 +541,7 @@ export function LineDemoScreen() {
         onClose={() => setFeedbackOpen(false)}
         drillTag={`postflop:line-demo:${hand.sc.id}:${street}`}
         drillLabel={`Flop to river · ${hand.sc.id} · ${street}`}
+        context={{ drill: "Flop to river", spot: `${hand.sc.id} · ${street[0].toUpperCase() + street.slice(1)}`, focus: inspecting ? `${inspecting.label} · ${inspecting.desc}` : undefined }}
         pageUrl={`/drills/postflop/line?hand=${hand.index}`}
       />
     </Shell>

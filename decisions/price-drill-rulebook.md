@@ -13,15 +13,21 @@ This is a living document. It holds every rule for splitting BTN's range into ha
 - Bet sizes are never asked. Only the money each group wants. *(Noam)*
 - Between streets, BTN bets and BB calls. In the background the bets are 1.8bb on the flop and 6bb on the turn, which gives a 5.5bb flop pot, a 9.1bb turn pot and a 21.1bb river pot. The player sees only the pot and the stack behind. *(draft)*
 
-## 2. The six boxes *(Noam, 2026-10-29)*
+## 2. The six boxes *(Noam, 2026-10-29; money as stack shares since 2026-10-30)*
 
 | Box | Means |
 |---|---|
-| **Potential bluffs** (left side) | Worth 0. It can't win by checking, so it's a candidate to bluff. That doesn't mean it always bluffs: which ones actually bet is taught in the later bluff drill. |
-| **Showdown value** (right side) | Worth about 1bb. No value bet, but it sometimes wins when checked down. |
-| **+5 · +15 · +40 · All-in** (top) | Real money, from one small bet up to stacks. |
+| **Potential bluffs** (left side) | Worth nothing. It can't win by checking, so it's a candidate to bluff. That doesn't mean it always bluffs: which ones actually bet is taught in the later bluff drill. |
+| **Showdown value** (right side) | Worth a tiny bit. No value bet, but it sometimes wins when checked down. |
+| **A little · ~20% · ~50% of stack · All-in** (top) | Real money as a rough share of the stack that's left. *(Noam: no exact bb numbers like +5/+15/+40, because we don't aim for that accuracy.)* |
 
 Layout: money boxes across the top, Potential bluffs down the left side, Showdown value down the right side. *(Noam)*
+
+## 2b. Bet sizes between streets *(Noam, 2026-10-30, not built yet)*
+
+- Flop: a small bet and a call.
+- Turn: depends on the card. On a **brick turn (good for BTN), BTN overbets** (polar). On a **wet turn (completes a straight or flush, or helps BB), BTN bets about 66–75%**.
+- The turn size changes the river: after a polar overbet, some groups have already checked down and others keep betting; the pot and the stack left are different too. The river answers must follow the turn size. *(Open: how the drill shows the groups that checked the turn; see open questions.)*
 
 ## 3. How the range is split into groups
 
@@ -82,9 +88,11 @@ These are the patterns the A72 answers follow. Uri's corrections will turn them 
 1. Is "Top pair, weak kicker" A6–A3 one group, or A6 alone plus the wheel draws A5–A3?
 2. Should K-high draws stay in showdown value, or be their own group?
 3. On rivers where the K pairs (K♦, K♠, K♥), no K-high no-pair hands exist. Should the showdown cutoff drop to Q-high there?
-4. All the turn and river buckets are drafts. Please correct them; the gold dots in the app's summary mark them.
+4. How should the river show groups that checked the turn after a polar overbet? (Noam to decide with Uri.)
+5. All the turn and river buckets are drafts. Please correct them; the gold dots in the app's summary mark them.
 
 ## Change log
 
 - **2026-10-28**: Drill spec agreed with Uri (Noam's doc "Price Every Hand").
 - **2026-10-29**: First prototype on A72 with 8 groups and 5 boxes. Uri's feedback led to finer groups (pocket pairs by slot, middle and bottom pair apart, top pair in three kicker bands), no-pair hands split into showdown vs potential bluffs, six boxes, one piece at a time, and boxes on the top and both sides.
+- **2026-10-30**: Money boxes became stack shares (A little, ~20%, ~50%, All-in) instead of +5/+15/+40bb. Feedback notes now save exactly where they were written (board, street, group, app answer, what was tried). Turn bet size depends on the card (overbet on bricks, 66–75% on wet cards); not built yet.

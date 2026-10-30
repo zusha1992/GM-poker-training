@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { saveFeedbackName, savedFeedbackName, timeAgo, type FeedbackRow } from "@/lib/drill/feedback";
+import { FeedbackContextCard } from "@/components/drill/FeedbackContextCard";
+import { parseContext, saveFeedbackName, savedFeedbackName, timeAgo, type FeedbackRow } from "@/lib/drill/feedback";
 import { feedbackLink } from "@/lib/drill/feedback-links";
 
 /** Every note across every drill, newest thread first, with its replies
@@ -108,6 +109,11 @@ export function AllFeedback() {
               </Link>
             </div>
 
+            {parseContext(note) && (
+              <div className="mb-2">
+                <FeedbackContextCard ctx={parseContext(note)!} />
+              </div>
+            )}
             <Note row={note} onDelete={() => void remove(note, replies.length)} />
 
             {replies.length > 0 && (

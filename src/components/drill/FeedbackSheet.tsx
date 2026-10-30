@@ -3,11 +3,14 @@
 import { useCallback, useEffect, useState } from "react";
 import { Sheet } from "@/components/ui/Sheet";
 import styles from "./FeedbackSheet.module.css";
+import { FeedbackContextCard } from "./FeedbackContextCard";
 import {
   isMine,
+  parseContext,
   saveFeedbackName,
   savedFeedbackName,
   timeAgo,
+  type FeedbackContext,
   type FeedbackRow,
 } from "@/lib/drill/feedback";
 
@@ -17,6 +20,10 @@ type FeedbackSheetProps = {
   drillTag: string;
   drillLabel: string;
   pageUrl: string;
+  /** Exactly what is on screen right now; saved with every new note. */
+  context?: FeedbackContext;
+  /** Keep the app's answer out of the "attached to" preview (the writer hasn't solved it yet). */
+  hideAppAnswer?: boolean;
 };
 
 /** Per-drill feedback thread: a flat list of top-level notes with one
@@ -24,7 +31,7 @@ type FeedbackSheetProps = {
  * messages (matched by name, not auth) and delete any message — this is a
  * two-person tool for Noam and Uri, not a public comment system. Deleting a
  * note also deletes its replies. */
-export function FeedbackSheet({ open, onClose, drillTag, drillLabel, pageUrl }: FeedbackSheetProps) {
+export function FeedbackSheet({ open, onClose, drillTag, drillLabel, pageUrl, context, hideAppAnswer = false }: FeedbackSheetProps) {
   const [rows, setRows] = useState<FeedbackRow[] | null>(null);
   const [failed, setFailed] = useState(false);
   const [name, setName] = useState("");
@@ -62,7 +69,7 @@ export function FeedbackSheet({ open, onClose, drillTag, drillLabel, pageUrl }: 
     await fetch("/api/feedback", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ drill: drillTag, drillLabel, pageUrl, parentId: replyTo?.id ?? null, author, message: text }),
+      body: JSON.stringify({ drill: drillTag, drillLabel, pageUrl, parentId: replyTo?.id ?? null, author, message: text, context }),
     });
     setMessage("");
     setReplyTo(null);
@@ -109,6 +116,7 @@ export function FeedbackSheet({ open, onClose, drillTag, drillLabel, pageUrl }: 
             {row.updatedAt ? " · edited" : ""}
           </span>
         </div>
+        {!isReply && parseContext(row) && <FeedbackContextCard ctx={parseContext(row)!} />}
         {isEditing ? (
           <textarea
             className={styles.textarea}
@@ -170,6 +178,14 @@ export function FeedbackSheet({ open, onClose, drillTag, drillLabel, pageUrl }: 
           ))}
         </div>
         <div className={styles.compose}>
+          {context && !replyTo && (
+            <div className="flex flex-col gap-1">
+              <span className="text-[11px] font-semibold" style={{ color: "var(--muted)" }}>
+                Your note will be attached to:
+              </span>
+              <FeedbackContextCard ctx={context} hideApp={hideAppAnswer} />
+            </div>
+          )}
           {replyTo && (
             <div className={styles.replyTo}>
               Replying to: {replyTo.snippet}

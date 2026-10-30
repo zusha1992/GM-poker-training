@@ -1,0 +1,1 @@
+ALTER TABLE `drill_feedback` ADD `context` text;
