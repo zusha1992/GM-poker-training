@@ -1,17 +1,13 @@
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import { marked } from "marked";
 import { RulebookScreen } from "@/components/RulebookScreen";
+import { RULEBOOK_MD } from "@/lib/rulebook-content";
 
-// Built once at deploy time from the rulebook in the repo, so the page always
-// shows exactly the rules the drill follows.
-export const dynamic = "force-static";
-
-/** The "How many big blinds?" rulebook, readable from the lobby. */
+/** The "How many big blinds?" rulebook, readable from the lobby. The text is
+ * decisions/price-drill-rulebook.md, copied into the app by `npm run rulebook`
+ * (also run before every build), so the page always shows the rules the drill follows. */
 export default function RulebookPage() {
-  const md = readFileSync(join(process.cwd(), "decisions", "price-drill-rulebook.md"), "utf8");
   // Split at the "## " headings so every section can get its own "suggest a change" button.
-  const parts = md.replace(/\r\n/g, "\n").split(/\n(?=## )/);
+  const parts = RULEBOOK_MD.split(/\n(?=## )/);
   const intro = parts[0].replace(/^# .*\n/, "");
   const sections = parts.slice(1).map((p) => {
     const [first, ...rest] = p.split("\n");
