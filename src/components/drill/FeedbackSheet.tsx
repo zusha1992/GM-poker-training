@@ -20,9 +20,10 @@ type FeedbackSheetProps = {
 };
 
 /** Per-drill feedback thread: a flat list of top-level notes with one
- * level of replies, backed by /api/feedback (D1). Anyone can edit/delete
- * their own messages (matched by name, not auth — this is a two-person
- * tool for Noam and Uri, not a public comment system). */
+ * level of replies, backed by /api/feedback (D1). Anyone can edit their own
+ * messages (matched by name, not auth) and delete any message — this is a
+ * two-person tool for Noam and Uri, not a public comment system. Deleting a
+ * note also deletes its replies. */
 export function FeedbackSheet({ open, onClose, drillTag, drillLabel, pageUrl }: FeedbackSheetProps) {
   const [rows, setRows] = useState<FeedbackRow[] | null>(null);
   const [failed, setFailed] = useState(false);
@@ -82,7 +83,8 @@ export function FeedbackSheet({ open, onClose, drillTag, drillLabel, pageUrl }: 
   }
 
   async function doDelete(id: string) {
-    if (typeof window !== "undefined" && !window.confirm("Delete this note?")) return;
+    const hasReplies = (rows ?? []).some((r) => r.parentId === id);
+    if (typeof window !== "undefined" && !window.confirm(hasReplies ? "Delete this note and its replies?" : "Delete this note?")) return;
     await fetch(`/api/feedback/${id}`, { method: "DELETE" });
     void load();
   }
@@ -136,15 +138,14 @@ export function FeedbackSheet({ open, onClose, drillTag, drillLabel, pageUrl }: 
                 </button>
               )}
               {mine && (
-                <>
-                  <button type="button" onClick={() => setEditing({ id: row.id, value: row.message })}>
-                    Edit
-                  </button>
-                  <button type="button" onClick={() => void doDelete(row.id)}>
-                    Delete
-                  </button>
-                </>
+                <button type="button" onClick={() => setEditing({ id: row.id, value: row.message })}>
+                  Edit
+                </button>
               )}
+              {/* Anyone can delete any note: it's a two-person working tool, and cleared notes are the point. */}
+              <button type="button" onClick={() => void doDelete(row.id)}>
+                Delete
+              </button>
             </>
           )}
         </div>
