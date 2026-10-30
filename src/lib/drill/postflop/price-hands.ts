@@ -4,7 +4,7 @@
  * SRP BTN vs BB, 100bb, BTN is the player. On every street BTN's range is
  * split into hand groups of the SAME strength, and the player drags each
  * group, one at a time, into what it's worth from here: Potential bluffs,
- * Showdown value, a little more, ~20% or ~50% of the stack, or All-in, assuming the rest of the board
+ * Showdown value, or 5%, 20%, 50% or 100% of the stack, assuming the rest of the board
  * bricks. Bet sizes are never asked.
  *
  * Hands never leave the matrix: every street the whole range re-sorts into
@@ -43,40 +43,30 @@ export const PGROUP_INFO: Record<PGroup, { color: string; shape: string }> = {
 /** What a group is worth from here, as a share of the stack that's left
  * (Noam 2026-10-30: rough shares, not exact bb). "bluff" = Potential bluffs
  * (nothing: it can't win by checking), "sd" = Showdown value (a tiny bit),
- * "little" = a little more money, "20" ≈ 20% of the stack, "50" ≈ half the
- * stack, "all" = all of it. */
+ * "little" ≈ 5%, "20" ≈ 20%, "50" ≈ half the stack, "all" = 100%. */
 export type Bucket = "bluff" | "sd" | "little" | "20" | "50" | "all";
 export const BUCKETS: Bucket[] = ["bluff", "sd", "little", "20", "50", "all"];
 export const BUCKET_RANK: Record<Bucket, number> = { bluff: 0, sd: 1, little: 2, "20": 3, "50": 4, all: 5 };
 
-/** Grey for no money, then one hue getting brighter with the money, so it
- * never clashes with the group colors. */
+/** The neon paddle colors (Noam 2026-10-30): warmer = more money, violet
+ * for potential bluffs, teal for showdown value. The matrix uses them too. */
 export const BUCKET_COLOR: Record<Bucket, string> = {
-  bluff: "#8A94A0",
-  sd: "#8C7A4E",
-  little: "#A88A45",
-  "20": "#C99A3C",
-  "50": "#E6AC38",
-  all: "#FFC94A",
+  bluff: "#8B6CFF",
+  sd: "#2EC4B6",
+  little: "#F2C14E",
+  "20": "#F59E3B",
+  "50": "#FF6B3B",
+  all: "#FF3D6E",
 };
 
-/** Box text: big line + small line. */
-export function bucketLabel(b: Bucket, behind: number): { big: string; small: string } {
-  if (b === "bluff") return { big: "Potential", small: "bluffs" };
-  if (b === "sd") return { big: "Showdown", small: "value" };
-  if (b === "all") return { big: "All-in", small: `${behind}bb` };
-  if (b === "little") return { big: "A little", small: "more" };
-  return { big: `~${b}%`, small: "of stack" };
-}
-
-/** Tiny text for the legend and summary chips. */
+/** Tiny text for the legend and summary chips: just the number. */
 export function bucketTiny(b: Bucket): string {
-  return b === "bluff" ? "Bluffs" : b === "sd" ? "Showdown" : b === "all" ? "All-in" : b === "little" ? "A little" : `~${b}%`;
+  return b === "bluff" ? "Bluffs" : b === "sd" ? "Showdown" : b === "all" ? "100%" : b === "little" ? "5%" : `${b}%`;
 }
 
-/** Short text for toasts and the summary. */
+/** Short text for toasts and feedback notes. */
 export function bucketShort(b: Bucket): string {
-  return b === "bluff" ? "potential bluff" : b === "sd" ? "showdown value" : b === "all" ? "all-in" : b === "little" ? "a little more" : `~${b}% of stack`;
+  return b === "bluff" ? "potential bluff" : b === "sd" ? "showdown value" : b === "all" ? "100% (all-in)" : `${bucketTiny(b)} of stack`;
 }
 
 export type Answer = { bucket: Bucket; why: string; sure: boolean; auto?: boolean };
@@ -126,7 +116,7 @@ const FLOP: StreetSpec = {
     twopair: autoAll("Sets and two pair want every chip in on a dry board."),
     tpgk: a("50", "AK and AQ beat all of BB's weaker aces: three streets of value."),
     tpmk: a("20", "AJ–A8 get called by better aces too often: two thin streets."),
-    tpwk: a("little", "A6–A3: top pair with the weakest kickers, one small bet then showdown."),
+    tpwk: a("20", "Any ace is worth two small bets: even A6–A3 bet small now and small again."),
     pp1: a("little", "KK–88 beat every 7x and 2x: one small bet, then showdown."),
     pp2: a("sd", "66–33 lose to every 7x: check and show down."),
     mp: a("little", "Middle pair: one small bet at most."),
@@ -211,7 +201,7 @@ const TURNS: TurnSpec[] = [
       tpgk: a("50", "Still well ahead: keep charging the new draws."),
       tpmk: a("little", "BB's range improved: the medium kickers slow down."),
       tpwk: a("little", "One small bet, then showdown."),
-      pp1: a("little", "One small bet, then showdown.", true),
+      pp1: a("sd", "KK–88 under an ace: one small bet on the flop, then check down unless they improve."),
       pp3: a("sd", "55–33 are under three cards: check and show down."),
       mp: a("little", "Keep the pot small."),
       bp: a("sd", "6x and 2x: check and show down."),
@@ -267,7 +257,7 @@ const TURNS: TurnSpec[] = [
       tpgk: a("20", "BB's range got stronger: one step down."),
       tpmk: a("little", "One small bet, then showdown."),
       tpwk: a("little", "A4 and A3 picked up a wheel draw: one small bet."),
-      pp1: a("little", "One small bet, then showdown."),
+      pp1: a("sd", "KK–88 under an ace: one small bet on the flop, then check down unless they improve."),
       pp2: a("sd", "66 is between the 7 and the 5: check and show down."),
       pp3: a("sd", "Check and show down."),
       mp: a("sd", "7x: check and show down."),

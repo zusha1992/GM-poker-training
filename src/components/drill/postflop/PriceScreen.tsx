@@ -11,7 +11,6 @@ import {
   BUCKET_COLOR,
   BUCKET_RANK,
   BUCKETS,
-  bucketLabel,
   bucketShort,
   bucketTiny,
   buildRunout,
@@ -25,11 +24,9 @@ import {
   type TurnBet,
 } from "@/lib/drill/postflop/price-hands";
 import { LineMatrix, type MatrixPalette } from "./LineMatrix";
+import { MoneyPaddles } from "./MoneyPaddles";
 import { SortPiece } from "./SortPiece";
 import { BoardCard, IconButton, InspectPanel, PrimaryButton, Row, Shell, StreetTrack } from "./drill-ui";
-
-/** The boxes along the top: money. Bluffs and showdown value sit on the sides. */
-const MONEY_BUCKETS: Bucket[] = ["little", "20", "50", "all"];
 
 /** Matrix color of a group nobody has answered yet on this street. */
 const UNSEEN = "#46525C";
@@ -99,27 +96,35 @@ export function PriceScreen() {
   const busy = useRef(false);
   const generation = useRef(0);
   const boxes = useRef<Partial<Record<Bucket, HTMLDivElement | null>>>({});
+  /** True while a piece is being dragged (the paddles breathe). */
+  const [holding, setHolding] = useState(false);
+  /** Bumped per paddle when something lands in it (replays its flash). */
+  const [flash, setFlash] = useState<Partial<Record<Bucket, number>>>({});
+  const zoneRef = useRef<HTMLDivElement>(null);
+  const [zone, setZone] = useState({ w: 328, h: 236 });
   const { toast, show: showToast } = useToast();
+
+  /** The drop area exists only while playing a street (not on the intro or the summary). */
+  const zoneShown = phase !== "intro" && phase !== "final";
+  // The paddles size themselves from the drop area, so measure it (it changes with the phone).
+  useEffect(() => {
+    const el = zoneRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(([e]) => setZone({ w: e.contentRect.width, h: e.contentRect.height }));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [zoneShown]);
+
+  const registerPaddle = (b: Bucket, el: HTMLDivElement | null) => {
+    boxes.current[b] = el;
+  };
+  const flashPaddles = (bs: Bucket[]) => setFlash((f) => Object.fromEntries([...Object.entries(f), ...bs.map((b) => [b, (f[b] ?? 0) + 1])]));
 
   // Opened from a feedback link (?runout=N&street=turn): skip the intro and go straight to that spot.
   useEffect(() => {
     if (new URLSearchParams(window.location.search).has("street")) start("new");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  const box = (b: Bucket, tall = false) => (
-    <BucketBox
-      key={b}
-      bucket={b}
-      behind={st.behind}
-      tall={tall}
-      armed={armed === b}
-      groups={PGROUP_ORDER.filter((g) => placed[g] === b)}
-      boxRef={(el) => {
-        boxes.current[b] = el;
-      }}
-    />
-  );
 
   const st = runout.streets[streetIdx];
   const current = queue.find((p) => !placed[p.key]) ?? null;
@@ -176,6 +181,7 @@ export function PriceScreen() {
       const auto: Partial<Record<PGroup, Bucket>> = {};
       for (const g of s.auto) auto[g] = s.answers[g]!.bucket;
       setPlaced(auto);
+      flashPaddles([...new Set(s.auto.map((g) => s.answers[g]!.bucket))]);
       pop(s.auto);
       tone(523, 0.08);
       setTimeout(() => tone(659, 0.12), 80);
@@ -197,7 +203,7 @@ export function PriceScreen() {
   function zoneAt(x: number, y: number): Bucket | null {
     for (const b of BUCKETS) {
       const r = boxes.current[b]?.getBoundingClientRect();
-      if (r && x >= r.left - 4 && x <= r.right + 4 && y >= r.top - 6 && y <= r.bottom + 6) return b;
+      if (r && x >= r.left - 10 && x <= r.right + 10 && y >= r.top - 10 && y <= r.bottom + 10) return b;
     }
     return null;
   }
@@ -221,6 +227,7 @@ export function PriceScreen() {
     buzz(15);
     setFlying({ key: p.key, bucket: b, rect: boxes.current[b]?.getBoundingClientRect() ?? null });
     pop([p.key], BUCKET_COLOR[b]);
+    flashPaddles([b]);
     const next = { ...placed, [p.key]: b };
     // Let the piece land before the next one appears.
     later(() => {
@@ -323,64 +330,56 @@ export function PriceScreen() {
         <>
           <div className="flex flex-shrink-0 flex-col gap-1 rounded-xl p-1.5" style={{ background: "var(--panel)", border: "1px solid var(--line)" }}>
             {/* Shrinks on short phones so the boxes always fit below it. */}
-            <div className="mx-auto w-full" style={{ maxWidth: "max(220px, calc(100dvh - 448px))" }}>
+            <div className="mx-auto w-full" style={{ maxWidth: "max(220px, calc(100dvh - 476px))" }}>
               <LineMatrix snap={st.snap} prev={prevSnap} seq={seq} palette={palette} pulse={pulse} />
             </div>
             <MoneyLegend />
           </div>
 
-          <div className="relative mt-0.5 flex min-h-[236px] flex-1 flex-col gap-1.5 overflow-hidden rounded-2xl p-1.5" style={{ border: "1px dashed var(--line)", touchAction: "none" }}>
+          {/* The drop area: neon paddles around the frame, the piece floating in the middle. */}
+          <div ref={zoneRef} className="relative mt-0.5 min-h-[236px] flex-1" style={{ touchAction: "none" }} data-testid="buckets">
             {inspecting && current ? (
-              <InspectPanel piece={{ ...current, label: current.name, desc: current.label }} onBack={() => setInspecting(false)} backLabel="Back" />
+              <div className="absolute inset-0 overflow-hidden rounded-2xl" style={{ border: "1px solid var(--line)", background: "var(--panel)" }}>
+                <InspectPanel piece={{ ...current, label: current.name, desc: current.label }} onBack={() => setInspecting(false)} backLabel="Back" />
+              </div>
             ) : (
               <>
-                {/* Money boxes across the top; Potential bluffs down the left side, Showdown value down the right. */}
-                <div className="grid flex-shrink-0 grid-cols-4 gap-1" data-testid="buckets">
-                  {MONEY_BUCKETS.map((b) => box(b))}
-                </div>
+                <MoneyPaddles w={zone.w} h={zone.h} armed={armed} holding={holding} flash={flash} hitRef={registerPaddle} />
 
-                <div className="flex min-h-0 flex-1 gap-1.5">
-                  {box("bluff", true)}
-                <div className="relative flex min-h-0 flex-1 items-center justify-center">
+                <div className="absolute inset-y-2 left-[64px] right-[64px] flex items-center justify-center">
                   <Toast toast={toast} />
                   {phase === "deal" && (
-                    <div className="flex flex-col items-center gap-1 px-2 text-center" style={{ animation: "rdIn 220ms ease-out both" }} data-testid="story">
+                    <div className="flex flex-col items-center gap-1 px-1 text-center" style={{ animation: "rdIn 220ms ease-out both" }} data-testid="story">
                       <b className="font-[family-name:var(--font-display)] text-[17px]" style={{ animation: "ldBanner 520ms cubic-bezier(.3,1.4,.5,1) both" }}>
                         {st.street === "flop" ? "The flop" : st.story.split(" · ")[0]}
                       </b>
-                      <span className="max-w-[300px] text-[12.5px] leading-snug" style={{ color: "var(--muted)" }}>
+                      <span className="text-[12.5px] leading-snug" style={{ color: "var(--muted)" }}>
                         {st.street === "flop" ? st.story : st.story.split(" · ").slice(1).join(" · ")}
                       </span>
                     </div>
                   )}
                   {phase === "decide" && current && (
-                    <div className="flex flex-col items-center gap-1" data-testid="sort-row">
-                      <span className="text-[10.5px] font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--muted)" }} data-testid="piece-count">
-                        {done + 1} of {queue.length}
-                      </span>
+                    <div className="flex flex-col items-center" data-testid="sort-row">
                       <SortPiece<Bucket>
                         key={`${st.street}-${current.key}`}
                         piece={current}
-                        caption={`${current.pct}% of the range · tap to see`}
+                        caption={`${current.pct}% · tap to see`}
                         delay={0}
                         zoneAt={zoneAt}
                         flyRect={flying?.key === current.key ? flying.rect : null}
                         onDrop={(b) => handleDrop(current, b)}
                         onArm={setArmed}
-                        onHold={() => {}}
+                        onHold={setHolding}
                         onInspect={() => setInspecting(true)}
                         shakeSeq={shake}
                         flyTo={flying?.key === current.key ? flying.bucket : null}
                         disabled={!!flying}
                       />
-                      <span className="text-center text-[10.5px] leading-tight" style={{ color: "var(--muted)" }}>
-                        What is it worth from here?
-                      </span>
                     </div>
                   )}
                   {phase === "advancing" && (
                     <div className="flex flex-col items-center gap-1 text-center" style={{ animation: "rdIn 220ms ease-out both" }} data-testid="advancing">
-                      <b className="font-[family-name:var(--font-display)] text-[20px]" style={{ color: "var(--mix)", animation: "ldBanner 520ms cubic-bezier(.3,1.4,.5,1) both" }}>
+                      <b className="font-[family-name:var(--font-display)] text-[19px]" style={{ color: "var(--mix)", animation: "ldBanner 520ms cubic-bezier(.3,1.4,.5,1) both" }}>
                         {st.street === "flop" ? "BTN bets small" : st.turnBet === "overbet" ? "BTN overbets · polar" : "BTN bets 66%"} · BB calls
                       </b>
                       <span className="text-[12.5px]" style={{ color: "var(--muted)" }}>
@@ -389,8 +388,16 @@ export function PriceScreen() {
                     </div>
                   )}
                 </div>
-                  {box("sd", true)}
-                </div>
+
+                {phase === "decide" && current && (
+                  <span
+                    className="absolute bottom-2.5 left-1/2 -translate-x-1/2 font-[family-name:var(--font-display)] text-[12px] font-semibold"
+                    style={{ color: "var(--muted)", fontVariantNumeric: "tabular-nums" }}
+                    data-testid="piece-count"
+                  >
+                    {done + 1} / {queue.length}
+                  </span>
+                )}
               </>
             )}
           </div>
@@ -436,63 +443,6 @@ function BetLine({ street, turnBet }: { street: string; turnBet: TurnBet }) {
       <span className="min-w-0 truncate text-[11px]" style={{ color: "var(--muted)" }}>
         {note}
       </span>
-    </div>
-  );
-}
-
-/** One box. Lights up while the piece hovers over it; holds a chip for
- * every group placed in it. */
-function BucketBox({
-  bucket,
-  behind,
-  tall = false,
-  armed,
-  groups,
-  boxRef,
-}: {
-  bucket: Bucket;
-  behind: number;
-  /** A side box: full height, narrow, label in the middle. */
-  tall?: boolean;
-  armed: boolean;
-  groups: PGroup[];
-  boxRef: (el: HTMLDivElement | null) => void;
-}) {
-  const color = BUCKET_COLOR[bucket];
-  const { big, small } = bucketLabel(bucket, behind);
-  const word = bucket === "bluff" || bucket === "sd";
-  return (
-    <div
-      ref={boxRef}
-      className={`flex min-w-0 flex-shrink-0 flex-col items-center gap-0.5 rounded-xl border-[1.5px] transition-[transform,background] duration-150 ${
-        tall ? "w-[78px] justify-center px-1 text-center" : "h-[54px] justify-start pt-1.5"
-      }`}
-      style={{
-        borderColor: color,
-        background: armed ? color : `color-mix(in srgb, ${color} 14%, transparent)`,
-        transform: armed ? "scale(1.05)" : undefined,
-        boxShadow: bucket === "all" ? `0 0 12px color-mix(in srgb, ${color} 35%, transparent)` : undefined,
-      }}
-      data-testid={`bucket-${bucket}`}
-    >
-      <b
-        className={`font-[family-name:var(--font-display)] leading-none ${word ? "text-[12.5px]" : bucket === "all" ? "text-[14px]" : "text-[17px]"}`}
-        style={{ color: armed ? "#10161B" : color, fontVariantNumeric: "tabular-nums" }}
-      >
-        {big}
-      </b>
-      <span className={`leading-none ${word ? "text-[11px] font-semibold" : "text-[9.5px]"}`} style={{ color: armed ? "#10161B" : word ? color : "var(--muted)" }}>
-        {small}
-      </span>
-      <div className="mt-0.5 flex flex-wrap justify-center gap-[3px] px-1">
-        {groups.map((g) => (
-          <i
-            key={g}
-            className="inline-block h-[8px] w-[8px] rounded-[2px]"
-            style={{ background: PGROUP_INFO[g].color, boxShadow: "inset 0 1px 0 rgba(255,255,255,.35)", animation: "ldDeal 380ms cubic-bezier(.3,1.4,.5,1) both" }}
-          />
-        ))}
-      </div>
     </div>
   );
 }

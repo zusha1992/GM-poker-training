@@ -17,11 +17,11 @@ This is a living document. It holds every rule for splitting BTN's range into ha
 
 | Box | Means |
 |---|---|
-| **Potential bluffs** (left side) | Worth nothing. It can't win by checking, so it's a candidate to bluff. That doesn't mean it always bluffs: which ones actually bet is taught in the later bluff drill. |
-| **Showdown value** (right side) | Worth a tiny bit. No value bet, but it sometimes wins when checked down. |
-| **A little · ~20% · ~50% of stack · All-in** (top) | Real money as a rough share of the stack that's left. *(Noam: no exact bb numbers like +5/+15/+40, because we don't aim for that accuracy.)* |
+| **Potential bluffs** (bottom-left corner) | Worth nothing. It can't win by checking, so it's a candidate to bluff. That doesn't mean it always bluffs: which ones actually bet is taught in the later bluff drill. |
+| **Showdown value** (bottom-right corner) | Worth a tiny bit. No value bet, but it sometimes wins when checked down. |
+| **5% · 20% · 50% · 100%** (left side, top corners, right side) | Real money as a rough share of the stack that's left; 100% = all-in. *(Noam: no exact bb numbers like +5/+15/+40, because we don't aim for that accuracy.)* |
 
-Layout: money boxes across the top, Potential bluffs down the left side, Showdown value down the right side. *(Noam)*
+Layout *(Noam, 2026-10-30)*: six neon paddles in one design (Arkanoid-style), different colors, evenly spaced around the drop area, clockwise from small to big: Potential bluffs (bottom-left corner), 5% (left side), 20% (top-left corner), 50% (top-right corner), 100% (right side), Showdown value (bottom-right corner). Labels are only the number. The paddle the piece is near lights up; it flashes when the piece lands.
 
 ## 2b. Bet sizes between streets *(Noam, 2026-10-30)*
 
@@ -30,6 +30,12 @@ Layout: money boxes across the top, Potential bluffs down the left side, Showdow
 - **Groups never change because of the bet size; the answers do** *(Noam)*. On a polar overbet turn, and on the river after it, every group is still asked, but only three answers are right: **All-in** (the polar value: two pair or better and top pair with the top kicker), **Potential bluffs** (the polar bluffs) and **Showdown value** (everything that checks back, even a good kicker like AJ). The middle boxes are the believable mistake there.
 - On a 66–75% turn the full ladder applies.
 - The screen always shows the bet: a badge under the board ("Turn: OVERBET · polar" or "Turn: 66% bet"), and on the river what the turn was.
+
+## 2c. How many bets a hand is worth *(Noam, 2026-10-30)*
+
+- **The drill asks what each hand wants, whatever the bet size.** The turn size (overbet or 66%) is shown as information; every group is still asked.
+- **Any ace (top pair on an ace-high board) is worth two small bets:** small on the flop, then a second bet. On a 66% turn the second bet goes in on the turn. So A6–A3 are 20% on the flop, like AJ–A8.
+- **Pocket pairs under an ace (KK–88 on A72) are worth one small bet:** 5% on the flop, then check down (showdown value) on the turn and river, unless they improve. Two bets with them is borderline. Bet sizes come in a few fixed sizes, and with only "bet 66%" or "check" on the turn, they check.
 
 ## 3. How the range is split into groups
 
@@ -85,10 +91,10 @@ Every hand goes into exactly one group, checked from the top down. Groups are re
 These are the patterns the A72 answers follow. Uri's corrections will turn them into rules.
 
 - Brick turn (Q♥) = polar overbet: two pair+ and AK all-in; every other one-pair hand checks back (showdown value); no-pair hands without showdown value are the bluffs.
-- Dynamic turn (6♦, 66%): the strong kickers keep going (~50%), the medium kickers slow down (a little).
-- Wet turn (5♣, 66%): sets and two pair stop being all-in (~50%), and every top pair drops one step.
-- Brick river: after an overbet turn, the same polar split as the turn; after a 66% turn, the strong kicker makes one value bet (~20%) and most one-pair hands go to showdown value.
-- Wet river: sets and two pair drop to ~20% (or stay all-in on the polar line), top pair becomes a bluff-catcher (a little), K-high becomes a potential bluff, and the rest goes to showdown value.
+- Dynamic turn (6♦, 66%): the strong kickers keep going (50%), the medium kickers slow down (5%).
+- Wet turn (5♣, 66%): sets and two pair stop being all-in (50%), and every top pair drops one step.
+- Brick river: after an overbet turn, the same polar split as the turn; after a 66% turn, the strong kicker makes one value bet (20%) and most one-pair hands go to showdown value.
+- Wet river: sets and two pair drop to 20% (or stay all-in on the polar line), top pair becomes a bluff-catcher (5%), K-high becomes a potential bluff, and the rest goes to showdown value.
 
 ## 7. Open questions for Uri
 
@@ -104,3 +110,5 @@ These are the patterns the A72 answers follow. Uri's corrections will turn them 
 - **2026-10-29**: First prototype on A72 with 8 groups and 5 boxes. Uri's feedback led to finer groups (pocket pairs by slot, middle and bottom pair apart, top pair in three kicker bands), no-pair hands split into showdown vs potential bluffs, six boxes, one piece at a time, and boxes on the top and both sides.
 - **2026-10-30**: Money boxes became stack shares (A little, ~20%, ~50%, All-in) instead of +5/+15/+40bb. Feedback notes now save exactly where they were written (board, street, group, app answer, what was tried). Turn bet size depends on the card (overbet on bricks, 66–75% on wet cards); not built yet.
 - **2026-10-30 (later)**: Turn sizes built (Q♥ = polar overbet, 6♦ and 5♣ = 66%), with a badge on screen. Polar line answers. AK and AQ are the strong kickers on A72. K-high on the river follows how many draws arrived. Rulebook readable from the lobby.
+- **2026-10-30 (evening)**: Drop targets became six neon paddles around the frame; money boxes read 5%, 20%, 50%, 100% ("A little" is now 5%).
+- **2026-10-30 (night)**: Any ace = two small bets (A6–A3 20% on the flop); KK–88 = one small bet then showdown on every turn; the drill asks every group whatever the bet size.

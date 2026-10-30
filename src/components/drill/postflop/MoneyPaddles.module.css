@@ -1,0 +1,91 @@
+/* The six neon paddles around the drop area (Arkanoid-style): one design,
+ * different colors. Each paddle sets --c (its color). */
+
+.paddle {
+  position: absolute;
+  pointer-events: none;
+}
+
+.stroke {
+  position: absolute;
+  inset: 0;
+  box-sizing: border-box;
+  border-color: var(--c);
+  filter: drop-shadow(0 0 7px var(--c));
+  transition: filter 160ms ease;
+}
+
+.inner {
+  position: absolute;
+  box-sizing: border-box;
+  border-color: #ffffff;
+  opacity: 0.5;
+  transition: opacity 160ms ease;
+}
+
+/* Light pooling inside a corner while it's the target. */
+.pool {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity 160ms ease;
+}
+
+.label {
+  position: absolute;
+  font-family: var(--font-display);
+  font-weight: 700;
+  line-height: 1.08;
+  color: color-mix(in srgb, var(--c) 45%, #ffffff);
+  text-shadow: 0 0 10px var(--c);
+  white-space: nowrap;
+  transition:
+    transform 160ms ease,
+    color 160ms ease;
+}
+
+/* While a piece is held: every paddle breathes, ready to catch it. */
+.holding .stroke {
+  animation: breathe 1.2s ease-in-out infinite;
+}
+@keyframes breathe {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 6px var(--c));
+  }
+  50% {
+    filter: drop-shadow(0 0 13px var(--c)) brightness(1.15);
+  }
+}
+
+/* The paddle the piece is over: brighter, white inner line, light inside. */
+.armed .stroke {
+  animation: none;
+  filter: drop-shadow(0 0 20px var(--c)) brightness(1.2);
+}
+.armed .inner {
+  opacity: 0.95;
+}
+.armed .pool {
+  opacity: 1;
+}
+.armed .label {
+  color: #ffffff;
+  transform: scale(1.18);
+}
+
+/* A piece just landed in this paddle. */
+.flash .stroke {
+  animation: catchFlash 620ms ease-out both;
+}
+@keyframes catchFlash {
+  0% {
+    filter: drop-shadow(0 0 4px var(--c)) brightness(2.2);
+  }
+  40% {
+    filter: drop-shadow(0 0 26px var(--c)) brightness(1.6);
+  }
+  100% {
+    filter: drop-shadow(0 0 7px var(--c));
+  }
+}
