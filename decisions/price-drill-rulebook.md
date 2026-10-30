@@ -96,6 +96,17 @@ These are the patterns the A72 answers follow. Uri's corrections will turn them 
 - Brick river: after an overbet turn, the same polar split as the turn; after a 66% turn, the strong kicker makes one value bet (20%) and most one-pair hands go to showdown value.
 - Wet river: sets and two pair drop to 20% (or stay all-in on the polar line), top pair becomes a bluff-catcher (5%), K-high becomes a potential bluff, and the rest goes to showdown value.
 
+## 6b. Board 2: J♠ T♠ 3♣ (all drafts, built from these rules, 2026-10-30)
+
+Chosen as the opposite of A72: no ace, two-tone, very connected.
+
+- **Cutoffs:** good kicker = AJ–KJ, medium = QJ–J9, weak = J8 and below. **Showdown cutoff = A-high** (no ace pairs on this board).
+- **New group:** overpairs (QQ–AA).
+- **Runouts:** 2♥ brick (polar overbet) → 3♦ (board pairs) / 9♠ (flush and straights); 6♣ dynamic, second flush draw (66%) → 3♦ / Q♠ (flush and straights); 9♠ wet, flush in (66%) → 2♦ / 8♠ (four spades).
+- **Flop:** sets and JT all-in; overpairs 50%; AJ–KJ 20% (two small bets); QJ–J9, J8-, Tx 5%; 99–44, 22, 3x and A-high showdown value; the rest potential bluffs (draws included).
+- **Polar overbet turn (2♥):** the top of the one-pair range here is the overpairs, so **QQ–AA bet the overbet** (all-in line) along with sets and two pair; AJ–KJ and everything below check back.
+- **Rivers where the draws arrive (9♠, Q♠, 8♠):** A-high becomes a potential bluff; overpairs become bluff-catchers (showdown value).
+
 ## 7. Open questions for Uri
 
 1. Is "Top pair, weak kicker" A6–A3 one group, or A6 alone plus the wheel draws A5–A3?
@@ -112,3 +123,4 @@ These are the patterns the A72 answers follow. Uri's corrections will turn them 
 - **2026-10-30 (later)**: Turn sizes built (Q♥ = polar overbet, 6♦ and 5♣ = 66%), with a badge on screen. Polar line answers. AK and AQ are the strong kickers on A72. K-high on the river follows how many draws arrived. Rulebook readable from the lobby.
 - **2026-10-30 (evening)**: Drop targets became six neon paddles around the frame; money boxes read 5%, 20%, 50%, 100% ("A little" is now 5%).
 - **2026-10-30 (night)**: Any ace = two small bets (A6–A3 20% on the flop); KK–88 = one small bet then showdown on every turn; the drill asks every group whatever the bet size.
+- **2026-10-30 (night)**: Second board J♠T♠3♣ added (6 runouts, drafts). The start screen lets you pick a board or mix them.

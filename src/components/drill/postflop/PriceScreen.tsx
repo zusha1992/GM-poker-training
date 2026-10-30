@@ -16,6 +16,7 @@ import {
   buildRunout,
   PGROUP_INFO,
   PGROUP_ORDER,
+  BOARDS,
   RUNOUTS,
   type Bucket,
   type PGroup,
@@ -35,13 +36,16 @@ const UNSEEN = "#46525C";
  * themselves. "advancing" = every group placed: BTN bets, BB calls, next card. */
 type Phase = "intro" | "deal" | "decide" | "advancing" | "final";
 
-/** A random runout, never the same one twice in a row. `?runout=N` (0-5) forces one. */
-function pickRunout(current: number): number {
+/** A random runout of the chosen board (any board when null), never the
+ * same one twice in a row. `?runout=N` forces one (feedback links, testing). */
+function pickRunout(current: number, board: string | null): number {
   const q = new URLSearchParams(window.location.search).get("runout");
   const forced = Number(q);
   if (q !== null && Number.isInteger(forced) && forced >= 0 && forced < RUNOUTS.length) return forced;
+  const pool = RUNOUTS.map((r, i) => ({ r, i })).filter(({ r }) => !board || r.board === board).map(({ i }) => i);
+  if (pool.length < 2) return pool[0] ?? 0;
   let i = current;
-  while (i === current && RUNOUTS.length > 1) i = Math.floor(Math.random() * RUNOUTS.length);
+  while (i === current) i = pool[Math.floor(Math.random() * pool.length)];
   return i;
 }
 
@@ -77,6 +81,8 @@ export function PriceScreen() {
   const router = useRouter();
   const [runout, setRunout] = useState<Runout>(() => buildRunout(0));
   const [phase, setPhase] = useState<Phase>("intro");
+  /** The board picked on the start screen (null = mix every board). */
+  const [board, setBoard] = useState<string | null>(null);
   const [streetIdx, setStreetIdx] = useState(0);
   const [placed, setPlaced] = useState<Partial<Record<PGroup, Bucket>>>({});
   /** This street's pieces in the order they're asked. */
@@ -194,7 +200,7 @@ export function PriceScreen() {
 
   function start(which: "new" | "same") {
     generation.current += 1;
-    const r = which === "new" ? buildRunout(pickRunout(runout.index)) : runout;
+    const r = which === "new" ? buildRunout(pickRunout(runout.index, board)) : runout;
     setRunout(r);
     setMissed(new Set());
     enterStreet(which === "new" ? linkedStreet() : 0, r);
@@ -267,10 +273,36 @@ export function PriceScreen() {
             </p>
           </div>
           <div className="flex flex-col gap-1.5 rounded-2xl p-3 text-[13px]" style={{ background: "var(--panel)", border: "1px solid var(--line)" }}>
-            <Row label="Board" text={`A♣ 7♦ 2♠ · ${RUNOUTS.length} runouts`} />
-            <Row label="Boxes" text="Bluffs · Showdown · A little · ~20% · ~50% · All-in" />
+            <Row label="Boxes" text="Bluffs · Showdown · 5% · 20% · 50% · 100%" />
             <Row label="Flop bet" text="Small, BB calls" />
             <Row label="Turn bet" text="Overbet (polar) on bricks · 66% on wet cards" />
+          </div>
+          <div className="flex flex-col gap-1.5" role="radiogroup" aria-label="Board" data-testid="board-picker">
+            <b className="font-[family-name:var(--font-display)] text-[13px] tracking-[0.06em] uppercase" style={{ color: "var(--muted)" }}>
+              Board
+            </b>
+            {[...BOARDS.map((b) => ({ key: b.name as string | null, title: b.flop.join(" "), sub: `${b.blurb} · 6 runouts` })), { key: null, title: "Mix them", sub: `Any board · ${RUNOUTS.length} runouts` }].map((o) => {
+              const on = board === o.key;
+              return (
+                <button
+                  key={o.key ?? "mix"}
+                  type="button"
+                  role="radio"
+                  aria-checked={on}
+                  className="flex cursor-pointer items-center justify-between rounded-xl border px-3 py-2.5 text-left transition-transform active:scale-[0.98]"
+                  style={{ borderColor: on ? "var(--mix)" : "var(--line)", background: on ? "var(--panel-2)" : "var(--panel)" }}
+                  onClick={() => setBoard(o.key)}
+                  data-testid={`board-${o.key ?? "mix"}`}
+                >
+                  <b className="font-[family-name:var(--font-display)] text-[16px]" style={{ color: on ? "var(--mix)" : "var(--foreground)" }}>
+                    {o.title}
+                  </b>
+                  <span className="text-[12px]" style={{ color: "var(--muted)" }}>
+                    {o.sub}
+                  </span>
+                </button>
+              );
+            })}
           </div>
           <button type="button" className="h-[52px] cursor-pointer rounded-2xl border-0 text-[16px] font-bold active:scale-[0.98]" style={{ background: "var(--mix)", color: "#2B1C02" }} onClick={() => start("new")}>
             Start
