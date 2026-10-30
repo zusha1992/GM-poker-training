@@ -1,7 +1,10 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { timeAgo, type FeedbackRow } from "@/lib/drill/feedback";
+import { feedbackLink } from "@/lib/drill/feedback-links";
 import { clickSound } from "@/lib/drill/sound";
 
 type DrillCard = {
@@ -153,12 +156,73 @@ export function Lobby() {
         ))}
       </div>
 
+      <FeedbackSection />
+
       <div className="mt-auto flex flex-col items-center gap-1 text-[12px]" style={{ color: "var(--muted)" }}>
         <span>6-max cash · 100bb · proof of concept</span>
       </div>
-      <Link href="/feedback" className="text-center text-[12px] underline" style={{ color: "var(--muted)" }}>
-        All feedback across every drill
-      </Link>
+    </div>
+  );
+}
+
+/** The latest notes from Noam and Uri, each one a tap away from the exact
+ * drill spot it was written on. */
+function FeedbackSection() {
+  const router = useRouter();
+  const [rows, setRows] = useState<FeedbackRow[] | null>(null);
+
+  useEffect(() => {
+    fetch("/api/feedback")
+      .then((r) => r.json())
+      .then((data) => setRows(data as FeedbackRow[]))
+      .catch(() => setRows([]));
+  }, []);
+
+  const latest = (rows ?? []).slice().sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 3);
+
+  return (
+    <div className="flex flex-col gap-2" data-testid="lobby-feedback">
+      <div className="flex items-baseline justify-between px-1">
+        <b className="font-[family-name:var(--font-display)] text-[15px] font-bold tracking-[0.04em] uppercase">Feedback</b>
+        <Link href="/feedback" className="text-[12.5px] font-semibold" style={{ color: "var(--mix)" }}>
+          {rows ? `All ${rows.length} notes →` : "All notes →"}
+        </Link>
+      </div>
+      {rows === null && (
+        <div className="rounded-2xl border p-3 text-[13px]" style={{ borderColor: "var(--line)", background: "var(--panel)", color: "var(--muted)" }}>
+          Loading…
+        </div>
+      )}
+      {rows !== null && latest.length === 0 && (
+        <div className="rounded-2xl border p-3 text-[13px]" style={{ borderColor: "var(--line)", background: "var(--panel)", color: "var(--muted)" }}>
+          No notes yet. Tap the speech bubble inside any drill to leave one.
+        </div>
+      )}
+      {latest.map((r) => (
+        <button
+          key={r.id}
+          type="button"
+          className="flex cursor-pointer flex-col gap-1 rounded-2xl border p-3 text-left transition-transform active:scale-[0.98]"
+          style={{ borderColor: "var(--line)", background: "var(--panel)" }}
+          onClick={() => {
+            clickSound();
+            router.push(feedbackLink(r));
+          }}
+        >
+          <span className="truncate font-[family-name:var(--font-display)] text-[11px] font-bold tracking-[0.03em]" style={{ color: "var(--mix)" }}>
+            {r.drillLabel || r.drill}
+          </span>
+          <span className="line-clamp-2 text-[14px] leading-snug" dir="auto">
+            {r.message}
+          </span>
+          <span className="flex items-center justify-between text-[11.5px]" style={{ color: "var(--muted)" }}>
+            <span>
+              <b style={{ color: "var(--foreground)" }}>{r.author}</b> · {timeAgo(r.createdAt)}
+            </span>
+            <span style={{ color: "var(--mix)" }}>Open →</span>
+          </span>
+        </button>
+      ))}
     </div>
   );
 }

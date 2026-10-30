@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { FeedbackSheet } from "@/components/drill/FeedbackSheet";
 import { Toast, useToast } from "@/components/drill/Toast";
@@ -45,6 +45,18 @@ function pickRunout(current: number): number {
   return i;
 }
 
+/** `?street=turn` (from a feedback link) starts the runout on that street,
+ * once: the param is then dropped so the next runout starts on the flop. */
+function linkedStreet(): number {
+  const url = new URL(window.location.href);
+  const i = STREETS.indexOf(url.searchParams.get("street") as (typeof STREETS)[number]);
+  if (url.searchParams.has("street")) {
+    url.searchParams.delete("street");
+    window.history.replaceState(null, "", url);
+  }
+  return Math.max(0, i);
+}
+
 function shuffled<T>(xs: T[]): T[] {
   const out = [...xs];
   for (let i = out.length - 1; i > 0; i--) {
@@ -80,6 +92,12 @@ export function PriceScreen() {
   const generation = useRef(0);
   const boxes = useRef<Partial<Record<Bucket, HTMLDivElement | null>>>({});
   const { toast, show: showToast } = useToast();
+
+  // Opened from a feedback link (?runout=N&street=turn): skip the intro and go straight to that spot.
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).has("street")) start("new");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const box = (b: Bucket, tall = false) => (
     <BucketBox
@@ -154,7 +172,7 @@ export function PriceScreen() {
     const r = which === "new" ? buildRunout(pickRunout(runout.index)) : runout;
     setRunout(r);
     setMissed(new Set());
-    enterStreet(0, r);
+    enterStreet(which === "new" ? linkedStreet() : 0, r);
   }
 
   function zoneAt(x: number, y: number): Bucket | null {
@@ -360,7 +378,7 @@ export function PriceScreen() {
         onClose={() => setFeedbackOpen(false)}
         drillTag={`postflop:price:${runout.id}:${st.street}`}
         drillLabel={`How many big blinds · ${runout.id} · ${st.street}`}
-        pageUrl="/drills/postflop/price"
+        pageUrl={`/drills/postflop/price?runout=${runout.index}&street=${st.street}`}
       />
     </Shell>
   );

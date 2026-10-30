@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { timeAgo, type FeedbackRow } from "@/lib/drill/feedback";
+import { feedbackLink } from "@/lib/drill/feedback-links";
 
 /** Every note across every drill, newest first, each with a deep link
  * back to the page it was written on — so a viewer doesn't have to click
@@ -112,8 +113,8 @@ export function AllFeedback() {
                 </span>
               </div>
               <div className="mb-2 whitespace-pre-wrap text-[14px] leading-[1.45]">{r.message}</div>
-              <Link href={r.pageUrl || "/"} className="font-[family-name:var(--font-display)] text-[12px] font-bold" style={{ color: "var(--mix)" }}>
-                View on page &rarr;
+              <Link href={feedbackLink(r)} className="font-[family-name:var(--font-display)] text-[12px] font-bold" style={{ color: "var(--mix)" }}>
+                Open this spot &rarr;
               </Link>
             </div>
           );

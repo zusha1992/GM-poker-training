@@ -541,7 +541,7 @@ export function LineDemoScreen() {
         onClose={() => setFeedbackOpen(false)}
         drillTag={`postflop:line-demo:${hand.sc.id}:${street}`}
         drillLabel={`Flop to river · ${hand.sc.id} · ${street}`}
-        pageUrl="/drills/postflop/line"
+        pageUrl={`/drills/postflop/line?hand=${hand.index}`}
       />
     </Shell>
   );
