@@ -22,6 +22,7 @@ import {
   type PGroup,
   type PricePiece,
   type Runout,
+  type TurnBet,
 } from "@/lib/drill/postflop/price-hands";
 import { LineMatrix, type MatrixPalette } from "./LineMatrix";
 import { SortPiece } from "./SortPiece";
@@ -261,7 +262,8 @@ export function PriceScreen() {
           <div className="flex flex-col gap-1.5 rounded-2xl p-3 text-[13px]" style={{ background: "var(--panel)", border: "1px solid var(--line)" }}>
             <Row label="Board" text={`A♣ 7♦ 2♠ · ${RUNOUTS.length} runouts`} />
             <Row label="Boxes" text="Bluffs · Showdown · A little · ~20% · ~50% · All-in" />
-            <Row label="Streets" text="Flop, turn and river" />
+            <Row label="Flop bet" text="Small, BB calls" />
+            <Row label="Turn bet" text="Overbet (polar) on bricks · 66% on wet cards" />
           </div>
           <button type="button" className="h-[52px] cursor-pointer rounded-2xl border-0 text-[16px] font-bold active:scale-[0.98]" style={{ background: "var(--mix)", color: "#2B1C02" }} onClick={() => start("new")}>
             Start
@@ -296,20 +298,23 @@ export function PriceScreen() {
         </IconButton>
       </div>
 
-      <div className="flex flex-shrink-0 items-center justify-between gap-2 rounded-[14px] p-2" style={{ background: "var(--panel)", border: "1px solid var(--line)" }}>
-        <div className="flex gap-1">
-          {st.board.map((c, i) => (
-            <BoardCard key={i} card={c} fresh={phase === "deal" && i >= 3 && i === st.board.length - 1} />
-          ))}
+      <div className="flex flex-shrink-0 flex-col gap-1.5 rounded-[14px] p-2" style={{ background: "var(--panel)", border: "1px solid var(--line)" }}>
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex gap-1">
+            {st.board.map((c, i) => (
+              <BoardCard key={i} card={c} fresh={phase === "deal" && i >= 3 && i === st.board.length - 1} />
+            ))}
+          </div>
+          <div className="flex flex-col items-end gap-0.5 text-right">
+            <span className="font-[family-name:var(--font-display)] text-[12px]" style={{ color: "var(--muted)" }}>
+              Pot <b style={{ color: "var(--mix)" }} data-testid="pot">{st.pot}bb</b>
+            </span>
+            <span className="text-[11px]" style={{ color: "var(--muted)" }}>
+              Behind <b style={{ color: "var(--foreground)", fontVariantNumeric: "tabular-nums" }}>{st.behind}bb</b>
+            </span>
+          </div>
         </div>
-        <div className="flex flex-col items-end gap-0.5 text-right">
-          <span className="font-[family-name:var(--font-display)] text-[12px]" style={{ color: "var(--muted)" }}>
-            Pot <b style={{ color: "var(--mix)" }} data-testid="pot">{st.pot}bb</b>
-          </span>
-          <span className="text-[11px]" style={{ color: "var(--muted)" }}>
-            Behind <b style={{ color: "var(--foreground)", fontVariantNumeric: "tabular-nums" }}>{st.behind}bb</b>
-          </span>
-        </div>
+        {phase !== "final" && <BetLine street={st.street} turnBet={st.turnBet} />}
       </div>
 
       {phase === "final" ? (
@@ -318,7 +323,7 @@ export function PriceScreen() {
         <>
           <div className="flex flex-shrink-0 flex-col gap-1 rounded-xl p-1.5" style={{ background: "var(--panel)", border: "1px solid var(--line)" }}>
             {/* Shrinks on short phones so the boxes always fit below it. */}
-            <div className="mx-auto w-full" style={{ maxWidth: "max(220px, calc(100dvh - 400px))" }}>
+            <div className="mx-auto w-full" style={{ maxWidth: "max(220px, calc(100dvh - 448px))" }}>
               <LineMatrix snap={st.snap} prev={prevSnap} seq={seq} palette={palette} pulse={pulse} />
             </div>
             <MoneyLegend />
@@ -376,7 +381,7 @@ export function PriceScreen() {
                   {phase === "advancing" && (
                     <div className="flex flex-col items-center gap-1 text-center" style={{ animation: "rdIn 220ms ease-out both" }} data-testid="advancing">
                       <b className="font-[family-name:var(--font-display)] text-[20px]" style={{ color: "var(--mix)", animation: "ldBanner 520ms cubic-bezier(.3,1.4,.5,1) both" }}>
-                        BTN bets · BB calls
+                        {st.street === "flop" ? "BTN bets small" : st.turnBet === "overbet" ? "BTN overbets · polar" : "BTN bets 66%"} · BB calls
                       </b>
                       <span className="text-[12.5px]" style={{ color: "var(--muted)" }}>
                         Pot {runout.streets[streetIdx + 1]?.pot}bb on the {STREETS[streetIdx + 1]}
@@ -402,6 +407,36 @@ export function PriceScreen() {
         pageUrl={`/drills/postflop/price?runout=${runout.index}&street=${st.street}`}
       />
     </Shell>
+  );
+}
+
+/** How BTN bets on this street (or bet the turn, on the river), always on
+ * screen: the turn size decides which groups still want money. */
+function BetLine({ street, turnBet }: { street: string; turnBet: TurnBet }) {
+  const polar = turnBet === "overbet";
+  const color = street === "flop" ? "#9DB4C4" : polar ? "#F2564B" : "#22C4A1";
+  const [tag, note] =
+    street === "flop"
+      ? ["Flop: small bet", "The whole range bets small"]
+      : street === "turn"
+        ? polar
+          ? ["Turn: OVERBET · polar", "Only the best hands + bluffs bet"]
+          : ["Turn: 66% bet", "Not polar: medium hands can add money"]
+        : polar
+          ? ["Turn was an overbet · polar", "Checked hands just show down"]
+          : ["Turn was a 66% bet", "BB called: smaller pot, more room"];
+  return (
+    <div className="flex items-center gap-2" data-testid="bet-line">
+      <span
+        className="flex-shrink-0 rounded-full px-2 py-0.5 font-[family-name:var(--font-display)] text-[11px] font-bold tracking-[0.04em]"
+        style={{ background: `color-mix(in srgb, ${color} 22%, transparent)`, color, border: `1px solid ${color}` }}
+      >
+        {tag}
+      </span>
+      <span className="min-w-0 truncate text-[11px]" style={{ color: "var(--muted)" }}>
+        {note}
+      </span>
+    </div>
   );
 }
 

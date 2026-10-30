@@ -156,6 +156,30 @@ export function Lobby() {
         ))}
       </div>
 
+      <button
+        type="button"
+        className="flex min-h-[72px] cursor-pointer items-center gap-3.5 rounded-2xl border p-3.5 text-left transition-transform active:scale-[0.98]"
+        style={{ borderColor: "var(--line)", background: "var(--panel)" }}
+        onClick={() => {
+          clickSound();
+          router.push("/rulebook");
+        }}
+        data-testid="lobby-rulebook"
+      >
+        <span className="flex h-[30px] w-[30px] flex-shrink-0 items-center justify-center rounded-[8px]" style={{ background: "var(--mix)", color: "#2B1C02" }} aria-hidden="true">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5z" />
+            <path d="M8 7h8M8 11h6" />
+          </svg>
+        </span>
+        <span className="min-w-0 flex-1">
+          <b className="block font-[family-name:var(--font-display)] text-[18px] font-bold">Rulebook</b>
+          <span className="text-[13px]" style={{ color: "var(--muted)" }}>
+            The rules the drills follow · read and suggest changes
+          </span>
+        </span>
+      </button>
+
       <FeedbackSection />
 
       <div className="mt-auto flex flex-col items-center gap-1 text-[12px]" style={{ color: "var(--muted)" }}>

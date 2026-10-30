@@ -15,6 +15,7 @@ export function feedbackLink(row: Pick<FeedbackRow, "drill" | "pageUrl">): strin
     const i = SCENARIOS.findIndex((s) => s.id === id);
     if (i >= 0) return `/drills/postflop/line?hand=${i}`;
   }
+  if (area === "rulebook") return "/rulebook";
   if (row.pageUrl) return row.pageUrl;
   if (area === "preflop" && ["rfi", "tb", "fb", "fv"].includes(drill)) {
     return drill === "rfi" && id && id !== "lobby" ? `/drills/preflop/rfi?pos=${encodeURIComponent(id)}` : `/drills/preflop/${drill}`;

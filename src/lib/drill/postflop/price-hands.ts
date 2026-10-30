@@ -104,12 +104,18 @@ const AUTO: Partial<Record<PGroup, Answer>> = {
   monster: autoAll("Straights and better want every chip in."),
 };
 
-/** The same cutoffs on every street of this board (Noam 2026-10-29: K-high
- * is the showdown cutoff; AT–A8 and A6–A3 are separate groups). */
-const CUT = { goodKicker: 11, midKicker: 8, sdCutoff: 13 };
+/** The same cutoffs on every street of this board. K-high is the showdown
+ * cutoff (Noam 2026-10-29); AK and AQ are the strong kickers, AJ–A8 the
+ * medium ones, A6–A3 the weak ones (Noam 2026-10-30: in a single-raised pot
+ * AQ is very strong on A72, grouped with AK). */
+const CUT = { goodKicker: 12, midKicker: 8, sdCutoff: 13 };
 
 const AIR = a("bluff", "No pair and no high card: it can't win by checking, so it's a potential bluff.", true);
 const SD = (why = "K-high: no pair, but it sometimes wins at showdown. Draws included.") => a("sd", why, true);
+/** Noam 2026-10-30: when the river completes the draws, K-high has no showdown value left. */
+const SD_GONE = a("bluff", "The draws arrived and the ranges are polar: K-high can't win at showdown any more, so it's a potential bluff.");
+/** On a polar line every one-pair hand that isn't top of the range checks. */
+const CHECKS = (why = "The overbet line is polar: this hand checks and shows down.") => a("sd", why);
 
 const FLOP: StreetSpec = {
   card: "",
@@ -118,8 +124,8 @@ const FLOP: StreetSpec = {
   ...CUT,
   answers: {
     twopair: autoAll("Sets and two pair want every chip in on a dry board."),
-    tpgk: a("50", "AJ+ beats all of BB's weaker aces: three streets of value."),
-    tpmk: a("20", "AT–A8 get called by better aces too often: two thin streets."),
+    tpgk: a("50", "AK and AQ beat all of BB's weaker aces: three streets of value."),
+    tpmk: a("20", "AJ–A8 get called by better aces too often: two thin streets."),
     tpwk: a("little", "A6–A3: top pair with the weakest kickers, one small bet then showdown."),
     pp1: a("little", "KK–88 beat every 7x and 2x: one small bet, then showdown."),
     pp2: a("sd", "66–33 lose to every 7x: check and show down."),
@@ -130,26 +136,32 @@ const FLOP: StreetSpec = {
   },
 };
 
-type TurnSpec = StreetSpec & { rivers: [StreetSpec, StreetSpec] };
+/** How BTN bets the turn (Noam 2026-10-30): a polar overbet when the turn
+ * is a brick that's good for BTN, 66% when it brings or completes draws. */
+export type TurnBet = "overbet" | "twoThirds";
+type TurnSpec = StreetSpec & { bet: TurnBet; rivers: [StreetSpec, StreetSpec] };
 
 const TURNS: TurnSpec[] = [
   {
     card: "Q♥",
     kind: "brick",
-    story: "Q♥ · Brick. No draw completes: almost nothing changes.",
+    bet: "overbet",
+    story: "Q♥ · Brick. Nothing changes for BB: BTN overbets, polar.",
     ...CUT,
+    // Polar line (Noam 2026-10-30): only the top of the range and the bluffs
+    // keep putting money in; everything else checks back the turn.
     answers: {
-      twopair: autoAll("Still the best hands on a blank."),
-      tpgk: a("50", "A blank changes nothing: keep going for three streets of value.", true),
-      tpmk: a("20", "Same as the flop: thin value."),
-      tpwk: a("little", "Same as the flop: one small bet, then showdown."),
-      pp1: a("little", "KK is only under the ace: one small bet, then showdown."),
-      pp2: a("sd", "JJ–88 are now under an ace and a queen: check and show down."),
-      pp3: a("sd", "66–33 are under three cards: check and show down."),
-      mp: a("little", "Second pair (Qx): one small bet at most."),
-      bp: a("sd", "7x and 2x: check and show down."),
+      twopair: autoAll("Two pair and better are the value of the polar overbet."),
+      tpgk: a("all", "AK is the top of the range: overbet now, all-in on the river."),
+      tpmk: CHECKS("AJ–A8 are good but not polar: they check back the turn."),
+      tpwk: CHECKS(),
+      pp1: CHECKS(),
+      pp2: CHECKS(),
+      pp3: CHECKS(),
+      mp: CHECKS("Second pair (Qx) checks back on a polar line."),
+      bp: CHECKS(),
       sd: SD(),
-      air: AIR,
+      air: a("bluff", "No showdown value: these are the bluffs of the polar overbet.", true),
     },
     rivers: [
       {
@@ -158,16 +170,16 @@ const TURNS: TurnSpec[] = [
         story: "9♣ · Brick. Nothing completes.",
         ...CUT,
         answers: {
-          twopair: autoAll("Nothing got there: get the rest in."),
-          tpgk: a("20", "One more value bet: after two calls, only worse aces still pay."),
-          tpmk: a("little", "One small value bet at most."),
-          tpwk: a("sd", "Check and show down."),
-          pp1: a("sd", "KK: check and show down."),
-          pp2: a("sd", "Check and show down."),
-          pp3: a("sd", "Check and show down."),
-          mp: a("sd", "Check and show down."),
-          bp: a("sd", "Check and show down."),
-          sd: SD("K-high: sometimes good at showdown."),
+          twopair: autoAll("After the overbet the rest is less than two pots: all-in."),
+          tpgk: a("all", "AK keeps going: all-in after the overbet."),
+          tpmk: CHECKS("AJ–A8 checked the turn: they show down."),
+          tpwk: CHECKS(),
+          pp1: CHECKS(),
+          pp2: CHECKS(),
+          pp3: CHECKS(),
+          mp: CHECKS(),
+          bp: CHECKS(),
+          sd: SD("The draws missed: K-high can still win at showdown."),
           air: AIR,
         },
       },
@@ -177,14 +189,12 @@ const TURNS: TurnSpec[] = [
         story: "K♦ · Wet. JT makes broadway.",
         ...CUT,
         answers: {
-          twopair: a("50", "Still strong, but JT has a straight now: big, not all-in."),
-          tpgk: a("little", "AJ is a bluff-catcher now: one small bet at most."),
-          tpmk: a("sd", "Check and show down."),
-          tpwk: a("sd", "Check and show down."),
-          pp3: a("sd", "Check and show down.", true),
-          mp: a("sd", "Check and show down.", true),
-          bp: a("sd", "Check and show down.", true),
-          sd: SD(),
+          twopair: a("all", "Two pair and better stay the polar value, even with broadway out there."),
+          tpmk: CHECKS(),
+          tpwk: CHECKS(),
+          pp3: CHECKS(),
+          mp: CHECKS(),
+          bp: CHECKS(),
           air: AIR,
         },
       },
@@ -193,7 +203,8 @@ const TURNS: TurnSpec[] = [
   {
     card: "6♦",
     kind: "dynamic",
-    story: "6♦ · Dynamic. A diamond flush draw and straight draws like 98, 85 and 54.",
+    bet: "twoThirds",
+    story: "6♦ · Dynamic. A diamond flush draw and straight draws like 98, 85 and 54: BTN bets 66%.",
     ...CUT,
     answers: {
       twopair: autoAll("Still way ahead: charge every new draw."),
@@ -215,14 +226,13 @@ const TURNS: TurnSpec[] = [
         ...CUT,
         answers: {
           twopair: autoAll("The draws missed: get the rest in."),
-          tpgk: a("20", "One more value bet against BB's weaker aces."),
+          tpgk: a("20", "AQ: one more value bet against BB's weaker aces."),
           tpmk: a("little", "One small value bet at most."),
           tpwk: a("sd", "Check and show down."),
           pp2: a("sd", "Check and show down."),
           pp3: a("sd", "Check and show down."),
           mp: a("sd", "Check and show down."),
           bp: a("sd", "Check and show down."),
-          sd: SD(),
           air: AIR,
         },
       },
@@ -240,7 +250,7 @@ const TURNS: TurnSpec[] = [
           pp3: a("sd", "Check and show down.", true),
           mp: a("sd", "Check and show down.", true),
           bp: a("sd", "Check and show down.", true),
-          sd: SD(),
+          sd: SD_GONE,
           air: AIR,
         },
       },
@@ -249,7 +259,8 @@ const TURNS: TurnSpec[] = [
   {
     card: "5♣",
     kind: "wet",
-    story: "5♣ · Wet. 43 makes the wheel, and a club flush draw and more straight draws arrive.",
+    bet: "twoThirds",
+    story: "5♣ · Wet. 43 makes the wheel, and a club flush draw and more straight draws arrive: BTN bets 66%.",
     ...CUT,
     answers: {
       twopair: a("50", "The wheel is possible now: still big, but not all-in."),
@@ -279,7 +290,6 @@ const TURNS: TurnSpec[] = [
           pp3: a("sd", "Check and show down."),
           mp: a("sd", "Check and show down."),
           bp: a("sd", "Check and show down."),
-          sd: SD(),
           air: AIR,
         },
       },
@@ -298,7 +308,7 @@ const TURNS: TurnSpec[] = [
           pp3: a("sd", "Check and show down.", true),
           mp: a("sd", "Check and show down.", true),
           bp: a("sd", "Check and show down.", true),
-          sd: SD(),
+          sd: SD_GONE,
           air: AIR,
         },
       },
@@ -309,20 +319,20 @@ const TURNS: TurnSpec[] = [
 const FLOP_CARDS = ["A♣", "7♦", "2♠"];
 const BOARD_NAME = "A72";
 
-/** Pot and stack at the start of each street. Between streets BTN makes a
- * standard bet and BB calls (flop 1.8bb, turn 6bb): the player never sees or
- * picks that size, only the pot it leaves. */
-const MONEY: Record<Street, { pot: number; behind: number }> = {
-  flop: { pot: 5.5, behind: 97.5 },
-  turn: { pot: 9.1, behind: 95.7 },
-  river: { pot: 21.1, behind: 89.7 },
-};
+/** Pot and stack at the start of each street. The flop is always a small
+ * bet (1.8bb) and a call; the turn is an overbet (13.7bb) or 66% (6bb) and a
+ * call, so the river pot depends on the turn. */
+function moneyOf(street: Street, bet: TurnBet): { pot: number; behind: number } {
+  if (street === "flop") return { pot: 5.5, behind: 97.5 };
+  if (street === "turn") return { pot: 9.1, behind: 95.7 };
+  return bet === "overbet" ? { pot: 36.5, behind: 82 } : { pot: 21.1, behind: 89.7 };
+}
 
-export type RunoutSpec = { id: string; streets: [StreetSpec, StreetSpec, StreetSpec] };
+export type RunoutSpec = { id: string; turnBet: TurnBet; streets: [StreetSpec, StreetSpec, StreetSpec] };
 
 /** Every runout of the board: 3 turns × 2 rivers = 6. */
 export const RUNOUTS: RunoutSpec[] = TURNS.flatMap((t) =>
-  t.rivers.map((rv) => ({ id: `${BOARD_NAME} · ${t.card} · ${rv.card}`, streets: [FLOP, t, rv] as [StreetSpec, StreetSpec, StreetSpec] })),
+  t.rivers.map((rv) => ({ id: `${BOARD_NAME} · ${t.card} · ${rv.card}`, turnBet: t.bet, streets: [FLOP, t, rv] as [StreetSpec, StreetSpec, StreetSpec] })),
 );
 
 // ---------- hand groups ----------
@@ -453,6 +463,8 @@ export type PriceStreet = {
   board: Card[];
   kind: StreetKind;
   story: string;
+  /** How BTN bets the turn on this runout (shown on the turn and the river). */
+  turnBet: TurnBet;
   pot: number;
   behind: number;
   snap: PriceSnap;
@@ -519,7 +531,8 @@ export function buildRunout(index: number): Runout {
       board,
       kind: st.kind,
       story: st.story,
-      ...MONEY[street],
+      turnBet: spec.turnBet,
+      ...moneyOf(street, spec.turnBet),
       snap,
       answers,
       pieces,
