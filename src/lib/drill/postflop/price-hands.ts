@@ -104,8 +104,8 @@ const AIR = a("bluff", "No pair and no high card: it can't win by checking, so i
 const SD = (why = "K-high: no pair, but it sometimes wins at showdown. Draws included.") => a("sd", why, true);
 /** Noam 2026-10-30: when the river completes the draws, K-high has no showdown value left. */
 const SD_GONE = a("bluff", "The draws arrived and the ranges are polar: K-high can't win at showdown any more, so it's a potential bluff.");
-/** On a polar line every one-pair hand that isn't top of the range checks. */
-const CHECKS = (why = "The overbet line is polar: this hand checks and shows down.") => a("sd", why);
+/** A hand that has already put in what it wants: check and show down. */
+const CHECKS = (why = "Check and show down.") => a("sd", why);
 
 const A72_FLOP: StreetSpec = {
   card: "",
@@ -141,17 +141,17 @@ const A72_TURNS: TurnSpec[] = [
     // Polar line (Noam 2026-10-30): only the top of the range and the bluffs
     // keep putting money in; everything else checks back the turn.
     answers: {
-      twopair: autoAll("Two pair and better are the value of the polar overbet."),
-      tpgk: a("all", "AK is the top of the range: overbet now, all-in on the river."),
-      tpmk: CHECKS("AJ–A8 are good but not polar: they check back the turn."),
-      tpwk: CHECKS(),
+      twopair: autoAll("Two pair and better want every chip in."),
+      tpgk: a("50", "AK keeps going for three streets of value: another big bet on a blank."),
+      tpmk: a("20", "Top pair on a brick turn: another 20%. That's its last bet."),
+      tpwk: a("20", "Top pair on a brick turn: another 20%. That's its last bet."),
       pp1: CHECKS(),
       pp2: CHECKS(),
       pp3: CHECKS(),
-      mp: CHECKS("Second pair (Qx) checks back on a polar line."),
+      mp: CHECKS("Second pair (Qx): check and show down."),
       bp: CHECKS(),
       sd: SD(),
-      air: a("bluff", "No showdown value: these are the bluffs of the polar overbet.", true),
+      air: a("bluff", "No showdown value: these are the potential bluffs.", true),
     },
     rivers: [
       {
@@ -161,9 +161,9 @@ const A72_TURNS: TurnSpec[] = [
         ...CUT,
         answers: {
           twopair: autoAll("After the overbet the rest is less than two pots: all-in."),
-          tpgk: a("all", "AK keeps going: all-in after the overbet."),
-          tpmk: CHECKS("AJ–A8 checked the turn: they show down."),
-          tpwk: CHECKS(),
+          tpgk: a("20", "AK: one more value bet on the river."),
+          tpmk: CHECKS("AJ–A8 bet the flop and the turn: that was their last bet. Show down."),
+          tpwk: CHECKS("A6–A3 bet the flop and the turn: show down."),
           pp1: CHECKS(),
           pp2: CHECKS(),
           pp3: CHECKS(),
@@ -309,9 +309,9 @@ const A72_TURNS: TurnSpec[] = [
 // ---------- the board: J♠T♠3♣, 3 turns × 2 rivers (drafts, built from the rulebook) ----------
 
 /** J♠T♠3♣: no ace, two-tone, connected. Top pair kickers: AJ–KJ good,
- * QJ–J9 medium, J8 and below weak. No ace pairs here, so A-high is the
+ * every other jack (QJ–J2) one group: Noam 2026-10-31. No ace pairs here, so A-high is the
  * showdown cutoff. */
-const JT3_CUT = { goodKicker: 13, midKicker: 9, sdCutoff: 14 };
+const JT3_CUT = { goodKicker: 13, midKicker: 2, sdCutoff: 14 };
 const A_HIGH_SD = (why = "A-high: no pair, but it sometimes wins at showdown. Draws included.") => a("sd", why);
 const A_HIGH_GONE = a("bluff", "The draws arrived and the ranges are polar: A-high can't win at showdown any more, so it's a potential bluff.");
 const JT3_AIR = a("bluff", "No pair and no ace: it can't win by checking, so it's a potential bluff. Flush and straight draws live here.", true);
@@ -326,7 +326,7 @@ const JT3_FLOP: StreetSpec = {
     twopair: autoAll("Sets and JT want every chip in on a wet board."),
     op: a("50", "QQ–AA beat every jack, but this board moves: build the pot now."),
     tpgk: a("20", "AJ and KJ: two streets of value against BB's weaker jacks and draws."),
-    tpmk: a("little", "QJ and J9: one small bet, then see the turn."),
+    tpmk: a("20", "Top pair wants 20% on the flop, even on a moving board, assuming it bricks."),
     tpwk: a("little", "J8 and below: one small bet at most."),
     pp1: SHOW(),
     pp2: SHOW("99–44 are under two broadway cards: check and show down."),
@@ -346,10 +346,10 @@ const JT3_TURNS: TurnSpec[] = [
     story: "2♥ · Brick. Nothing changes: BTN overbets, polar.",
     ...JT3_CUT,
     answers: {
-      twopair: autoAll("Sets and two pair are the value of the polar overbet."),
-      op: a("all", "QQ–AA are the top of the one-pair range: overbet now, all-in on the river."),
-      tpgk: CHECKS("AJ and KJ are good but not polar: they check back the turn."),
-      tpmk: CHECKS(),
+      twopair: autoAll("Sets and two pair want every chip in."),
+      op: a("50", "QQ–AA beat every jack: another big bet on a blank."),
+      tpgk: a("20", "Top pair on a brick turn: another 20%. That's its last bet."),
+      tpmk: a("20", "Top pair on a brick turn: another 20%. That's its last bet."),
       tpwk: CHECKS(),
       pp1: CHECKS(),
       pp2: CHECKS(),
@@ -357,7 +357,7 @@ const JT3_TURNS: TurnSpec[] = [
       mp: CHECKS(),
       bp: CHECKS(),
       sd: A_HIGH_SD(),
-      air: a("bluff", "Flush draws, straight draws and air: the bluffs of the polar overbet.", true),
+      air: a("bluff", "Flush draws, straight draws and air: the potential bluffs.", true),
     },
     rivers: [
       {
@@ -367,9 +367,9 @@ const JT3_TURNS: TurnSpec[] = [
         ...JT3_CUT,
         answers: {
           twopair: autoAll("Nothing got there: get the rest in."),
-          op: a("all", "QQ–AA keep going: all-in after the overbet."),
-          tpgk: CHECKS("AJ and KJ checked the turn: they show down."),
-          tpmk: CHECKS(),
+          op: a("20", "QQ–AA: one more value bet."),
+          tpgk: CHECKS("Top pair bet the flop and the turn: that was its last bet. Show down."),
+          tpmk: CHECKS("Top pair bet the flop and the turn: that was its last bet. Show down."),
           tpwk: CHECKS(),
           pp1: CHECKS(),
           pp2: CHECKS(),
@@ -412,7 +412,7 @@ const JT3_TURNS: TurnSpec[] = [
       twopair: autoAll("Still way ahead: charge both flush draws."),
       op: a("50", "QQ–AA are still ahead: keep charging the draws."),
       tpgk: a("20", "AJ and KJ: the second small bet goes in now."),
-      tpmk: a("little", "QJ and J9: one more small bet at most."),
+      tpmk: a("little", "QJ–J7: one more small bet at most."),
       tpwk: SHOW(),
       pp1: SHOW(),
       pp2: SHOW(),

@@ -27,13 +27,13 @@ Layout *(Noam, 2026-10-30)*: six neon paddles in one design (Arkanoid-style), di
 
 - Flop: a small bet and a call.
 - Turn: depends on the card. On a **brick turn (good for BTN), BTN overbets** (polar). On a **wet turn (completes a straight or flush, or helps BB), BTN bets about 66–75%**.
-- **Groups never change because of the bet size; the answers do** *(Noam)*. On a polar overbet turn, and on the river after it, every group is still asked, but only three answers are right: **All-in** (the polar value: two pair or better and top pair with the top kicker), **Potential bluffs** (the polar bluffs) and **Showdown value** (everything that checks back, even a good kicker like AJ). The middle boxes are the believable mistake there.
-- On a 66–75% turn the full ladder applies.
+- **The bet size changes nothing in the answers** *(Noam, 2026-10-31)*. The amounts are estimates of what each hand wants; the turn size (overbet or 66%) is extra information for the player, shown on screen, nothing more. *(This replaces an earlier draft rule that made every one-pair hand except the very top "check back" on a polar overbet turn.)*
 - The screen always shows the bet: a badge under the board ("Turn: OVERBET · polar" or "Turn: 66% bet"), and on the river what the turn was.
 
 ## 2c. How many bets a hand is worth *(Noam, 2026-10-30)*
 
 - **The drill asks what each hand wants, whatever the bet size.** The turn size (overbet or 66%) is shown as information; every group is still asked.
+- **Top pair is worth about 20% on the flop and, on a brick turn, another 20%; that is its last bet, then showdown** *(Noam, 2026-10-31, from his notes on J♠T♠3♣)*. This holds even on a dynamic board like J♠T♠3♣, assuming the runout bricks.
 - **Any ace (top pair on an ace-high board) is worth two small bets:** small on the flop, then a second bet. On a 66% turn the second bet goes in on the turn. So A6–A3 are 20% on the flop, like AJ–A8.
 - **Pocket pairs under an ace (KK–88 on A72) are worth one small bet:** 5% on the flop, then check down (showdown value) on the turn and river, unless they improve. Two bets with them is borderline. Bet sizes come in a few fixed sizes, and with only "bet 66%" or "check" on the turn, they check.
 
@@ -90,21 +90,21 @@ Every hand goes into exactly one group, checked from the top down. Groups are re
 
 These are the patterns the A72 answers follow. Uri's corrections will turn them into rules.
 
-- Brick turn (Q♥) = polar overbet: two pair+ and AK all-in; every other one-pair hand checks back (showdown value); no-pair hands without showdown value are the bluffs.
+- Brick turn (Q♥, BTN overbets): AK 50% (three streets); AJ–A8 and A6–A3 another 20% (their last bet); KK and the lower pairs showdown value.
 - Dynamic turn (6♦, 66%): the strong kickers keep going (50%), the medium kickers slow down (5%).
 - Wet turn (5♣, 66%): sets and two pair stop being all-in (50%), and every top pair drops one step.
-- Brick river: after an overbet turn, the same polar split as the turn; after a 66% turn, the strong kicker makes one value bet (20%) and most one-pair hands go to showdown value.
-- Wet river: sets and two pair drop to 20% (or stay all-in on the polar line), top pair becomes a bluff-catcher (5%), K-high becomes a potential bluff, and the rest goes to showdown value.
+- Brick river: top pair that bet the flop and turn shows down, AK makes one more value bet (20%); after a 66% turn, the strong kicker makes one value bet (20%) and most one-pair hands go to showdown value.
+- Wet river: sets and two pair drop to 20%, top pair becomes a bluff-catcher (5%), K-high becomes a potential bluff, and the rest goes to showdown value.
 
 ## 6b. Board 2: J♠ T♠ 3♣ (all drafts, built from these rules, 2026-10-30)
 
 Chosen as the opposite of A72: no ace, two-tone, very connected.
 
-- **Cutoffs:** good kicker = AJ–KJ, medium = QJ–J9, weak = J8 and below. **Showdown cutoff = A-high** (no ace pairs on this board).
+- **Cutoffs:** good kicker = AJ–KJ; **every other jack (QJ–J7) is one group** *(Noam: they all want about 20% on the flop)*. **Showdown cutoff = A-high** (no ace pairs on this board).
 - **New group:** overpairs (QQ–AA).
 - **Runouts:** 2♥ brick (polar overbet) → 3♦ (board pairs) / 9♠ (flush and straights); 6♣ dynamic, second flush draw (66%) → 3♦ / Q♠ (flush and straights); 9♠ wet, flush in (66%) → 2♦ / 8♠ (four spades).
-- **Flop:** sets and JT all-in; overpairs 50%; AJ–KJ 20% (two small bets); QJ–J9, J8-, Tx 5%; 99–44, 22, 3x and A-high showdown value; the rest potential bluffs (draws included).
-- **Polar overbet turn (2♥):** the top of the one-pair range here is the overpairs, so **QQ–AA bet the overbet** (all-in line) along with sets and two pair; AJ–KJ and everything below check back.
+- **Flop:** sets and JT all-in; overpairs 50%; AJ–KJ and QJ–J7 20% (top pair); Tx 5%; 99–44, 22, 3x and A-high showdown value; the rest potential bluffs (draws included).
+- **Brick turn (2♥, BTN overbets):** overpairs 50%; every top pair another 20% (its last bet, then showdown on a brick river); the lower pairs showdown value.
 - **Rivers where the draws arrive (9♠, Q♠, 8♠):** A-high becomes a potential bluff; overpairs become bluff-catchers (showdown value).
 
 ## 7. Open questions for Uri
@@ -112,7 +112,7 @@ Chosen as the opposite of A72: no ace, two-tone, very connected.
 1. Is "Top pair, weak kicker" A6–A3 one group, or A6 alone plus the wheel draws A5–A3?
 2. Should K-high draws stay in showdown value, or be their own group?
 3. On rivers where the K pairs (K♦, K♠, K♥), no K-high no-pair hands exist. Should the showdown cutoff drop to Q-high there?
-4. *(Settled 2026-10-30: groups stay; answers on a polar line are all-in, potential bluffs or showdown value.)*
+4. *(Settled 2026-10-31: groups stay, and the bet size changes no answer; it is information only.)*
 5. All the turn and river buckets are drafts. Please correct them; the gold dots in the app's summary mark them.
 
 ## Change log
@@ -124,3 +124,4 @@ Chosen as the opposite of A72: no ace, two-tone, very connected.
 - **2026-10-30 (evening)**: Drop targets became six neon paddles around the frame; money boxes read 5%, 20%, 50%, 100% ("A little" is now 5%).
 - **2026-10-30 (night)**: Any ace = two small bets (A6–A3 20% on the flop); KK–88 = one small bet then showdown on every turn; the drill asks every group whatever the bet size.
 - **2026-10-30 (night)**: Second board J♠T♠3♣ added (6 runouts, drafts). The start screen lets you pick a board or mix them.
+- **2026-10-31**: From Noam's notes: top pair = 20% on the flop and 20% more on a brick turn, then showdown; the turn bet size is information only (the polar "check back" answers are gone); on J♠T♠3♣ QJ–J7 form one group.
