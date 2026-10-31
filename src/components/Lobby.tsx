@@ -68,7 +68,7 @@ const DRILLS: DrillCard[] = [
   {
     key: "price",
     title: "How many big blinds?",
-    sub: "BTN vs BB · what each hand group wants, flop to river",
+    sub: "BTN vs BB · 10 boards · what each hand group wants",
     meta: "New",
     colors: ["#3FA9F5", "#22C4A1", "#9B7FEA", "#FFC94A"],
     href: "/drills/postflop/price",

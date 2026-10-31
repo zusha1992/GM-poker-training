@@ -277,11 +277,11 @@ export function PriceScreen() {
             <Row label="Flop bet" text="Small, BB calls" />
             <Row label="Turn bet" text="Overbet (polar) on bricks · 66% on wet cards" />
           </div>
-          <div className="flex flex-col gap-1.5" role="radiogroup" aria-label="Board" data-testid="board-picker">
-            <b className="font-[family-name:var(--font-display)] text-[13px] tracking-[0.06em] uppercase" style={{ color: "var(--muted)" }}>
-              Board
+          <div className="grid grid-cols-2 gap-1.5" role="radiogroup" aria-label="Board" data-testid="board-picker">
+            <b className="col-span-2 font-[family-name:var(--font-display)] text-[13px] tracking-[0.06em] uppercase" style={{ color: "var(--muted)" }}>
+              Board · {BOARDS.length} flops, 6 runouts each
             </b>
-            {[...BOARDS.map((b) => ({ key: b.name as string | null, title: b.flop.join(" "), sub: `${b.blurb} · 6 runouts` })), { key: null, title: "Mix them", sub: `Any board · ${RUNOUTS.length} runouts` }].map((o) => {
+            {[{ key: null as string | null, title: "Mix them all", sub: `Any board · ${RUNOUTS.length} runouts` }, ...BOARDS.map((b) => ({ key: b.name as string | null, title: b.flop.join(" "), sub: b.blurb }))].map((o) => {
               const on = board === o.key;
               return (
                 <button
@@ -289,15 +289,15 @@ export function PriceScreen() {
                   type="button"
                   role="radio"
                   aria-checked={on}
-                  className="flex cursor-pointer items-center justify-between rounded-xl border px-3 py-2.5 text-left transition-transform active:scale-[0.98]"
+                  className={`flex cursor-pointer flex-col items-start gap-0.5 rounded-xl border px-2.5 py-2 text-left transition-transform active:scale-[0.98] ${o.key ? "" : "col-span-2"}`}
                   style={{ borderColor: on ? "var(--mix)" : "var(--line)", background: on ? "var(--panel-2)" : "var(--panel)" }}
                   onClick={() => setBoard(o.key)}
                   data-testid={`board-${o.key ?? "mix"}`}
                 >
-                  <b className="font-[family-name:var(--font-display)] text-[16px]" style={{ color: on ? "var(--mix)" : "var(--foreground)" }}>
+                  <b className="font-[family-name:var(--font-display)] text-[15px]" style={{ color: on ? "var(--mix)" : "var(--foreground)" }}>
                     {o.title}
                   </b>
-                  <span className="text-[12px]" style={{ color: "var(--muted)" }}>
+                  <span className="text-[11px] leading-tight" style={{ color: "var(--muted)" }}>
                     {o.sub}
                   </span>
                 </button>

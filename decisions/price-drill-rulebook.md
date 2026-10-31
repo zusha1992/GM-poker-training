@@ -107,6 +107,27 @@ Chosen as the opposite of A72: no ace, two-tone, very connected.
 - **Brick turn (2♥, BTN overbets):** overpairs 50%; every top pair another 20% (its last bet, then showdown on a brick river); the lower pairs showdown value.
 - **Rivers where the draws arrive (9♠, Q♠, 8♠):** A-high becomes a potential bluff; overpairs become bluff-catchers (showdown value).
 
+## 6c. Boards 3–10: answers computed from the rules (2026-10-31, all drafts)
+
+Eight more boards from the planning doc, each teaching something different: **K♠5♥4♣** (king-high, low connectors), **Q♥T♦7♠** (middle cards), **9♠8♦6♣** (very connected, low), **K♦Q♣T♥** (broadway), **A♥7♥6♣** (ace-high but two-tone and connected), **K♦Q♦4♠** (two high cards, two-tone), **T♥8♥7♠** (the wettest), **9♦6♦2♥** (low, two-tone). Each has the doc's brick / dynamic / wet turns and a brick and a wet river.
+
+Their answers are not written one by one: they come from a **value plan**, the rules above turned into numbers. Change a rule here and every one of these boards follows.
+
+**How many streets of value each group wants** (on a brick runout):
+- Overpairs: 3
+- Top pair, strong kicker: 3 on a dry flop, 2 on a wet flop *(wet = two-tone or connected)*
+- Every other top pair: 2 *(20% on the flop, 20% more on a brick turn)*
+- Pairs under the top card that sit right below it, and second pair: 1 *(one small bet, then showdown)*
+- Everything else with a pair: 0 (showdown value)
+- No pair: showdown value if it holds the highest missing card (A-high, or K-high when an ace is on board), otherwise a potential bluff
+
+**Spending them, street by street:**
+- **Flop:** 3 → 50% · 2 → 20% · 1 → 5% · 0 → showdown value. Sets and two pair all-in.
+- **Turn** (with what's left): brick → 50% or 20% (its last bet) · dynamic → 50% or 5% · wet → 20% or 5% · nothing left → showdown value. Sets and two pair stay all-in, except on a wet turn (50%).
+- **River:** a group with value left bets 20% on a blank (5% if the turn was wet, or if the river completes draws); everything else shows down. On a river that completes the draws, sets and two pair drop to 20% and the high-card hands become potential bluffs.
+- **Kickers:** the two best kickers make "strong" (AK/AQ on an ace, AK/KQ on a king, AQ/KQ below); every other kicker is one group.
+- **The turn bet size** (overbet on a brick, 66% otherwise) is shown as information only.
+
 ## 7. Open questions for Uri
 
 1. Is "Top pair, weak kicker" A6–A3 one group, or A6 alone plus the wheel draws A5–A3?
@@ -125,3 +146,4 @@ Chosen as the opposite of A72: no ace, two-tone, very connected.
 - **2026-10-30 (night)**: Any ace = two small bets (A6–A3 20% on the flop); KK–88 = one small bet then showdown on every turn; the drill asks every group whatever the bet size.
 - **2026-10-30 (night)**: Second board J♠T♠3♣ added (6 runouts, drafts). The start screen lets you pick a board or mix them.
 - **2026-10-31**: From Noam's notes: top pair = 20% on the flop and 20% more on a brick turn, then showdown; the turn bet size is information only (the polar "check back" answers are gone); on J♠T♠3♣ QJ–J7 form one group.
+- **2026-10-31**: Eight more boards (10 in all, 60 runouts). Their answers come from the value plan in section 6c.

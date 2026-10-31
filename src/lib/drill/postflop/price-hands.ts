@@ -533,10 +533,211 @@ const JT3_TURNS: TurnSpec[] = [
 /** A board of the drill: its flop, cutoffs and answers, and its runouts. */
 type BoardSpec = { name: string; flop: [string, string, string]; blurb: string; flopSpec: StreetSpec; turns: TurnSpec[] };
 
+// ---------- boards 3–10: answers computed from the rulebook ----------
+//
+// Instead of hand-writing every answer, these boards use the rulebook's
+// "value plan": how many streets of value each group wants on a brick
+// runout, spent street by street. All drafts for Uri and Noam to correct;
+// a rule change here changes every one of these boards at once.
+
+/** Streets of value a group wants (rulebook 2c and section 6). */
+function valueStreets(g: PGroup, wetFlop: boolean): number {
+  if (g === "op") return 3;
+  if (g === "tpgk") return wetFlop ? 2 : 3; // strong kicker: three streets on a dry flop, two on a wet one
+  if (g === "tpmk" || g === "tpwk") return 2; // top pair: 20% on the flop, 20% on a brick turn, then showdown
+  if (g === "pp1" || g === "mp") return 1; // one small bet on the flop, then check down
+  return 0;
+}
+
+const FLOP_BUCKET: Record<number, Bucket> = { 3: "50", 2: "20", 1: "little", 0: "sd" };
+
+type RunoutKinds = { wetFlop: boolean; turn?: StreetKind; river?: StreetKind };
+
+/** What one group wants on one street of a generated board. */
+function ruleAnswer(g: PGroup, street: Street, k: RunoutKinds): Answer {
+  if (g === "monster") return autoAll("Straights and better want every chip in.");
+  if (g === "air") return a("bluff", "No pair and no showdown value: it can't win by checking, so it's a potential bluff.", true);
+  if (g === "sd") {
+    if (street === "river" && k.river === "wet") return a("bluff", "The draws arrived and the ranges are polar: this high card can't win at showdown any more.");
+    return a("sd", "No pair, but the highest cards sometimes win at showdown. Draws included.", true);
+  }
+  if (g === "twopair") {
+    if (street === "flop" || (street === "turn" && k.turn !== "wet")) return autoAll("Sets and two pair want every chip in.");
+    if (street === "turn") return a("50", "The turn completed draws: still big, not all-in.");
+    if (k.river === "wet") return a("20", "Behind every new flush and straight: one value bet at most.");
+    return k.turn === "wet" ? a("50", "The draws missed, but the turn already brought them: big, not all-in.") : autoAll("Nothing got there: get the rest in.");
+  }
+  const n = valueStreets(g, k.wetFlop);
+  if (street === "flop") {
+    const b = FLOP_BUCKET[n];
+    const why =
+      n === 3 ? "Three streets of value on a brick runout." : n === 2 ? "Two small bets: 20% now, 20% more on a brick turn." : n === 1 ? "One small bet, then check down unless it improves." : "Check and show down.";
+    return a(b, why);
+  }
+  if (street === "turn") {
+    const left = n - 1;
+    if (left <= 0) return a("sd", n === 1 ? "It already made its one small bet: check and show down." : "Check and show down.");
+    if (k.turn === "brick") return left >= 2 ? a("50", "A blank: keep going for value.") : a("20", "Top pair on a brick turn: another 20%. That's its last bet.");
+    if (k.turn === "dynamic") return left >= 2 ? a("50", "Still ahead: keep charging the new draws.") : a("little", "BB's range improved: one more small bet at most.");
+    return left >= 2 ? a("20", "The turn completed draws: one step down.") : a("little", "The turn completed draws: one small bet at most.");
+  }
+  const left = n - 2;
+  if (left <= 0) return a("sd", n === 2 ? "It bet the flop and the turn: that was its last bet. Show down." : "Check and show down.");
+  if (k.river === "wet") return a("little", "The river completed draws: a bluff-catcher now, a small bet at most.");
+  return k.turn === "wet" ? a("little", "The draws missed, but the turn was scary: one small value bet.") : a("20", "One more value bet on a blank river.");
+}
+
+/** Kicker and showdown cutoffs from the board itself: the two best kickers
+ * are "good" (AK/AQ on an ace, AK/KQ on a king, AQ/KQ below), every other
+ * kicker one group (Noam 2026-10-31); A-high has showdown value unless an
+ * ace is on board, then K-high. */
+function rulesCut(board: Card[]): Pick<StreetSpec, "goodKicker" | "midKicker" | "sdCutoff"> {
+  const top = Math.max(...board.map((c) => c.r));
+  const goodKicker = top >= 13 ? 12 : 13;
+  return { goodKicker, midKicker: 2, sdCutoff: board.some((c) => c.r === 14) ? 13 : 14 };
+}
+
+function ruleAnswers(street: Street, board: Card[], k: RunoutKinds): Partial<Record<PGroup, Answer>> {
+  return Object.fromEntries(PGROUP_ORDER.map((g) => [g, ruleAnswer(g, street, k)])) as Partial<Record<PGroup, Answer>>;
+}
+
+type RuleTurn = { card: string; kind: Exclude<StreetKind, "flop" | "wet"> | "wet"; story: string; rivers: [{ card: string; story: string }, { card: string; story: string }] };
+type RuleBoard = { name: string; flop: [string, string, string]; blurb: string; wetFlop: boolean; story: string; turns: [RuleTurn, RuleTurn, RuleTurn] };
+
+/** A board from its cards and runouts; every answer comes from ruleAnswer.
+ * Turn size (information only): overbet on a brick, 66% otherwise. */
+function ruleBoard(b: RuleBoard): BoardSpec {
+  const flopCards = b.flop.map(card);
+  const flopSpec: StreetSpec = { card: "", kind: "flop", story: b.story, ...rulesCut(flopCards), answers: ruleAnswers("flop", flopCards, { wetFlop: b.wetFlop }) };
+  const turns = b.turns.map((t): TurnSpec => {
+    const turnBoard = [...flopCards, card(t.card)];
+    const rivers = t.rivers.map((rv, i): StreetSpec => {
+      const kind: StreetKind = i === 0 ? "brick" : "wet";
+      const riverBoard = [...turnBoard, card(rv.card)];
+      return { card: rv.card, kind, story: rv.story, ...rulesCut(riverBoard), answers: ruleAnswers("river", riverBoard, { wetFlop: b.wetFlop, turn: t.kind, river: kind }) };
+    }) as [StreetSpec, StreetSpec];
+    return {
+      card: t.card,
+      kind: t.kind,
+      bet: t.kind === "brick" ? "overbet" : "twoThirds",
+      story: t.story,
+      ...rulesCut(turnBoard),
+      answers: ruleAnswers("turn", turnBoard, { wetFlop: b.wetFlop, turn: t.kind }),
+      rivers,
+    };
+  });
+  return { name: b.name, flop: b.flop, blurb: b.blurb, flopSpec, turns };
+}
+
+/** Boards 3–10, picked from Noam's planning doc for different lessons.
+ * Each turn: brick / dynamic / wet; each turn's rivers: brick first, then wet. */
+const RULE_BOARDS: RuleBoard[] = [
+  {
+    name: "K54",
+    flop: ["K♠", "5♥", "4♣"],
+    blurb: "King-high with low connectors",
+    wetFlop: false,
+    story: "King-high with a low connected pair of cards: BTN has the kings, BB the 5x and 4x.",
+    turns: [
+      { card: "Q♦", kind: "brick", story: "Q♦ · Brick. Nothing new for BB: BTN overbets, polar.", rivers: [{ card: "4♦", story: "4♦ · Brick. The board pairs, no new straights." }, { card: "3♥", story: "3♥ · Wet. A2, 76 and 62 make straights." }] },
+      { card: "9♥", kind: "dynamic", story: "9♥ · Dynamic. A heart flush draw and gutshots like 76, 87, 86: BTN bets 66%.", rivers: [{ card: "4♦", story: "4♦ · Brick. The board pairs." }, { card: "6♥", story: "6♥ · Wet. The heart flush and the 87, 73, 32 straights come in." }] },
+      { card: "3♠", kind: "wet", story: "3♠ · Wet. A2, 62 and 76 make straights, and a spade draw arrives: BTN bets 66%.", rivers: [{ card: "9♦", story: "9♦ · Brick. Nothing new completes." }, { card: "2♠", story: "2♠ · Wet. The spade flush, and any A or 6 makes a straight." }] },
+    ],
+  },
+  {
+    name: "QT7",
+    flop: ["Q♥", "T♦", "7♠"],
+    blurb: "Middle cards, rainbow",
+    wetFlop: true,
+    story: "Queen-high with tens and sevens: plenty of straight draws for both players.",
+    turns: [
+      { card: "2♣", kind: "brick", story: "2♣ · Brick. A blank: BTN overbets, polar.", rivers: [{ card: "3♦", story: "3♦ · Brick. Nothing completes." }, { card: "9♥", story: "9♥ · Wet. KJ, J8 and 86 make straights." }] },
+      { card: "5♦", kind: "dynamic", story: "5♦ · Dynamic. A diamond flush draw and low straight draws (86, 64): BTN bets 66%.", rivers: [{ card: "2♣", story: "2♣ · Brick. The draws missed." }, { card: "9♦", story: "9♦ · Wet. The diamond flush and the KJ, J8, 86 straights come in." }] },
+      { card: "J♥", kind: "wet", story: "J♥ · Wet. AK, K9 and 98 make straights, and a heart draw arrives: BTN bets 66%.", rivers: [{ card: "3♣", story: "3♣ · Brick. Nothing new." }, { card: "K♥", story: "K♥ · Wet. The heart flush, and any A or 9 makes a straight." }] },
+    ],
+  },
+  {
+    name: "986",
+    flop: ["9♠", "8♦", "6♣"],
+    blurb: "Very connected, low",
+    wetFlop: true,
+    story: "A low, very connected flop: it hits BB's calling range hard.",
+    turns: [
+      { card: "2♥", kind: "brick", story: "2♥ · Brick. A blank: BTN overbets, polar.", rivers: [{ card: "K♣", story: "K♣ · Brick. An overcard, no straight." }, { card: "7♥", story: "7♥ · Wet. Any T or 5 makes a straight." }] },
+      { card: "K♦", kind: "dynamic", story: "K♦ · Dynamic. An overcard and a diamond draw: BTN bets 66%.", rivers: [{ card: "3♥", story: "3♥ · Brick. The draws missed." }, { card: "T♦", story: "T♦ · Wet. The diamond flush, and any 7 or QJ makes a straight." }] },
+      { card: "7♠", kind: "wet", story: "7♠ · Wet. Any T or 5 makes a straight, and a spade draw arrives: BTN bets 66%.", rivers: [{ card: "2♦", story: "2♦ · Brick. Nothing new." }, { card: "J♠", story: "J♠ · Wet. The spade flush, and QT now beats any T." }] },
+    ],
+  },
+  {
+    name: "KQT",
+    flop: ["K♦", "Q♣", "T♥"],
+    blurb: "Broadway, connected, rainbow",
+    wetFlop: true,
+    story: "Three broadway cards: AJ already has the nuts, and BTN has far more of the strong hands.",
+    turns: [
+      { card: "3♠", kind: "brick", story: "3♠ · Brick. A blank: BTN overbets, polar.", rivers: [{ card: "4♦", story: "4♦ · Brick. Nothing new." }, { card: "J♠", story: "J♠ · Wet. Any A or 9 makes a straight." }] },
+      { card: "7♣", kind: "dynamic", story: "7♣ · Dynamic. A club draw and J9, 98 draws: BTN bets 66%.", rivers: [{ card: "2♥", story: "2♥ · Brick. The draws missed." }, { card: "9♣", story: "9♣ · Wet. The club flush, and any J and 86 make straights." }] },
+      { card: "J♦", kind: "wet", story: "J♦ · Wet. Any A or 9 makes a straight, and a diamond draw arrives: BTN bets 66%.", rivers: [{ card: "4♠", story: "4♠ · Brick. Nothing new." }, { card: "8♦", story: "8♦ · Wet. The diamond flush comes in." }] },
+    ],
+  },
+  {
+    name: "A76",
+    flop: ["A♥", "7♥", "6♣"],
+    blurb: "Ace-high, two-tone, connected",
+    wetFlop: true,
+    story: "Ace-high again, but two-tone with a 7-6: much more dangerous than A72.",
+    turns: [
+      { card: "K♠", kind: "brick", story: "K♠ · Brick. No new draws: BTN overbets, polar.", rivers: [{ card: "2♦", story: "2♦ · Brick. Every draw missed." }, { card: "8♥", story: "8♥ · Wet. The heart flush, and 95, T9, 54 make straights." }] },
+      { card: "Q♣", kind: "dynamic", story: "Q♣ · Dynamic. A second flush draw and broadway gutshots: BTN bets 66%.", rivers: [{ card: "2♠", story: "2♠ · Brick. The draws missed." }, { card: "5♥", story: "5♥ · Wet. The heart flush, and 98, 84, 43 make straights." }] },
+      { card: "8♥", kind: "wet", story: "8♥ · Wet. The heart flush, and 95, T9, 54 make straights: BTN bets 66%.", rivers: [{ card: "2♦", story: "2♦ · Brick. Nothing new." }, { card: "T♥", story: "T♥ · Wet. A fourth heart, and any 9 makes a straight." }] },
+    ],
+  },
+  {
+    name: "KQ4",
+    flop: ["K♦", "Q♦", "4♠"],
+    blurb: "Two high cards, two-tone",
+    wetFlop: false,
+    story: "King-queen with a flush draw: BTN's range is full of strong kings and queens.",
+    turns: [
+      { card: "2♣", kind: "brick", story: "2♣ · Brick. A blank: BTN overbets, polar.", rivers: [{ card: "7♥", story: "7♥ · Brick. Nothing completes." }, { card: "J♦", story: "J♦ · Wet. The diamond flush, and AT, T9 make straights." }] },
+      { card: "8♠", kind: "dynamic", story: "8♠ · Dynamic. A second flush draw and small gutshots: BTN bets 66%.", rivers: [{ card: "3♥", story: "3♥ · Brick. The draws missed." }, { card: "T♦", story: "T♦ · Wet. The diamond flush, and AJ, J9 make straights." }] },
+      { card: "A♦", kind: "wet", story: "A♦ · Wet. The diamond flush comes in, and JT makes broadway: BTN bets 66%.", rivers: [{ card: "7♣", story: "7♣ · Brick. Nothing new." }, { card: "T♦", story: "T♦ · Wet. A fourth diamond, and any J makes broadway." }] },
+    ],
+  },
+  {
+    name: "T87",
+    flop: ["T♥", "8♥", "7♠"],
+    blurb: "Very wet, two-tone",
+    wetFlop: true,
+    story: "The wettest board here: straights already possible, flush draws, and BB hits it hard.",
+    turns: [
+      { card: "2♦", kind: "brick", story: "2♦ · Brick. A blank: BTN overbets, polar.", rivers: [{ card: "3♣", story: "3♣ · Brick. Every draw missed." }, { card: "9♥", story: "9♥ · Wet. The heart flush, and any J or 6 makes a straight." }] },
+      { card: "A♠", kind: "dynamic", story: "A♠ · Dynamic. An overcard and a second flush draw: BTN bets 66%.", rivers: [{ card: "2♣", story: "2♣ · Brick. The draws missed." }, { card: "6♠", story: "6♠ · Wet. The spade flush, and any 9 or 54 makes a straight." }] },
+      { card: "9♥", kind: "wet", story: "9♥ · Wet. The heart flush, and any J or 6 makes a straight: BTN bets 66%.", rivers: [{ card: "2♣", story: "2♣ · Brick. Nothing new." }, { card: "Q♥", story: "Q♥ · Wet. A fourth heart, and any J makes a straight." }] },
+    ],
+  },
+  {
+    name: "962",
+    flop: ["9♦", "6♦", "2♥"],
+    blurb: "Low and two-tone",
+    wetFlop: false,
+    story: "A low, two-tone flop: overpairs are strong, and BB has plenty of 9x and 6x.",
+    turns: [
+      { card: "2♣", kind: "brick", story: "2♣ · Brick. The board pairs, no new draws: BTN overbets, polar.", rivers: [{ card: "K♠", story: "K♠ · Brick. An overcard, nothing completes." }, { card: "8♦", story: "8♦ · Wet. The diamond flush, and T7, 75 make straights." }] },
+      { card: "Q♥", kind: "dynamic", story: "Q♥ · Dynamic. An overcard, a second flush draw and a JT draw: BTN bets 66%.", rivers: [{ card: "A♣", story: "A♣ · Brick. The draws missed." }, { card: "T♦", story: "T♦ · Wet. The diamond flush, and KJ, J8, 87 make straights." }] },
+      { card: "8♦", kind: "wet", story: "8♦ · Wet. The diamond flush, and T7, 75 make straights: BTN bets 66%.", rivers: [{ card: "K♣", story: "K♣ · Brick. Nothing new." }, { card: "7♣", story: "7♣ · Wet. Four to a straight: any T or 5." }] },
+    ],
+  },
+];
+
+const GENERATED_BOARDS: BoardSpec[] = RULE_BOARDS.map(ruleBoard);
+
+
 /** Every board in the drill. Each has 3 turns × 2 rivers = 6 runouts. */
 export const BOARDS: BoardSpec[] = [
   { name: "A72", flop: ["A♣", "7♦", "2♠"], blurb: "Dry, ace-high, rainbow", flopSpec: A72_FLOP, turns: A72_TURNS },
   { name: "JT3", flop: ["J♠", "T♠", "3♣"], blurb: "Wet, no ace, two-tone", flopSpec: JT3_FLOP, turns: JT3_TURNS },
+  ...GENERATED_BOARDS,
 ];
 
 /** Pot and stack at the start of each street. The flop is always a small
