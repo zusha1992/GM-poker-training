@@ -61,12 +61,12 @@ export const BUCKET_COLOR: Record<Bucket, string> = {
 
 /** Tiny text for the legend and summary chips: just the number. */
 export function bucketTiny(b: Bucket): string {
-  return b === "bluff" ? "Bluffs" : b === "sd" ? "Showdown" : b === "all" ? "100%" : b === "little" ? "5%" : `${b}%`;
+  return { bluff: "Bluffs", sd: "Showdown", little: "Small pot", "20": "Medium pot", "50": "Big pot", all: "Stacks" }[b];
 }
 
 /** Short text for toasts and feedback notes. */
 export function bucketShort(b: Bucket): string {
-  return b === "bluff" ? "potential bluff" : b === "sd" ? "showdown value" : b === "all" ? "100% (all-in)" : `${bucketTiny(b)} of stack`;
+  return { bluff: "potential bluff", sd: "showdown value", little: "small pot", "20": "medium pot", "50": "big pot", all: "stacks (all-in)" }[b];
 }
 
 export type Answer = { bucket: Bucket; why: string; sure: boolean; auto?: boolean };

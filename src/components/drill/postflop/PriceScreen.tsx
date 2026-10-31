@@ -268,12 +268,12 @@ export function PriceScreen() {
             </span>
             <b className="font-[family-name:var(--font-display)] text-[26px] font-bold">How many big blinds?</b>
             <p className="m-0 max-w-[330px] text-[13.5px] leading-[1.5]" style={{ color: "var(--muted)" }}>
-              BTN opened, BB called, 100bb deep. On every street your hand groups come one at a time: drag each into what it&apos;s worth from here, if the
+              BTN opened, BB called, 100bb deep. On every street your hand groups come one at a time: drag each into how big a pot it wants to play, if the
               rest of the board bricks. BB calls every bet.
             </p>
           </div>
           <div className="flex flex-col gap-1.5 rounded-2xl p-3 text-[13px]" style={{ background: "var(--panel)", border: "1px solid var(--line)" }}>
-            <Row label="Boxes" text="Bluffs · Showdown · 5% · 20% · 50% · 100%" />
+            <Row label="Boxes" text="Bluffs · Showdown · Small, medium or big pot · Stacks" />
             <Row label="Flop bet" text="Small, BB calls" />
             <Row label="Turn bet" text="Overbet (polar) on bricks · 66% on wet cards" />
           </div>

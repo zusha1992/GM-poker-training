@@ -9,7 +9,8 @@ import styles from "./MoneyPaddles.module.css";
  * 100% on the right side, showdown value in the bottom-right corner. */
 type Spot = "bl" | "left" | "tl" | "tr" | "right" | "br";
 const SPOT: Record<Bucket, Spot> = { bluff: "bl", little: "left", "20": "tl", "50": "tr", all: "right", sd: "br" };
-const LABEL: Record<Bucket, string> = { bluff: "Potential\nbluffs", sd: "Showdown\nvalue", little: "5%", "20": "20%", "50": "50%", all: "100%" };
+/** How big a pot each paddle stands for (Noam 2026-10-31: pot sizes, not percentages). */
+const LABEL: Record<Bucket, string> = { bluff: "Potential\nbluffs", sd: "Showdown\nvalue", little: "Small\npot", "20": "Medium\npot", "50": "Big\npot", all: "Stacks" };
 
 const INSET = 6;
 const STROKE = 12;
@@ -68,7 +69,7 @@ export function MoneyPaddles({ w, h, armed, holding, flash, hitRef }: Props) {
                 className={styles.inner}
                 style={{ [side]: 5, top: 7, bottom: 7, width: 2, borderRadius: 1, background: "#fff" }}
               />
-              <span className={styles.label} style={{ [side]: STROKE + 9, top: "50%", marginTop: -11, fontSize: 18 }}>
+              <span className={styles.label} style={{ [side]: STROKE + 9, top: "50%", transform: "translateY(-50%)", fontSize: 15, whiteSpace: "pre-line", textAlign: side }}>
                 {LABEL[b]}
               </span>
             </div>
@@ -89,7 +90,7 @@ export function MoneyPaddles({ w, h, armed, holding, flash, hitRef }: Props) {
             <span className={styles.inner} style={{ ...innerRadius, [v]: 5, [hz]: 5, width: a - 5, height: a - 5, borderStyle: "solid", ...edges(v, hz, 2) }} />
             <span
               className={styles.label}
-              style={{ [v]: STROKE + 9, [hz]: STROKE + 10, fontSize: word ? 13 : 20, textAlign: hz, whiteSpace: "pre-line", transformOrigin: `${hz} ${v}` }}
+              style={{ [v]: STROKE + 9, [hz]: STROKE + 10, fontSize: word ? 13 : 15, textAlign: hz, whiteSpace: "pre-line", transformOrigin: `${hz} ${v}` }}
             >
               {LABEL[b]}
             </span>

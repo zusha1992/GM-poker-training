@@ -13,13 +13,16 @@ This is a living document. It holds every rule for splitting BTN's range into ha
 - Bet sizes are never asked. Only the money each group wants. *(Noam)*
 - Between streets, BTN bets and BB calls. The flop bet is always small (1.8bb). The turn bet depends on the card (section 2b). Pots: 5.5bb on the flop, 9.1bb on the turn, then about 36bb on the river after an overbet turn or about 21bb after a 66% turn. The player sees the pot, the stack behind and the bet size. *(draft numbers)*
 
-## 2. The six boxes *(Noam, 2026-10-29; money as stack shares since 2026-10-30)*
+## 2. The six boxes
+
+*Older rules below may still say 5% / 20% / 50% / 100%: read them as Small pot / Medium pot / Big pot / Stacks.*
+ *(Noam, 2026-10-29; money as stack shares since 2026-10-30)*
 
 | Box | Means |
 |---|---|
 | **Potential bluffs** (bottom-left corner) | Worth nothing. It can't win by checking, so it's a candidate to bluff. That doesn't mean it always bluffs: which ones actually bet is taught in the later bluff drill. |
 | **Showdown value** (bottom-right corner) | Worth a tiny bit. No value bet, but it sometimes wins when checked down. |
-| **5% · 20% · 50% · 100%** (left side, top corners, right side) | Real money as a rough share of the stack that's left; 100% = all-in. *(Noam: no exact bb numbers like +5/+15/+40, because we don't aim for that accuracy.)* |
+| **Small pot · Medium pot · Big pot · Stacks** (left side, top corners, right side) | How big a pot the group wants to play by the river *(Noam, 2026-10-31: pot sizes, not percentages)*. Two small bets can still be a small pot: it is about where the pot ends up, not how many bets. *(Noam: no exact bb numbers like +5/+15/+40, because we don't aim for that accuracy.)* |
 
 Layout *(Noam, 2026-10-30)*: six neon paddles in one design (Arkanoid-style), different colors, evenly spaced around the drop area, clockwise from small to big: Potential bluffs (bottom-left corner), 5% (left side), 20% (top-left corner), 50% (top-right corner), 100% (right side), Showdown value (bottom-right corner). Labels are only the number. The paddle the piece is near lights up; it flashes when the piece lands.
 
@@ -157,3 +160,4 @@ Their answers are not written one by one: they come from a **value plan**, the r
 - **2026-10-31**: Eight more boards (10 in all, 60 runouts). Their answers come from the value plan in section 6c.
 - **2026-10-31 (afternoon)**: From Noam's notes on K♦Q♦4♠: no-pair group names follow the board; fourth pair or worse is a potential bluff on the river (every board).
 - **2026-10-31 (afternoon)**: Any pair on the flop wants at least 5% (single-raised pot, wide ranges); applied to every board.
+- **2026-10-31 (evening)**: Money paddles renamed to pot sizes: Small pot, Medium pot, Big pot, Stacks. Open: is top pair a small pot (two small bets) or a medium pot?
