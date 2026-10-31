@@ -66,6 +66,13 @@ Every hand goes into exactly one group, checked from the top down. Groups are re
 - **The river completes the draws** (flush comes in, more straights): K-high loses its showdown value and becomes a **potential bluff**, because the ranges are polar.
 - **The draws brick** (for example the turn brought two flush draws and straight draws, and the river misses them all): BB has many missed draws, so **K-high can keep showdown value**.
 
+### Every pair wants money on the flop *(Noam, 2026-10-31)*
+- In a single-raised pot (BTN raises, BB calls) both ranges are wide, so **any pair on the flop wants to put some money in**, even the worst pair: at least 5%. No pair is showdown value on the flop yet.
+
+### Weak pairs on the river *(Noam, 2026-10-31, from his note on K♦Q♦4♠ · 8♠ · 3♥)*
+- **A pocket pair under three or more board cards on the river (fourth pair or worse) is a potential bluff**, not showdown value: it rarely wins at showdown.
+- *Open:* exactly when such weak pairs still have showdown value. Noam: it follows the same principle as A-high and K-high, which draws arrived on the river and which missed. To work out with Uri.
+
 ### Cutoffs to set for every new board
 1. Good kicker (A72: Q or better, so AK and AQ: in a single-raised pot AQ is very strong on this board *(Noam)*)
 2. Medium kicker (A72: 8 or better)
@@ -76,6 +83,7 @@ Every hand goes into exactly one group, checked from the top down. Groups are re
 - **One group at a time, in mixed order** (not strongest to weakest, so the player can't just walk down the ladder).
 - The current group is **lit in its own color** on the matrix. Groups not answered yet are **grey**, and answered groups take **their box's money color**. By the end of a street the matrix is a money map.
 - Obvious groups place themselves: straight+ always, and sets & two pair when they're all-in. Everything else is asked.
+- **No-pair names use only ranks that aren't on the board** *(Noam, 2026-10-31)*: on K♦Q♦4♠ the groups are "A-high" and "J-high & below", never "K-high".
 - **Names are neutral.** A piece says what the hands are ("AT–A8", "66–33", "K-high", "Q-high & below"), never what to do. The words "bluff", "give up" and "showdown" only appear on the boxes, never on a piece.
 - A wrong drop says only "worth more" or "worth less", never the right box.
 - Tapping a piece shows its full name and every hand in it.
@@ -147,3 +155,5 @@ Their answers are not written one by one: they come from a **value plan**, the r
 - **2026-10-30 (night)**: Second board J♠T♠3♣ added (6 runouts, drafts). The start screen lets you pick a board or mix them.
 - **2026-10-31**: From Noam's notes: top pair = 20% on the flop and 20% more on a brick turn, then showdown; the turn bet size is information only (the polar "check back" answers are gone); on J♠T♠3♣ QJ–J7 form one group.
 - **2026-10-31**: Eight more boards (10 in all, 60 runouts). Their answers come from the value plan in section 6c.
+- **2026-10-31 (afternoon)**: From Noam's notes on K♦Q♦4♠: no-pair group names follow the board; fourth pair or worse is a potential bluff on the river (every board).
+- **2026-10-31 (afternoon)**: Any pair on the flop wants at least 5% (single-raised pot, wide ranges); applied to every board.

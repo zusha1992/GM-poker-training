@@ -812,6 +812,13 @@ export function priceGroupOf(hole: [Card, Card], board: Card[], cut: Pick<Street
 
 const ch = (r: number) => rankChar(r);
 
+/** The highest rank at or below `r` that isn't on the board (a no-pair hand's high card can't be a board rank). */
+function missingAtOrBelow(boardRanksHiLo: number[], r: number): number {
+  let x = r;
+  while (x > 2 && boardRanksHiLo.includes(x)) x--;
+  return x;
+}
+
 /** [13, 11, 10, 9] → "K, J–9" style runs (high to low). */
 function runs(vals: number[], fmt: (v: number) => string): string {
   const sorted = [...new Set(vals)].sort((p, q) => q - p);
@@ -861,10 +868,16 @@ function namesOf(g: PGroup, board: Card[], hands: string[], cut: Pick<StreetSpec
       const lows = ranks.slice(2).filter((r) => hands.some((h) => rv(h[0]) === r || rv(h[1]) === r));
       return { label: lows.map((r) => `${ch(r)}x`).join(" · "), name: "Lower pairs" };
     }
-    case "sd":
-      return { label: `${ch(cut.sdCutoff)}-high`, name: `No pair, ${ch(cut.sdCutoff)}-high (draws included)` };
-    default:
-      return { label: `${ch(cut.sdCutoff - 1)}-high & below`, name: `No pair, ${ch(cut.sdCutoff - 1)}-high or lower (draws included)` };
+    // No-pair names use only ranks that are NOT on the board (Noam: "K-high" makes
+    // no sense on a board with a king), e.g. "A-high" and "J-high & below" on K♦Q♦4♠.
+    case "sd": {
+      const hi = missingAtOrBelow(ranks, cut.sdCutoff);
+      return { label: `${ch(hi)}-high`, name: `No pair, ${ch(hi)}-high (draws included)` };
+    }
+    default: {
+      const lo = missingAtOrBelow(ranks, cut.sdCutoff - 1);
+      return { label: `${ch(lo)}-high & below`, name: `No pair, ${ch(lo)}-high or lower (draws included)` };
+    }
   }
 }
 
@@ -911,6 +924,25 @@ export type PriceStreet = {
 export type Runout = { index: number; id: string; streets: PriceStreet[] };
 
 const STREET_NAMES: Street[] = ["flop", "turn", "river"];
+
+/** Rules that hold on every board, over each board's own answers.
+ * Noam 2026-10-31: a pocket pair under three or more board cards on the river
+ * (fourth pair or worse) is a potential bluff, not showdown value. When such
+ * pairs keep showdown value (draws missing vs arriving) is still open for Uri. */
+/** Noam 2026-10-31: in a single-raised pot the ranges are wide, so every pair
+ * on the flop wants some money, even the worst one: never showdown value yet. */
+const PAIR_GROUPS = new Set<PGroup>(["op", "tpgk", "tpmk", "tpwk", "pp1", "pp2", "pp3", "mp", "bp"]);
+function everyBoardRule(g: PGroup, street: Street, ans: Answer | undefined): Answer | undefined {
+  if (ans && street === "flop" && PAIR_GROUPS.has(g) && BUCKET_RANK[ans.bucket] < BUCKET_RANK.little) {
+    return a("little", "Any pair on the flop of a single-raised pot wants some money: both ranges are wide.");
+  }
+  return ans;
+}
+
+function riverRule(g: PGroup, street: Street): Answer | undefined {
+  if (street === "river" && g === "pp3") return a("bluff", "Fourth pair or worse on the river: it rarely wins at showdown, so it's a potential bluff.");
+  return undefined;
+}
 const RUNOUT_CACHE = new Map<number, Runout>();
 
 /** Everything the screen shows for one runout, worked out once. */
@@ -930,7 +962,7 @@ export function buildRunout(index: number): Runout {
     const pieces: PricePiece[] = [];
     for (const g of PGROUP_ORDER) {
       if (snap.byGroup[g] <= 0) continue;
-      const ans = st.answers[g] ?? AUTO[g];
+      const ans = everyBoardRule(g, street, riverRule(g, street) ?? st.answers[g] ?? AUTO[g]);
       if (!ans) throw new Error(`price-hands: no answer for ${g} on ${spec.id} (${street})`);
       answers[g] = ans;
       const entries: { hand: string; part: number }[] = [];
