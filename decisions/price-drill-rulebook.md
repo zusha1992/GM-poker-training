@@ -76,6 +76,17 @@ Every hand goes into exactly one group, checked from the top down. Groups are re
 - **A pocket pair under three or more board cards on the river (fourth pair or worse) is a potential bluff**, not showdown value: it rarely wins at showdown.
 - *Open:* exactly when such weak pairs still have showdown value. Noam: it follows the same principle as A-high and K-high, which draws arrived on the river and which missed. To work out with Uri.
 
+### Very wet boards *(Noam, 2026-10-31, from his notes on T♥8♥7♠ · 9♥)*
+- **A board is very wet when one card makes a straight (four to a straight on board), or when a flush is in and straights are possible too.**
+- On a very wet turn or river, **one pair, sets and two pair go to showdown value**: they only get called by better. Sets and two pair never bet big there; at most a small bet sometimes, usually a check.
+- It stays that way on later streets, because the board stays very wet.
+- Applies on every board, checked from the cards themselves (the flop is never very wet).
+- *Open (Noam):* in spots like this, two answers might both be right (check or a small bet). See section 7.
+
+### A third bet makes a big pot *(Noam, 2026-10-31, from his notes on Q♥T♦7♠)*
+- **The strong top pair on a dry or medium flop wants a big pot** (not stacks): Q♥T♦7♠ counts as dry for this, since no straight is possible yet and there's no flush draw.
+- **On a blank runout, a hand that bet the flop and the turn and still has value bets a healthy third time on the river: big pot**, not medium. Applies to overpairs and strong top pairs on every board (A72 AK/AQ, J♠T♠3♣ overpairs too).
+
 ### Cutoffs to set for every new board
 1. Good kicker (A72: Q or better, so AK and AQ: in a single-raised pot AQ is very strong on this board *(Noam)*)
 2. Medium kicker (A72: 8 or better)
@@ -126,7 +137,7 @@ Their answers are not written one by one: they come from a **value plan**, the r
 
 **How many streets of value each group wants** (on a brick runout):
 - Overpairs: 3
-- Top pair, strong kicker: 3 on a dry flop, 2 on a wet flop *(wet = two-tone or connected)*
+- Top pair, strong kicker: 3 on a dry flop, 2 on a wet flop *(wet = a straight is already possible, or two-tone and connected: 9♠8♦6♣, K♦Q♣T♥, A♥7♥6♣, T♥8♥7♠)*
 - Every other top pair: 2 *(20% on the flop, 20% more on a brick turn)*
 - Pairs under the top card that sit right below it, and second pair: 1 *(one small bet, then showdown)*
 - Everything else with a pair: 0 (showdown value)
@@ -135,7 +146,8 @@ Their answers are not written one by one: they come from a **value plan**, the r
 **Spending them, street by street:**
 - **Flop:** 3 → 50% · 2 → 20% · 1 → 5% · 0 → showdown value. Sets and two pair all-in.
 - **Turn** (with what's left): brick → 50% or 20% (its last bet) · dynamic → 50% or 5% · wet → 20% or 5% · nothing left → showdown value. Sets and two pair stay all-in, except on a wet turn (50%).
-- **River:** a group with value left bets 20% on a blank (5% if the turn was wet, or if the river completes draws); everything else shows down. On a river that completes the draws, sets and two pair drop to 20% and the high-card hands become potential bluffs.
+- **River:** a group with value left bets a third time on a blank: big pot (small pot if the turn was wet, or if the river completes draws); everything else shows down. On a river that completes the draws, sets and two pair drop to medium pot and the high-card hands become potential bluffs.
+- **Very wet boards** (section 3) override all of this on the turn and river: every pair, set and two pair shows down.
 - **Kickers:** the two best kickers make "strong" (AK/AQ on an ace, AK/KQ on a king, AQ/KQ below); every other kicker is one group.
 - **The turn bet size** (overbet on a brick, 66% otherwise) is shown as information only.
 
@@ -146,6 +158,7 @@ Their answers are not written one by one: they come from a **value plan**, the r
 3. On rivers where the K pairs (K♦, K♠, K♥), no K-high no-pair hands exist. Should the showdown cutoff drop to Q-high there?
 4. *(Settled 2026-10-31: groups stay, and the bet size changes no answer; it is information only.)*
 5. All the turn and river buckets are drafts. Please correct them; the gold dots in the app's summary mark them.
+6. *(Noam)* Should some spots accept two answers? For example, sets on a very wet turn (check or a small bet), or AK/AJ on Q-T-3 (a draw with some showdown value: bluff or showdown).
 
 ## Change log
 
@@ -161,3 +174,4 @@ Their answers are not written one by one: they come from a **value plan**, the r
 - **2026-10-31 (afternoon)**: From Noam's notes on K♦Q♦4♠: no-pair group names follow the board; fourth pair or worse is a potential bluff on the river (every board).
 - **2026-10-31 (afternoon)**: Any pair on the flop wants at least 5% (single-raised pot, wide ranges); applied to every board.
 - **2026-10-31 (evening)**: Money paddles renamed to pot sizes: Small pot, Medium pot, Big pot, Stacks. Open: is top pair a small pot (two small bets) or a medium pot?
+- **2026-10-31 (night)**: From Noam's notes on T♥8♥7♠ · 9♥ and Q♥T♦7♠, applied to every board (143 answers changed): very wet boards (one card to a straight, or a flush plus straights) send every pair, set and two pair to showdown value on the turn and river; a third bet on a blank river is a big pot; Q♥T♦7♠ counts as a dry flop, so AQ/KQ want a big pot.

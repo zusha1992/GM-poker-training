@@ -161,7 +161,7 @@ const A72_TURNS: TurnSpec[] = [
         ...CUT,
         answers: {
           twopair: autoAll("After the overbet the rest is less than two pots: all-in."),
-          tpgk: a("20", "AK: one more value bet on the river."),
+          tpgk: a("50", "AK: a third healthy bet on a blank river, a big pot."),
           tpmk: CHECKS("AJ–A8 bet the flop and the turn: that was their last bet. Show down."),
           tpwk: CHECKS("A6–A3 bet the flop and the turn: show down."),
           pp1: CHECKS(),
@@ -216,7 +216,7 @@ const A72_TURNS: TurnSpec[] = [
         ...CUT,
         answers: {
           twopair: autoAll("The draws missed: get the rest in."),
-          tpgk: a("20", "AQ: one more value bet against BB's weaker aces."),
+          tpgk: a("50", "AK and AQ: a third healthy bet against BB's weaker aces, a big pot."),
           tpmk: a("little", "One small value bet at most."),
           tpwk: a("sd", "Check and show down."),
           pp2: a("sd", "Check and show down."),
@@ -367,7 +367,7 @@ const JT3_TURNS: TurnSpec[] = [
         ...JT3_CUT,
         answers: {
           twopair: autoAll("Nothing got there: get the rest in."),
-          op: a("20", "QQ–AA: one more value bet."),
+          op: a("50", "QQ–AA: a third healthy bet on a blank river, a big pot."),
           tpgk: CHECKS("Top pair bet the flop and the turn: that was its last bet. Show down."),
           tpmk: CHECKS("Top pair bet the flop and the turn: that was its last bet. Show down."),
           tpwk: CHECKS(),
@@ -430,7 +430,7 @@ const JT3_TURNS: TurnSpec[] = [
         ...JT3_CUT,
         answers: {
           twopair: autoAll("The draws missed: get the rest in."),
-          op: a("20", "One more value bet against BB's jacks."),
+          op: a("50", "A third healthy bet against BB's jacks: a big pot."),
           tpgk: a("little", "One small value bet at most."),
           tpmk: SHOW(),
           tpwk: SHOW(),
@@ -584,7 +584,7 @@ function ruleAnswer(g: PGroup, street: Street, k: RunoutKinds): Answer {
   const left = n - 2;
   if (left <= 0) return a("sd", n === 2 ? "It bet the flop and the turn: that was its last bet. Show down." : "Check and show down.");
   if (k.river === "wet") return a("little", "The river completed draws: a bluff-catcher now, a small bet at most.");
-  return k.turn === "wet" ? a("little", "The draws missed, but the turn was scary: one small value bet.") : a("20", "One more value bet on a blank river.");
+  return k.turn === "wet" ? a("little", "The draws missed, but the turn was scary: one small value bet.") : a("50", "A third healthy bet on a blank river: a big pot.");
 }
 
 /** Kicker and showdown cutoffs from the board itself: the two best kickers
@@ -648,7 +648,7 @@ const RULE_BOARDS: RuleBoard[] = [
     name: "QT7",
     flop: ["Q♥", "T♦", "7♠"],
     blurb: "Middle cards, rainbow",
-    wetFlop: true,
+    wetFlop: false, // Noam 2026-10-31: AQ/KQ want a big pot here; no straight possible yet, no flush draw
     story: "Queen-high with tens and sevens: plenty of straight draws for both players.",
     turns: [
       { card: "2♣", kind: "brick", story: "2♣ · Brick. A blank: BTN overbets, polar.", rivers: [{ card: "3♦", story: "3♦ · Brick. Nothing completes." }, { card: "9♥", story: "9♥ · Wet. KJ, J8 and 86 make straights." }] },
@@ -943,6 +943,34 @@ function riverRule(g: PGroup, street: Street): Answer | undefined {
   if (street === "river" && g === "pp3") return a("bluff", "Fourth pair or worse on the river: it rarely wins at showdown, so it's a potential bluff.");
   return undefined;
 }
+
+/** Most board cards inside any five-rank window (the ace counts high and low). */
+function mostInStraightWindow(board: Card[]): number {
+  const ranks = new Set(board.flatMap((c) => (c.r === 14 ? [14, 1] : [c.r])));
+  let most = 0;
+  for (let lo = 1; lo <= 10; lo++) {
+    let n = 0;
+    for (let r = lo; r < lo + 5; r++) if (ranks.has(r)) n++;
+    most = Math.max(most, n);
+  }
+  return most;
+}
+
+/** Four to a straight on board, or a completed flush with straights possible too. */
+function veryWet(board: Card[]): boolean {
+  const flush = Object.values(board.reduce<Record<string, number>>((m, c) => ({ ...m, [c.s]: (m[c.s] ?? 0) + 1 }), {})).some((n) => n >= 3);
+  const window = mostInStraightWindow(board);
+  return window >= 4 || (flush && window >= 3);
+}
+
+/** Noam 2026-10-31 (T87-9♥): once the board is very wet, one pair, sets and
+ * two pair only get called by better: they check and show down. */
+function veryWetRule(g: PGroup, street: Street, board: Card[], ans: Answer | undefined): Answer | undefined {
+  if (!ans || street === "flop" || !veryWet(board)) return ans;
+  if (g !== "twopair" && !PAIR_GROUPS.has(g)) return ans;
+  if (BUCKET_RANK[ans.bucket] <= BUCKET_RANK.sd) return ans;
+  return a("sd", g === "twopair" ? "One card makes a straight or a flush is in: sets and two pair only get called by better. Check and show down." : "A very wet board: one pair only gets called by better. Check and show down.");
+}
 const RUNOUT_CACHE = new Map<number, Runout>();
 
 /** Everything the screen shows for one runout, worked out once. */
@@ -962,7 +990,7 @@ export function buildRunout(index: number): Runout {
     const pieces: PricePiece[] = [];
     for (const g of PGROUP_ORDER) {
       if (snap.byGroup[g] <= 0) continue;
-      const ans = everyBoardRule(g, street, riverRule(g, street) ?? st.answers[g] ?? AUTO[g]);
+      const ans = veryWetRule(g, street, board, everyBoardRule(g, street, riverRule(g, street) ?? st.answers[g] ?? AUTO[g]));
       if (!ans) throw new Error(`price-hands: no answer for ${g} on ${spec.id} (${street})`);
       answers[g] = ans;
       const entries: { hand: string; part: number }[] = [];
