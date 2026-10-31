@@ -43,22 +43,28 @@ export function StreetTrack({ current, done }: { current: number; done: boolean 
 
 const SUIT_GLYPH: Record<string, string> = { s: "♠", h: "♥", d: "♦", c: "♣" };
 
+/** Four-color deck, like GG Poker (Noam 2026-10-31): every suit has its own
+ * card color, so suits are easy to tell apart on a phone. */
+const SUIT_COLOR: Record<string, string> = { s: "#30353B", h: "#C8262E", d: "#1F63C6", c: "#1E8C3E" };
+
 /** A board card in the top panel; `fresh` = just dealt (flip-in + glow). */
 export function BoardCard({ card, fresh = false }: { card: Card; fresh?: boolean }) {
-  const red = card.s === "h" || card.s === "d";
   const r = rankChar(card.r);
+  const color = SUIT_COLOR[card.s];
   return (
     <span
-      className="flex h-9 w-[26px] flex-shrink-0 flex-col items-center justify-center rounded-[4px] font-[family-name:var(--font-display)] text-[12px] font-bold leading-none"
+      className="flex h-[38px] w-[28px] flex-shrink-0 flex-col items-center justify-center rounded-[5px] font-[family-name:var(--font-display)] text-[14px] font-bold leading-none"
       style={{
-        background: "#F7F4EC",
-        color: red ? "#C62F28" : "#16191C",
+        background: `linear-gradient(180deg, color-mix(in srgb, ${color} 82%, #ffffff) 0%, ${color} 55%)`,
+        color: "#FFFFFF",
+        border: "1px solid rgba(255,255,255,.22)",
         boxShadow: fresh ? "0 0 0 2px var(--mix), 0 1px 0 rgba(0,0,0,.4)" : "0 1px 0 rgba(0,0,0,.4)",
         animation: fresh ? "ldDeal 520ms cubic-bezier(.3,1.4,.5,1) both" : undefined,
       }}
+      data-testid="board-card"
     >
       {r === "T" ? "10" : r}
-      <em className="mt-px text-[11px] not-italic">{SUIT_GLYPH[card.s]}</em>
+      <em className="mt-px text-[12px] not-italic">{SUIT_GLYPH[card.s]}</em>
     </span>
   );
 }
