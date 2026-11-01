@@ -70,7 +70,7 @@ function finishSummary(spot: AnySpot): string {
 }
 
 function modeNoteFor(modeKey: PreflopModeKey): string {
-  if (modeKey === "rfi") return "Groups you already raise from an earlier seat start red. Real trash is filled in.";
+  if (modeKey === "rfi") return "Pairs, suited aces and groups you already raise from an earlier seat start red. Real trash is filled in.";
   if (modeKey === "fb") return "Only hands you opened are in play. Weaker folds are filled in.";
   if (modeKey === "fv") return "Only hands you 3-bet are in play.";
   return "Real trash is filled in.";

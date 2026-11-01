@@ -38,7 +38,8 @@ export const PREFLOP_MODES: Record<PreflopModeKey, PreflopModeMeta> = {
       { swatch: mixGradient(r, f, 50), label: "Mix" },
       { swatch: "var(--pending)", label: "Still to place" },
     ],
-    actionOrder: ["raise", "fold", "mix"],
+    // Uri 2026-11-01: start with the hands that fold (gappers first).
+    actionOrder: ["fold", "raise", "mix"],
     hasOutOfRange: false,
   },
   tb: {

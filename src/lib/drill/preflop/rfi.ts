@@ -63,11 +63,13 @@ export const RFI_POSITIONS: RfiPosition[] = [
  * broadways/kings/connectors, offsuit) only the weakest new pure-raise group
  * is asked. Raising it auto-fills every stronger group on that ladder. */
 const LADDERS: string[][] = [
-  ["PP", "MP", "LP"],
-  ["SAH", "SAL"],
   ["SBW", "SBF", "SK", "SQ", "SC", "SG", "LS"],
   ["BO", "OBWF", "OF", "OA", "OK", "LK", "WO"],
 ];
+
+/** Uri/Noam 2026-11-01: every pair and every suited ace raises from every
+ * seat, so asking them isn't a challenge: they start filled in. */
+const ALWAYS_RAISE = ["PP", "MP", "LP", "SAH", "SAL"];
 
 function foldPiece(g: Family): DrillPiece {
   return {
@@ -97,6 +99,8 @@ function buildRfi(pos: RfiPosition, known: Set<string>): RfiDrill {
   const pieces: DrillPiece[] = [];
   const preFilled: string[] = [];
   const freqOf = (k: string) => pos.strat[k] ?? 0;
+
+  ALWAYS_RAISE.filter((k) => freqOf(k) >= 90).forEach((k) => preFilled.push(...FAM_BY_KEY[k].hands));
 
   for (const ladder of LADDERS) {
     const fresh = ladder.filter(
