@@ -21,5 +21,9 @@ Source: Uri's in-app feedback notes on the UTG and HJ opening drills, 2026-11-01
 - **HJ:** low pairs 100% (pre-filled from UTG, not asked). Suited kings mix 50%, offsuit broadway low mix 50%, suited connectors mix 60%. Folds asked: suited gappers, suited queens and jacks, offsuit aces.
 - CO, BTN, SB: the gappers carry the value "Small suited" had (CO fold, now asked; BTN 60%; SB 100%).
 
+## Follow-up (Noam, same day, after checking on the phone)
+- Uri's "ask more about hands that fold" was meant in general: **don't ask hands that always raise.** Every pair and every suited ace now starts filled in red at every seat and is never asked.
+- **The drill starts with the folding hands** (gappers first, then suited kings), then the clear raises, then the mixes.
+
 ## Still placeholder
 The mix percentages (50%, 60%) are placeholders for Uri to correct. HJ, CO, BTN and SB are still not from real solver ranges.
