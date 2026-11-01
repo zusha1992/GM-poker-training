@@ -8,21 +8,30 @@ export type RfiPosition = {
   name: string;
   /** Raise % per family key. Families not listed are a pure fold. */
   strat: Partial<Record<string, number>>;
+  /** Folding groups to ask about (Uri's picks). Without it, the two
+   * strongest folding groups are asked. */
+  ask?: string[];
 };
 
 /** Raise-first-in: how wide each seat opens, per hand-group family.
  * UTG is real (ported from solver screenshots, see decisions/2026-10-23-
- * rfi-ranges-from-solver-screenshots.md). HJ/CO/BTN/SB are still placeholder. */
+ * rfi-ranges-from-solver-screenshots.md). HJ/CO/BTN/SB are still placeholder,
+ * with Uri's notes of 2026-11-01 applied (decisions/2026-11-01-rfi-uri-notes.md). */
 export const RFI_POSITIONS: RfiPosition[] = [
   {
     key: "UTG",
     name: "Under the gun",
-    strat: { PP: 100, MP: 100, LP: 100, SAH: 100, SAL: 100, SBW: 100, SBF: 100, BO: 100, OBWF: 100 },
+    // Uri: suited connectors mix; ask about the gappers and suited kings that fold.
+    strat: { PP: 100, MP: 100, LP: 100, SAH: 100, SAL: 100, SBW: 100, SBF: 100, BO: 100, OBWF: 100, SC: 50 },
+    ask: ["SG", "SK", "OF"],
   },
   {
     key: "HJ",
     name: "Hijack",
-    strat: { PP: 100, MP: 100, LP: 70, SAH: 100, SAL: 100, SBW: 100, SBF: 100, BO: 100, OBWF: 100, SC: 60 },
+    // Uri: low pairs were a pure raise from UTG, so they're not asked here;
+    // suited kings and offsuit broadways mix; ask about gappers, suited queens, weak offsuit aces.
+    strat: { PP: 100, MP: 100, LP: 100, SAH: 100, SAL: 100, SBW: 100, SBF: 100, BO: 100, OBWF: 100, SC: 60, SK: 50, OF: 50 },
+    ask: ["SG", "SQ", "OA"],
   },
   {
     key: "CO",
@@ -37,7 +46,7 @@ export const RFI_POSITIONS: RfiPosition[] = [
     name: "Button",
     strat: {
       PP: 100, MP: 100, LP: 100, SAH: 100, SAL: 100, SBW: 100, SBF: 100, BO: 100, OBWF: 100,
-      OF: 100, SC: 100, SK: 100, SQ: 100, OA: 100, LS: 60, OK: 50,
+      OF: 100, SC: 100, SK: 100, SQ: 100, OA: 100, SG: 60, LS: 60, OK: 50,
     },
   },
   {
@@ -45,7 +54,7 @@ export const RFI_POSITIONS: RfiPosition[] = [
     name: "Small blind",
     strat: {
       PP: 100, MP: 100, LP: 100, SAH: 100, SAL: 100, SBW: 100, SBF: 100, BO: 100, OBWF: 100,
-      OF: 100, SC: 100, SK: 100, SQ: 100, OA: 100, LS: 100, OK: 40,
+      OF: 100, SC: 100, SK: 100, SQ: 100, OA: 100, SG: 100, LS: 100, OK: 40,
     },
   },
 ];
@@ -56,7 +65,7 @@ export const RFI_POSITIONS: RfiPosition[] = [
 const LADDERS: string[][] = [
   ["PP", "MP", "LP"],
   ["SAH", "SAL"],
-  ["SBW", "SBF", "SK", "SQ", "SC", "LS"],
+  ["SBW", "SBF", "SK", "SQ", "SC", "SG", "LS"],
   ["BO", "OBWF", "OF", "OA", "OK", "LK", "WO"],
 ];
 
@@ -134,7 +143,7 @@ function buildRfi(pos: RfiPosition, known: Set<string>): RfiDrill {
   }
 
   const foldKeys = FAMS.filter((g) => (pos.strat[g.key] ?? 0) <= 10).map((g) => g.key);
-  nearFolds(foldKeys).forEach((k) => pieces.push(foldPiece(FAM_BY_KEY[k])));
+  (pos.ask?.filter((k) => foldKeys.includes(k)) ?? nearFolds(foldKeys)).forEach((k) => pieces.push(foldPiece(FAM_BY_KEY[k])));
 
   let combos = 0;
   for (const g of FAMS) {
