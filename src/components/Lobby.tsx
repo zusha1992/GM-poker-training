@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { timeAgo, type FeedbackRow } from "@/lib/drill/feedback";
 import { feedbackLink } from "@/lib/drill/feedback-links";
 import { clickSound } from "@/lib/drill/sound";
+import { DrillStartSheet } from "./DrillStartSheet";
 
 type DrillCard = {
   key: string;
@@ -79,6 +80,8 @@ const DRILLS: DrillCard[] = [
  * prototype's lobby overlay into its own route. */
 export function Lobby() {
   const router = useRouter();
+  /** The drill whose card was tapped: watch its video or play it. */
+  const [chosen, setChosen] = useState<DrillCard | null>(null);
 
   return (
     <div
@@ -135,8 +138,9 @@ export function Lobby() {
             style={{ borderColor: "var(--mix)", background: "var(--panel)" }}
             onClick={() => {
               clickSound();
-              router.push(d.href);
+              setChosen(d);
             }}
+            data-testid={`lobby-${d.key}`}
           >
             <span className="grid flex-shrink-0 grid-cols-2 gap-[3px]" aria-hidden="true">
               {d.colors.map((c, i) => (
@@ -182,6 +186,7 @@ export function Lobby() {
 
       <FeedbackSection />
 
+      <DrillStartSheet drill={chosen} onClose={() => setChosen(null)} onPlay={() => chosen && router.push(chosen.href)} />
       <div className="mt-auto flex flex-col items-center gap-1 text-[12px]" style={{ color: "var(--muted)" }}>
         <span>6-max cash · 100bb · proof of concept</span>
       </div>
