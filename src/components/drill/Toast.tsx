@@ -22,6 +22,10 @@ export function useToast() {
 }
 
 export function Toast({ toast }: { toast: ToastState }) {
+  // Keep the last message while it fades out, so an empty pill never flashes.
+  const [last, setLast] = useState<ToastState>(toast);
+  if (toast && toast !== last) setLast(toast);
+  const shown = toast ?? last;
   return (
     <div
       role="status"
@@ -30,13 +34,13 @@ export function Toast({ toast }: { toast: ToastState }) {
       style={{
         opacity: toast ? 1 : 0,
         transform: toast ? "translate(-50%, 0)" : "translate(-50%, -6px)",
-        background: toast ? (toast.good ? "var(--call)" : "var(--raise)") : undefined,
-        color: toast ? (toast.good ? "#06210F" : "#2A0705") : undefined,
+        background: shown ? (shown.good ? "var(--call)" : "var(--raise)") : undefined,
+        color: shown ? (shown.good ? "#06210F" : "#2A0705") : undefined,
         pointerEvents: "none",
         whiteSpace: "nowrap",
       }}
     >
-      {toast?.message}
+      {shown?.message}
     </div>
   );
 }

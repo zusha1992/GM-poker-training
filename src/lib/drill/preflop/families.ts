@@ -45,6 +45,34 @@ export const FAM_BY_KEY: Record<string, Family> = Object.fromEntries(
   FAMS.map((f) => [f.key, f]),
 );
 
+/** Each group's own Tetris shape (see Tetromino in SortPiece.tsx), so a
+ * group looks the same in every drill and every seat. */
+export const FAMILY_SHAPE: Record<string, string> = {
+  PP: "O",
+  MP: "block6",
+  LP: "I3",
+  SAH: "I",
+  SAL: "dot2",
+  SBW: "plus",
+  SBF: "value",
+  BO: "U",
+  OBWF: "J",
+  OF: "check",
+  SC: "bluff",
+  SG: "giveup",
+  SK: "V",
+  SQ: "P",
+  OA: "W",
+  LS: "L5",
+  OK: "N",
+  LK: "Y",
+  WO: "F",
+};
+
+export function shapeOf(key: string): string {
+  return FAMILY_SHAPE[key] ?? "O";
+}
+
 /** Longer explanation shown in the per-piece "explain" sheet. */
 export const FAMILY_DESC: Record<string, string> = {
   PP: "The three strongest pairs. They win big pots and almost never fold before the flop.",

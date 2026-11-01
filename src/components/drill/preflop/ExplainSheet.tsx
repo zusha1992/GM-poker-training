@@ -1,7 +1,8 @@
 "use client";
 
 import { Sheet } from "@/components/ui/Sheet";
-import { PieceShape } from "@/components/drill/PieceShape";
+import { Tetromino } from "@/components/drill/postflop/SortPiece";
+import { shapeOf } from "@/lib/drill/preflop/families";
 import { PlayingCards } from "./PlayingCards";
 import { combosOf } from "@/lib/drill/matrix";
 import { colorOf, mixGradient } from "@/lib/drill/colors";
@@ -25,7 +26,7 @@ export function ExplainSheet({ piece, onClose, answered, evContext, evLabel, lab
       {piece && (
         <>
           <div className="flex items-center gap-3.5">
-            <PieceShape hands={piece.hands} color={piece.color} maxSize={64} />
+            <Tetromino kind={shapeOf(piece.key)} color={piece.color} block={16} />
             <div>
               <h2 className="m-0 font-[family-name:var(--font-display)] text-[22px] font-bold">
                 {piece.label}

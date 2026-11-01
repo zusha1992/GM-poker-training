@@ -105,6 +105,49 @@ const TETROMINO: Record<string, [number, number][]> = {
     [1, 1],
     [2, 1],
   ],
+  // Pentominoes, so each of the 19 preflop hand groups has its own shape.
+  P: [
+    [0, 0],
+    [1, 0],
+    [0, 1],
+    [1, 1],
+    [0, 2],
+  ],
+  W: [
+    [0, 0],
+    [0, 1],
+    [1, 1],
+    [1, 2],
+    [2, 2],
+  ],
+  N: [
+    [1, 0],
+    [1, 1],
+    [0, 2],
+    [1, 2],
+    [0, 3],
+  ],
+  Y: [
+    [1, 0],
+    [0, 1],
+    [1, 1],
+    [1, 2],
+    [1, 3],
+  ],
+  F: [
+    [1, 0],
+    [2, 0],
+    [0, 1],
+    [1, 1],
+    [1, 2],
+  ],
+  L5: [
+    [0, 0],
+    [0, 1],
+    [0, 2],
+    [0, 3],
+    [1, 3],
+  ],
 };
 
 const BLOCK = 19;
@@ -292,7 +335,7 @@ export function SortPiece<D extends string = SortDir>({
       className={`relative flex ${width} cursor-grab flex-col items-center ${tiny ? "gap-1" : "gap-1.5"} text-center select-none`}
       data-testid={`sort-${piece.key}`}
       role="button"
-      aria-label={`${piece.label}, ${piece.pct}% of the range. ${zoneAt ? "Drag it to a box" : "Drag left to check or right to overbet"}. Tap to see the hands.`}
+      aria-label={`${piece.label}, ${caption ?? `${piece.pct}% of the range`}. ${zoneAt ? "Drag it to a box" : "Drag left to check or right to overbet"}. Tap to see the hands.`}
     >
       <motion.div
         className={`flex w-full flex-col items-center ${tiny ? "gap-1" : "gap-1.5"}`}

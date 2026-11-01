@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { PieceCard, type FlyTo } from "@/components/drill/PieceCard";
+import { SortPiece } from "@/components/drill/postflop/SortPiece";
+import { ActionPaddles } from "./ActionPaddles";
 import { DrillMatrix, type CellState } from "@/components/drill/DrillMatrix";
 import { Celebration, type CelebrationTrigger } from "@/components/drill/Celebration";
 import { Toast, useToast } from "@/components/drill/Toast";
@@ -14,24 +15,17 @@ import { ExplainSheet } from "./ExplainSheet";
 import { LegendSheet } from "./LegendSheet";
 import { HelpSheet } from "./HelpSheet";
 import { FinishSheet } from "./FinishSheet";
-import { FAMS, FAMILY_DESC } from "@/lib/drill/preflop/families";
+import { FAMS, FAMILY_DESC, shapeOf } from "@/lib/drill/preflop/families";
 import { PREFLOP_MODES, type PreflopModeKey } from "@/lib/drill/preflop/modes";
 import { RFI_SPOTS, rfiSpot, type RfiSpot } from "@/lib/drill/preflop/rfi";
 import type { Seat } from "@/lib/drill/preflop/seats";
 import { colorOf, mixGradient } from "@/lib/drill/colors";
 import { MATRIX_HANDS } from "@/lib/drill/matrix";
-import type { DrillAction, DrillPiece, SwipeDirection } from "@/lib/drill/types";
+import type { DrillAction, DrillPiece } from "@/lib/drill/types";
 import type { EvContext } from "@/lib/drill/preflop/ev";
 import { badSound, buzz, clickSound, goodSound, tone } from "@/lib/drill/sound";
 
 type AnySpot = AnyPreflopSpot | RfiSpot;
-
-const DIRV: Record<SwipeDirection, [number, number]> = {
-  up: [0, -500],
-  down: [0, 500],
-  left: [-500, 0],
-  right: [500, 0],
-};
 
 const RANK_LABELS = ["A", "K", "Q", "J", "T", "9", "8", "7", "6", "5", "4", "3", "2"];
 
@@ -111,7 +105,15 @@ export function PreflopDrillScreen({ modeKey }: PreflopDrillScreenProps) {
   const [drillBestStreak, setDrillBestStreak] = useState(0);
   const [streakBump, setStreakBump] = useState(0);
   const [shakeSeq, setShakeSeq] = useState(0);
-  const [flyTo, setFlyTo] = useState<FlyTo | null>(null);
+  /** Set on a right answer: the piece flies into that action's paddle. */
+  const [flying, setFlying] = useState<{ action: DrillAction; rect: DOMRect | null } | null>(null);
+  /** True while a piece is being dragged (the paddles breathe). */
+  const [holding, setHolding] = useState(false);
+  /** Bumped per paddle when a piece lands in it (replays its flash). */
+  const [flash, setFlash] = useState<Partial<Record<DrillAction, number>>>({});
+  const paddles = useRef<Partial<Record<DrillAction, HTMLDivElement | null>>>({});
+  const zoneRef = useRef<HTMLDivElement>(null);
+  const [zone, setZone] = useState({ w: 340, h: 200 });
   const [dragPreview, setDragPreview] = useState<DrillAction | null>(null);
   const [revealedColors, setRevealedColors] = useState<Map<string, string>>(new Map());
   const [resultLabelByKey, setResultLabelByKey] = useState<Map<string, string>>(new Map());
@@ -152,7 +154,7 @@ export function PreflopDrillScreen({ modeKey }: PreflopDrillScreenProps) {
     setStreak(0);
     setDrillBestStreak(0);
     setShakeSeq(0);
-    setFlyTo(null);
+    setFlying(null);
     setDragPreview(null);
     setFinished(false);
     const pre = new Map<string, string>();
@@ -211,7 +213,7 @@ export function PreflopDrillScreen({ modeKey }: PreflopDrillScreenProps) {
     for (const hand of outOfRange) {
       if (!map.has(hand)) map.set(hand, { variant: "out" });
     }
-    if (piece && !flyTo) {
+    if (piece && !flying) {
       const liveColor = dragPreview ? colorOf(dragPreview) : piece.color;
       for (const hand of piece.hands) map.set(hand, { background: liveColor, active: true });
     }
@@ -223,9 +225,28 @@ export function PreflopDrillScreen({ modeKey }: PreflopDrillScreenProps) {
       }
     }
     return map;
-  }, [revealedColors, askedHands, revealTargetHands, outOfRange, piece, dragPreview, flyTo]);
+  }, [revealedColors, askedHands, revealTargetHands, outOfRange, piece, dragPreview, flying]);
 
-  const colorFor = useCallback((action: DrillAction) => colorOf(action), []);
+  // The paddles size themselves from the drop area, so measure it (it changes with the phone).
+  useEffect(() => {
+    const el = zoneRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(([e]) => setZone({ w: e.contentRect.width, h: e.contentRect.height }));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  const registerPaddle = useCallback((a: DrillAction, el: HTMLDivElement | null) => {
+    paddles.current[a] = el;
+  }, []);
+
+  function zoneAt(x: number, y: number): DrillAction | null {
+    for (const a of Object.values(mode.swipes)) {
+      const r = paddles.current[a]?.getBoundingClientRect();
+      if (r && x >= r.left - 10 && x <= r.right + 10 && y >= r.top - 10 && y <= r.bottom + 10) return a;
+    }
+    return null;
+  }
 
   function paint(pc: DrillPiece, action: DrillAction) {
     const color = paintColorFor(pc, action);
@@ -249,9 +270,8 @@ export function PreflopDrillScreen({ modeKey }: PreflopDrillScreenProps) {
     return rv.length;
   }
 
-  function handleSwipe(direction: SwipeDirection) {
-    const action = mode.swipes[direction];
-    if (!action || busy || !piece || !spot) return;
+  function handleDrop(action: DrillAction) {
+    if (busy || !piece || !spot) return;
     setBusy(true);
     setDragPreview(null);
 
@@ -290,9 +310,8 @@ export function PreflopDrillScreen({ modeKey }: PreflopDrillScreenProps) {
       buzz(15);
       const revealCount = paint(piece, action);
 
-      const dir = (Object.keys(mode.swipes) as SwipeDirection[]).find((d) => mode.swipes[d] === action);
-      const vec = dir ? DIRV[dir] : DIRV.up;
-      setFlyTo({ x: vec[0], y: vec[1], rotate: vec[0] / 20 });
+      setFlying({ action, rect: paddles.current[action]?.getBoundingClientRect() ?? null });
+      setFlash((f) => ({ ...f, [action]: (f[action] ?? 0) + 1 }));
 
       const prevPure = piece.answer !== "mix";
       const nextIndex = index + 1;
@@ -305,7 +324,7 @@ export function PreflopDrillScreen({ modeKey }: PreflopDrillScreenProps) {
         setIndex(nextIndex);
         setAttempt(1);
         setBusy(false);
-        setFlyTo(null);
+        setFlying(null);
         if (nextIndex >= order.length) {
           finishDrill(spot);
         }
@@ -398,7 +417,7 @@ export function PreflopDrillScreen({ modeKey }: PreflopDrillScreenProps) {
 
   return (
     <div
-      className="relative mx-auto flex h-dvh max-w-[460px] flex-col gap-1.5 overflow-hidden px-4 py-2"
+      className="relative mx-auto flex h-dvh w-full min-w-0 max-w-[460px] flex-col gap-1.5 overflow-hidden px-4 py-2"
       style={{ background: "var(--background)", color: "var(--foreground)" }}
     >
       <div className="flex items-center gap-2">
@@ -534,58 +553,45 @@ export function PreflopDrillScreen({ modeKey }: PreflopDrillScreenProps) {
         </div>
       </div>
 
-      <div
-        className="relative flex min-h-[170px] flex-1 items-center justify-center rounded-2xl"
-        style={{ border: "1px dashed var(--line)", touchAction: "none" }}
-      >
-        {spot &&
-          (Object.keys(mode.swipes) as SwipeDirection[]).map((dir) => {
-            const action = mode.swipes[dir];
-            if (!action) return null;
-            const isOn = dragPreview === action;
-            const color = colorOf(action);
-            const posClass = {
-              up: "top-2.5 left-1/2 -translate-x-1/2",
-              down: "bottom-2.5 left-1/2 -translate-x-1/2",
-              left: "left-2 top-1/2 -translate-y-1/2 flex-col gap-0.5 px-1.5 py-2 rounded-2xl text-[11px]",
-              right: "right-2 top-1/2 -translate-y-1/2 flex-col gap-0.5 px-1.5 py-2 rounded-2xl text-[11px]",
-            }[dir];
-            return (
-              <div
-                key={dir}
-                className={`absolute flex items-center gap-1.5 rounded-full border-[1.5px] px-2.5 py-1 font-[family-name:var(--font-display)] text-[13px] font-bold tracking-[0.1em] transition-transform ${posClass}`}
-                style={{
-                  borderColor: color,
-                  background: isOn ? color : "transparent",
-                  color: isOn ? "#10161B" : color,
-                  transform: isOn ? `${posClass.includes("-translate-x-1/2") ? "translateX(-50%)" : "translateY(-50%)"} scale(1.12)` : undefined,
-                }}
-              >
-                {dir !== "down" && <ArrowIcon dir={dir} />}
-                {mode.labels[action]?.toUpperCase()}
-                {dir === "down" && <ArrowIcon dir={dir} />}
-              </div>
-            );
-          })}
+      {/* The drop area: neon paddles around the frame, the piece floating in the middle. */}
+      <div ref={zoneRef} className="relative flex min-h-[200px] flex-1 items-center justify-center" style={{ touchAction: "none" }} data-testid="drop-zone">
+        {spot && (
+          <ActionPaddles
+            w={zone.w}
+            h={zone.h}
+            swipes={mode.swipes}
+            labels={mode.labels}
+            armed={dragPreview}
+            holding={holding}
+            flash={flash}
+            hitRef={registerPaddle}
+          />
+        )}
 
-        <Toast toast={toast} />
+        {/* Under the top paddle, so a message never hides its label. */}
+        <div className="pointer-events-none absolute inset-x-0 top-[44px] z-[4]">
+          <Toast toast={toast} />
+        </div>
         <Celebration trigger={celebration} />
 
         {spot && piece && (
-          <PieceCard
+          <SortPiece<DrillAction>
             key={piece.key}
-            piece={piece}
-            swipes={mode.swipes}
-            colorFor={colorFor}
-            onSwipe={handleSwipe}
-            onDragPreview={setDragPreview}
-            onTap={() => {
+            piece={{ key: piece.key, label: piece.label, pct: 0, color: piece.color, shape: shapeOf(piece.key) }}
+            caption={piece.sub}
+            delay={0}
+            zoneAt={zoneAt}
+            flyRect={flying?.rect ?? null}
+            onDrop={handleDrop}
+            onArm={setDragPreview}
+            onHold={setHolding}
+            onInspect={() => {
               setExplainPiece(piece);
               setExplainAnswered(resultLabelByKey.has(piece.key));
             }}
             shakeSeq={shakeSeq}
-            flyTo={flyTo}
-            disabled={busy && !flyTo}
+            flyTo={flying?.action ?? null}
+            disabled={busy && !flying}
           />
         )}
         {spot && !piece && !finished && (
@@ -685,19 +691,5 @@ export function PreflopDrillScreen({ modeKey }: PreflopDrillScreenProps) {
         />
       )}
     </div>
-  );
-}
-
-function ArrowIcon({ dir }: { dir: SwipeDirection }) {
-  const paths: Record<SwipeDirection, string> = {
-    up: "M12 19V5M5 12l7-7 7 7",
-    down: "M12 5v14M5 12l7 7 7-7",
-    left: "M19 12H5M12 5l-7 7 7 7",
-    right: "M5 12h14M12 5l7 7-7 7",
-  };
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d={paths[dir]} />
-    </svg>
   );
 }

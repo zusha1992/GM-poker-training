@@ -2,7 +2,8 @@
 
 import { Sheet } from "@/components/ui/Sheet";
 import { HowToGrid } from "./HowToGrid";
-import { PieceShape } from "@/components/drill/PieceShape";
+import { Tetromino } from "@/components/drill/postflop/SortPiece";
+import { shapeOf } from "@/lib/drill/preflop/families";
 import type { DrillAction, DrillPiece, SwipeDirection } from "@/lib/drill/types";
 
 type LegendSheetProps = {
@@ -56,7 +57,7 @@ export function LegendSheet({
               style={{ background: "var(--panel-2)" }}
             >
               <div className="w-14 flex-shrink-0 flex justify-center">
-                <PieceShape hands={p.hands} color={p.color} maxSize={52} />
+                <Tetromino kind={shapeOf(p.key)} color={p.color} block={11} />
               </div>
               <div className="min-w-0 flex-1">
                 <b className="block text-[14px] font-semibold">{p.label}</b>
