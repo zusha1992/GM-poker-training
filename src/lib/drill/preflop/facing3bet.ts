@@ -1,6 +1,6 @@
 import { combosOf, labelAt } from "@/lib/drill/matrix";
-import type { DrillPiece } from "@/lib/drill/types";
-import { FAMS, FAM_BY_KEY, FAMILY_DESC, STRENGTH, nearFolds, type Family } from "./families";
+import type { DrillAction, DrillPiece } from "@/lib/drill/types";
+import { FAMS, FAM_BY_KEY, FAMILY_DESC, STRENGTH, nearFolds, obviousKeys, type Family, type PreFilledGroup } from "./families";
 import { RFI_POSITIONS } from "./rfi";
 import { SEATS, SEAT_NAME, type Seat } from "./seats";
 
@@ -49,6 +49,8 @@ export type Facing3betSpot = {
   roleText: string;
   drill: {
     pieces: DrillPiece[];
+    /** Clear groups everybody knows, filled in before the drill starts. */
+    preFilled: PreFilledGroup[];
     outOfRange: string[];
     fourBetPct: number;
     callPct: number;
@@ -62,6 +64,7 @@ function buildFacing3bet(hero: Seat, villain: Seat): Facing3betSpot["drill"] {
 
   const pieces: DrillPiece[] = [];
   const folds: string[] = [];
+  const answers: [string, DrillAction][] = [];
   const outOfRange: string[] = [];
   let raiseCombos = 0;
   let callCombos = 0;
@@ -87,12 +90,14 @@ function buildFacing3bet(hero: Seat, villain: Seat): Facing3betSpot["drill"] {
     }
     if (a.fold >= 90) {
       folds.push(g.key);
+      answers.push([g.key, "fold"]);
       continue;
     }
     const ranked = (Object.keys(a) as (keyof Split)[]).sort((x, y) => a[y] - a[x]);
     const top = ranked[0];
     const second = ranked[1];
     const answer = a[top] >= 80 ? top : "mix";
+    answers.push([g.key, answer]);
     pieces.push({
       key: g.key,
       label: g.name,
@@ -105,10 +110,12 @@ function buildFacing3bet(hero: Seat, villain: Seat): Facing3betSpot["drill"] {
     });
   }
 
+  const obvious = obviousKeys(answers);
   nearFolds(folds).forEach((k) => pieces.push(foldPiece(FAM_BY_KEY[k])));
 
   return {
-    pieces,
+    pieces: pieces.filter((p) => !obvious.has(p.key)),
+    preFilled: pieces.filter((p) => obvious.has(p.key)).map((p) => ({ key: p.key, answer: p.answer })),
     outOfRange,
     fourBetPct: allCombos ? Math.round((raiseCombos / allCombos) * 100) : 0,
     callPct: allCombos ? Math.round((callCombos / allCombos) * 100) : 0,

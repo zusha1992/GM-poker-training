@@ -15,7 +15,7 @@ import { ExplainSheet } from "./ExplainSheet";
 import { LegendSheet } from "./LegendSheet";
 import { HelpSheet } from "./HelpSheet";
 import { FinishSheet } from "./FinishSheet";
-import { FAMS, FAMILY_DESC, shapeOf } from "@/lib/drill/preflop/families";
+import { FAMS, FAM_BY_KEY, FAMILY_DESC, shapeOf } from "@/lib/drill/preflop/families";
 import { PREFLOP_MODES, type PreflopModeKey } from "@/lib/drill/preflop/modes";
 import { RFI_SPOTS, rfiSpot, type RfiSpot } from "@/lib/drill/preflop/rfi";
 import type { Seat } from "@/lib/drill/preflop/seats";
@@ -41,9 +41,11 @@ function outOfRangeHands(spot: AnySpot): string[] {
   return [];
 }
 
-function preFilledHands(spot: AnySpot): string[] {
-  if (spot.modeKey === "rfi") return spot.drill.preFilled;
-  return [];
+/** Hands that start filled in, with their answer: raise-first-in's known
+ * raises, and the clear groups of the other drills. */
+function preFilledHands(spot: AnySpot): Map<string, DrillAction> {
+  if (spot.modeKey === "rfi") return new Map(spot.drill.preFilled.map((h) => [h, "raise"]));
+  return new Map(spot.drill.preFilled.flatMap((g) => FAM_BY_KEY[g.key].hands.map((h) => [h, g.answer] as const)));
 }
 
 function evContextFor(spot: AnySpot): EvContext {
@@ -65,9 +67,9 @@ function finishSummary(spot: AnySpot): string {
 
 function modeNoteFor(modeKey: PreflopModeKey): string {
   if (modeKey === "rfi") return "Pairs, suited aces and groups you already raise from an earlier seat start red. Real trash is filled in.";
-  if (modeKey === "fb") return "Only hands you opened are in play. Weaker folds are filled in.";
-  if (modeKey === "fv") return "Only hands you 3-bet are in play.";
-  return "Real trash is filled in.";
+  if (modeKey === "fb") return "Only hands you opened are in play. AA–QQ and other clear groups start filled in, and so do weaker folds.";
+  if (modeKey === "fv") return "Only hands you 3-bet are in play. AA–QQ and other clear groups start filled in.";
+  return "AA–QQ and other clear groups start filled in. Real trash is filled in.";
 }
 
 function pureFirstOrder(pieces: DrillPiece[], actionOrder: DrillAction[]): DrillPiece[] {
@@ -158,7 +160,7 @@ export function PreflopDrillScreen({ modeKey }: PreflopDrillScreenProps) {
     setDragPreview(null);
     setFinished(false);
     const pre = new Map<string, string>();
-    for (const h of preFilledHands(nextSpot)) pre.set(h, colorOf("raise"));
+    for (const [h, a] of preFilledHands(nextSpot)) pre.set(h, colorOf(a));
     setRevealedColors(pre);
     setResultLabelByKey(new Map());
 
@@ -363,14 +365,14 @@ export function PreflopDrillScreen({ modeKey }: PreflopDrillScreenProps) {
       );
       return;
     }
-    const isPre = preFilledHands(spot).includes(hand);
+    const pre = preFilledHands(spot).get(hand);
     setExplainPiece({
       key: family.key,
       label: family.name,
       sub: family.sub,
       color: family.color,
       hands: family.hands,
-      answer: isPre ? "raise" : "fold",
+      answer: pre ?? "fold",
       desc: FAMILY_DESC[family.key],
     });
     setExplainAnswered(true);

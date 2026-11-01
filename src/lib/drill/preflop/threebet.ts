@@ -1,6 +1,6 @@
 import { combosOf } from "@/lib/drill/matrix";
-import type { DrillPiece } from "@/lib/drill/types";
-import { FAMS, FAM_BY_KEY, FAMILY_DESC, STRENGTH, nearFolds, type Family } from "./families";
+import type { DrillAction, DrillPiece } from "@/lib/drill/types";
+import { FAMS, FAM_BY_KEY, FAMILY_DESC, STRENGTH, nearFolds, obviousKeys, type Family, type PreFilledGroup } from "./families";
 import { SEATS, SEAT_NAME, type Seat } from "./seats";
 
 function foldPiece(g: Family): DrillPiece {
@@ -50,6 +50,8 @@ export type ThreebetSpot = {
   roleText: string;
   drill: {
     pieces: DrillPiece[];
+    /** Clear groups everybody knows, filled in before the drill starts. */
+    preFilled: PreFilledGroup[];
     tbPct: number;
     callPct: number;
   };
@@ -59,6 +61,7 @@ function buildThreebet(hero: Seat, opener: Seat): ThreebetSpot["drill"] {
   const strat = genStrat(opener, hero);
   const pieces: DrillPiece[] = [];
   const folds: string[] = [];
+  const answers: [string, DrillAction][] = [];
   let raiseCombos = 0;
   let callCombos = 0;
 
@@ -75,12 +78,14 @@ function buildThreebet(hero: Seat, opener: Seat): ThreebetSpot["drill"] {
     }
     if (a.fold >= 90) {
       folds.push(g.key);
+      answers.push([g.key, "fold"]);
       continue;
     }
     const ranked = (Object.keys(a) as (keyof Split)[]).sort((x, y) => a[y] - a[x]);
     const top = ranked[0];
     const second = ranked[1];
     const answer = a[top] >= 80 ? top : "mix";
+    answers.push([g.key, answer]);
     pieces.push({
       key: g.key,
       label: g.name,
@@ -93,10 +98,12 @@ function buildThreebet(hero: Seat, opener: Seat): ThreebetSpot["drill"] {
     });
   }
 
+  const obvious = obviousKeys(answers);
   nearFolds(folds).forEach((k) => pieces.push(foldPiece(FAM_BY_KEY[k])));
 
   return {
-    pieces,
+    pieces: pieces.filter((p) => !obvious.has(p.key)),
+    preFilled: pieces.filter((p) => obvious.has(p.key)).map((p) => ({ key: p.key, answer: p.answer })),
     tbPct: Math.round((raiseCombos / 1326) * 100),
     callPct: Math.round((callCombos / 1326) * 100),
   };
