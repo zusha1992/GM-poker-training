@@ -13,7 +13,6 @@ import { PositionPicker } from "./PositionPicker";
 import { SeatPicker, type AnyPreflopSpot } from "./SeatPicker";
 import { ExplainSheet } from "./ExplainSheet";
 import { LegendSheet } from "./LegendSheet";
-import { HelpSheet } from "./HelpSheet";
 import { FinishSheet } from "./FinishSheet";
 import { FAMS, FAM_BY_KEY, FAMILY_DESC, shapeOf } from "@/lib/drill/preflop/families";
 import { PREFLOP_MODES, type PreflopModeKey } from "@/lib/drill/preflop/modes";
@@ -125,11 +124,9 @@ export function PreflopDrillScreen({ modeKey }: PreflopDrillScreenProps) {
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [explainPiece, setExplainPiece] = useState<DrillPiece | null>(null);
   const [explainAnswered, setExplainAnswered] = useState(false);
-  const [helpOpen, setHelpOpen] = useState(false);
   const [doneSpots, setDoneSpots] = useState<Set<string>>(new Set());
 
   const { toast, show: showToast } = useToast();
-  const seenHelp = useRef<Set<string>>(new Set());
   const generation = useRef(0);
   const deepLinkChecked = useRef(false);
   const celebrationId = useRef(0);
@@ -164,12 +161,8 @@ export function PreflopDrillScreen({ modeKey }: PreflopDrillScreenProps) {
     setRevealedColors(pre);
     setResultLabelByKey(new Map());
 
-    if (!seenHelp.current.has(modeKey)) {
-      later(() => setHelpOpen(true), 500);
-    } else {
-      later(() => showToast(nextSpot.roleText, true, 2600), 0);
-    }
-  }, [mode.actionOrder, modeKey, later, showToast]);
+    later(() => showToast(nextSpot.roleText, true, 2600), 0);
+  }, [mode.actionOrder, later, showToast]);
 
   useEffect(() => {
     // Guarded by a ref (not state) so this runs exactly once per mount even
@@ -188,12 +181,6 @@ export function PreflopDrillScreen({ modeKey }: PreflopDrillScreenProps) {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  function closeHelp() {
-    seenHelp.current.add(modeKey);
-    setHelpOpen(false);
-    if (spot) later(() => showToast(spot.roleText, true, 2600), 200);
-  }
 
   const piece = order[index];
   const nPure = useMemo(() => order.filter((p) => p.answer !== "mix").length, [order]);
@@ -618,17 +605,6 @@ export function PreflopDrillScreen({ modeKey }: PreflopDrillScreenProps) {
           modeTitle={mode.title}
           onClose={goToLobby}
           onStart={(newSpot) => resetForSpot(newSpot)}
-        />
-      )}
-
-      {spot && (
-        <HelpSheet
-          open={helpOpen}
-          onGotIt={closeHelp}
-          modeKey={modeKey}
-          roleText={spot.roleText}
-          swipes={mode.swipes}
-          labels={mode.labels}
         />
       )}
 
