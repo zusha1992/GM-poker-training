@@ -73,7 +73,7 @@ Broadway cards are A, K, Q, J and T.
   - **Underpairs from 99 to JJ** are a **small pot**, and so is second pair or better. *(Noam, from Uri)*
   - **Ace-high and third pair or lower** are a **tiny pot**.
   - **Lower pocket pairs are Zero** and **stay Zero on the turn and river unless they improve**. Their own group: "Small pocket pairs". 66 and lower are confirmed; 88 and 77 are included because they're below 99 *(draft)*.
-- **A paired flop follows the first rule**, even KK or QQ *(draft)*.
+- **A paired flop follows the first rule**, even K-K or Q-Q *(Noam, 2026-11-02)*. The drill's paired board is 8♠8♦6♣.
 
 ### No pair on the flop and turn *(Noam and Uri, 2026-11-02)*
 - **Flop:** A-high (K-high when an ace is on board) is a tiny pot. Every other no-pair hand is zero. On Q-T-2, AK and AJ are a tiny pot; KJ and J9 are zero despite their straight draws.
@@ -144,7 +144,7 @@ Chosen as the opposite of A72: no ace, two-tone, very connected.
 - **Brick turn (2♥, BTN overbets):** overpairs 50%; every top pair another 20% (its last bet, then showdown on a brick river); the lower pairs showdown value.
 - **Rivers where the draws arrive (9♠, Q♠, 8♠):** A-high becomes a potential bluff; overpairs become bluff-catchers (showdown value).
 
-## 6c. Boards 3–10: answers computed from the rules (2026-10-31, all drafts)
+## 6c. Boards 3–11: answers computed from the rules (2026-10-31, all drafts)
 
 Eight more boards from the planning doc, each teaching something different: **K♠5♥4♣** (king-high, low connectors), **Q♥T♦7♠** (middle cards), **9♠8♦6♣** (very connected, low), **K♦Q♣T♥** (broadway), **A♥7♥6♣** (ace-high but two-tone and connected), **K♦Q♦4♠** (two high cards, two-tone), **T♥8♥7♠** (the wettest), **9♦6♦2♥** (low, two-tone). Each has the doc's brick / dynamic / wet turns and a brick and a wet river.
 
@@ -195,3 +195,4 @@ Their answers are not written one by one: they come from a **value plan**, the r
 - **2026-10-31 (night)**: From Noam's notes on T♥8♥7♠ · 9♥ and Q♥T♦7♠, applied to every board (143 answers changed): very wet boards (one card to a straight, or a flush plus straights) send every pair, set and two pair to showdown value on the turn and river; a third bet on a blank river is a big pot; Q♥T♦7♠ counts as a dry flop, so AQ/KQ want a big pot.
 - **2026-11-02**: From Noam and Uri, applied to every board: the drill only asks what a group is worth. "Potential bluffs" became Zero and "Showdown value" became Tiny pot. A-high (K-high on an ace board) is a tiny pot on the flop and zero on every turn.
 - **2026-11-02**: From Noam, from Uri: flops with at most one broadway card or paired: small pairs and ace-high with two overcards are worth a small bet. Flops with two or more broadway cards: 99–JJ and second pair or better are a small pot; ace-high and third pair or lower are a tiny pot; 88 and lower are Zero and stay Zero on the turn and river unless they improve.
+- **2026-11-02**: Paired flops are in the rulebook, and an 11th board was added: 8♠8♦6♣ (6 runouts, answers computed from the rules, all drafts).

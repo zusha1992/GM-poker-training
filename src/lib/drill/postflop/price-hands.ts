@@ -635,7 +635,8 @@ function ruleBoard(b: RuleBoard): BoardSpec {
   return { name: b.name, flop: b.flop, blurb: b.blurb, flopSpec, turns };
 }
 
-/** Boards 3–10, picked from Noam's planning doc for different lessons.
+/** Boards 3–10, picked from Noam's planning doc for different lessons, plus a
+ * paired flop (board 11, Noam 2026-11-02).
  * Each turn: brick / dynamic / wet; each turn's rivers: brick first, then wet. */
 const RULE_BOARDS: RuleBoard[] = [
   {
@@ -732,6 +733,18 @@ const RULE_BOARDS: RuleBoard[] = [
       { card: "2♣", kind: "brick", story: "2♣ · Brick. The board pairs, no new draws: BTN overbets, polar.", rivers: [{ card: "K♠", story: "K♠ · Brick. An overcard, nothing completes." }, { card: "8♦", story: "8♦ · Wet. The diamond flush, and T7, 75 make straights." }] },
       { card: "Q♥", kind: "dynamic", story: "Q♥ · Dynamic. An overcard, a second flush draw and a JT draw: BTN bets 66%.", rivers: [{ card: "A♣", story: "A♣ · Brick. The draws missed." }, { card: "T♦", story: "T♦ · Wet. The diamond flush, and KJ, J8, 87 make straights." }] },
       { card: "8♦", kind: "wet", story: "8♦ · Wet. The diamond flush, and T7, 75 make straights: BTN bets 66%.", rivers: [{ card: "K♣", story: "K♣ · Brick. Nothing new." }, { card: "7♣", story: "7♣ · Wet. Four to a straight: any T or 5." }] },
+    ],
+  },
+  {
+    name: "886",
+    flop: ["8♠", "8♦", "6♣"],
+    blurb: "Low and paired",
+    wetFlop: false,
+    story: "A low, paired flop: few hands connect with it, so small pairs and good ace-high are worth a small bet.",
+    turns: [
+      { card: "2♥", kind: "brick", story: "2♥ · Brick. A blank: BTN overbets, polar.", rivers: [{ card: "K♠", story: "K♠ · Brick. An overcard, nothing completes." }, { card: "5♠", story: "5♠ · Wet. 97 and 74 make straights." }] },
+      { card: "J♦", kind: "dynamic", story: "J♦ · Dynamic. An overcard, a diamond draw and T9 draws: BTN bets 66%.", rivers: [{ card: "3♥", story: "3♥ · Brick. The draws missed." }, { card: "9♦", story: "9♦ · Wet. The diamond flush, and QT, T7, 75 make straights." }] },
+      { card: "7♠", kind: "wet", story: "7♠ · Wet. T9, 95 and 54 make straights, and a spade draw arrives: BTN bets 66%.", rivers: [{ card: "2♦", story: "2♦ · Brick. Nothing new." }, { card: "5♠", story: "5♠ · Wet. The spade flush, and any 9 or 4 makes a straight." }] },
     ],
   },
 ];
