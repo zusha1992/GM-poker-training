@@ -18,10 +18,12 @@ import type { MatrixSnap } from "@/components/drill/postflop/LineMatrix";
 /** Strongest first; a hand is in exactly one group, checked top-down.
  *  pp1/pp2/pp3 = pocket pairs below the top card, by how many board ranks
  *  sit above them (pp3 = three or more). mp = pairs the second board rank,
- *  bp = pairs a lower one. sd = no pair, high card at or above the board's
- *  showdown cutoff (draws included); air = every other no-pair hand. */
-export type PGroup = "monster" | "twopair" | "op" | "tpgk" | "tpmk" | "tpwk" | "pp1" | "pp2" | "pp3" | "mp" | "bp" | "sd" | "air";
-export const PGROUP_ORDER: PGroup[] = ["monster", "twopair", "op", "tpgk", "tpmk", "tpwk", "pp1", "pp2", "pp3", "mp", "bp", "sd", "air"];
+ *  bp = pairs a lower one. spp = 66 and lower on a flop with two or more
+ *  broadway cards. aho = ace-high with two overcards on a flop with at most
+ *  one broadway card, or a paired one. sd = no pair, high card at or above the
+ *  board's showdown cutoff (draws included); air = every other no-pair hand. */
+export type PGroup = "monster" | "twopair" | "op" | "tpgk" | "tpmk" | "tpwk" | "pp1" | "pp2" | "pp3" | "spp" | "mp" | "bp" | "aho" | "sd" | "air";
+export const PGROUP_ORDER: PGroup[] = ["monster", "twopair", "op", "tpgk", "tpmk", "tpwk", "pp1", "pp2", "pp3", "spp", "mp", "bp", "aho", "sd", "air"];
 
 /** Same color and shape on every board and street. */
 export const PGROUP_INFO: Record<PGroup, { color: string; shape: string }> = {
@@ -34,8 +36,10 @@ export const PGROUP_INFO: Record<PGroup, { color: string; shape: string }> = {
   pp1: { color: "#9B7FEA", shape: "bluff" },
   pp2: { color: "#C59BF0", shape: "giveup" },
   pp3: { color: "#7A62C9", shape: "V" },
+  spp: { color: "#B7A6E8", shape: "W" },
   mp: { color: "#9DB4C4", shape: "I3" },
   bp: { color: "#7F97A8", shape: "dot2" },
+  aho: { color: "#D4E86B", shape: "P" },
   sd: { color: "#9BE07A", shape: "plus" },
   air: { color: "#56626C", shape: "U" },
 };
@@ -774,6 +778,15 @@ const SUITS = ["s", "h", "d", "c"] as const;
 const boardRanks = (board: Card[]) => [...new Set(board.map((c) => c.r))].sort((p, q) => q - p);
 
 /** The group one combo is in on this board (checked top-down). */
+/** Noam/Uri 2026-11-02: what weak pairs and ace-high are worth on the flop
+ * depends on the broadway cards. "low" = one or none, or a paired flop;
+ * "high" = two or more; null on later streets. */
+function flopTexture(board: Card[]): "low" | "high" | null {
+  if (board.length !== 3) return null;
+  const broadway = board.filter((c) => c.r >= 10).length;
+  return broadway <= 1 || new Set(board.map((c) => c.r)).size < 3 ? "low" : "high";
+}
+
 export function priceGroupOf(hole: [Card, Card], board: Card[], cut: Pick<StreetSpec, "goodKicker" | "midKicker" | "sdCutoff">): PGroup {
   const all = [...hole, ...board];
   const [x, y] = hole;
@@ -797,7 +810,9 @@ export function priceGroupOf(hole: [Card, Card], board: Card[], cut: Pick<Street
   const twoPair = !pocket && boardCount(x.r) > 0 && boardCount(y.r) > 0;
   if (trips.length || twoPair) return "twopair";
 
+  const texture = flopTexture(board);
   if (pocket) {
+    if (texture === "high" && x.r <= 6) return "spp";
     if (x.r > top) return "op";
     const above = ranks.filter((r) => r > x.r).length;
     return above === 1 ? "pp1" : above === 2 ? "pp2" : "pp3";
@@ -807,6 +822,7 @@ export function priceGroupOf(hole: [Card, Card], board: Card[], cut: Pick<Street
     return kicker >= cut.goodKicker ? "tpgk" : kicker >= cut.midKicker ? "tpmk" : "tpwk";
   }
   if (boardCount(x.r) > 0 || boardCount(y.r) > 0) return x.r === ranks[1] || y.r === ranks[1] ? "mp" : "bp";
+  if (texture === "low" && Math.max(x.r, y.r) === 14 && Math.min(x.r, y.r) > top) return "aho";
   return Math.max(x.r, y.r) >= cut.sdCutoff ? "sd" : "air";
 }
 
@@ -864,6 +880,10 @@ function namesOf(g: PGroup, board: Card[], hands: string[], cut: Pick<StreetSpec
       const where = i < ranks.length && g !== "pp3" ? `between the ${ch(ranks[i - 1])} and the ${ch(ranks[i])}` : `below the ${ch(ranks[i - 1])}`;
       return { label, name: `Pocket pairs ${where}` };
     }
+    case "spp":
+      return { label: runs(hands.map((h) => rv(h[0])), (r) => `${ch(r)}${ch(r)}`), name: "Small pocket pairs" };
+    case "aho":
+      return { label: runs(hands.map((h) => rv(h[1])), (r) => `A${ch(r)}`), name: "Ace-high, two overcards" };
     case "mp":
       return { label: `${ch(ranks[1])}x`, name: `Second pair (a ${ch(ranks[1])})` };
     case "bp": {
@@ -944,6 +964,18 @@ function everyBoardRule(g: PGroup, street: Street, ans: Answer | undefined): Ans
   return ans;
 }
 
+/** Noam/Uri 2026-11-02: the flop by broadway cards (see flopTexture). On two or
+ * more, small pairs are zero, other underpairs and lower pairs a tiny pot, and
+ * only second pair or better starts at a small pot. */
+function flopRule(g: PGroup, board: Card[]): Answer | undefined {
+  if (g === "spp") return a("zero", "Two or more broadway cards on the flop: small pairs want no money in the pot.", true);
+  if (g === "aho") return a("little", "At most one broadway card, or a paired flop: ace-high with two overcards is worth a small bet.", true);
+  if (flopTexture(board) === "high" && (g === "pp1" || g === "pp2" || g === "pp3" || g === "bp")) {
+    return a("tiny", "Two or more broadway cards on the flop: only second pair or better starts at a small pot.", true);
+  }
+  return undefined;
+}
+
 function riverRule(g: PGroup, street: Street): Answer | undefined {
   if (street === "river" && g === "pp3") return a("zero", "Fourth pair or worse on the river: it rarely wins at showdown, so it's worth zero.");
   return undefined;
@@ -995,7 +1027,7 @@ export function buildRunout(index: number): Runout {
     const pieces: PricePiece[] = [];
     for (const g of PGROUP_ORDER) {
       if (snap.byGroup[g] <= 0) continue;
-      const ans = veryWetRule(g, street, board, everyBoardRule(g, street, riverRule(g, street) ?? st.answers[g] ?? AUTO[g]));
+      const ans = flopRule(g, board) ?? veryWetRule(g, street, board, everyBoardRule(g, street, riverRule(g, street) ?? st.answers[g] ?? AUTO[g]));
       if (!ans) throw new Error(`price-hands: no answer for ${g} on ${spec.id} (${street})`);
       answers[g] = ans;
       const entries: { hand: string; part: number }[] = [];
