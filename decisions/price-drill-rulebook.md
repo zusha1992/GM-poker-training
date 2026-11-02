@@ -15,16 +15,18 @@ This is a living document. It holds every rule for splitting BTN's range into ha
 
 ## 2. The six boxes
 
-*Older rules below may still say 5% / 20% / 50% / 100%: read them as Small pot / Medium pot / Big pot / Stacks.*
+*Older rules below may still say 5% / 20% / 50% / 100%: read them as Small pot / Medium pot / Big pot / Stacks. They may also say "potential bluff" and "showdown value": read them as Zero and Tiny pot.*
  *(Noam, 2026-10-29; money as stack shares since 2026-10-30)*
+
+**The drill only asks how much money a group is worth** *(Noam and Uri, 2026-11-02)*. Bluffing, protection and draws are not part of the question. A draw adds nothing to a hand's worth here.
 
 | Box | Means |
 |---|---|
-| **Potential bluffs** (bottom-left corner) | Worth nothing. It can't win by checking, so it's a candidate to bluff. That doesn't mean it always bluffs: which ones actually bet is taught in the later bluff drill. |
-| **Showdown value** (bottom-right corner) | Worth a tiny bit. No value bet, but it sometimes wins when checked down. |
+| **Zero** (bottom-left corner) | Wants exactly zero money in the pot: it can't win by checking. *(Noam and Uri, 2026-11-02; was "Potential bluffs")* |
+| **Tiny pot** (bottom-right corner) | Worth about 1bb. It sometimes wins at showdown, and the pot is already as big as it wants. *(Noam and Uri, 2026-11-02; was "Showdown value")* |
 | **Small pot · Medium pot · Big pot · Stacks** (left side, top corners, right side) | How big a pot the group wants to play by the river *(Noam, 2026-10-31: pot sizes, not percentages)*. Two small bets can still be a small pot: it is about where the pot ends up, not how many bets. *(Noam: no exact bb numbers like +5/+15/+40, because we don't aim for that accuracy.)* |
 
-Layout *(Noam, 2026-10-30)*: six neon paddles in one design (Arkanoid-style), different colors, evenly spaced around the drop area, clockwise from small to big: Potential bluffs (bottom-left corner), 5% (left side), 20% (top-left corner), 50% (top-right corner), 100% (right side), Showdown value (bottom-right corner). Labels are only the number. The paddle the piece is near lights up; it flashes when the piece lands.
+Layout *(Noam, 2026-10-30)*: six neon paddles in one design (Arkanoid-style), different colors, evenly spaced around the drop area, clockwise from small to big: Zero (bottom-left corner), 5% (left side), 20% (top-left corner), 50% (top-right corner), 100% (right side), Tiny pot (bottom-right corner). Labels are only the number. The paddle the piece is near lights up; it flashes when the piece lands.
 
 ## 2b. Bet sizes between streets *(Noam, 2026-10-30)*
 
@@ -61,13 +63,17 @@ Every hand goes into exactly one group, checked from the top down. Groups are re
 | 13 | No pair, the rest | Everything else |
 
 ### Draws *(Noam, 2026-10-29)*
-- Draws don't get their own group. **Every flush draw and straight draw with no pair and no showdown value is a potential bluff.** "Potential" doesn't mean "always": some of them check, and that choice belongs to the bluff drill.
-- **A hand's strongest feature decides its group** *(draft, proposed and accepted)*: a pair plus a draw stays in its pair group, and a K-high draw stays in showdown value, because it can win by checking and doesn't need to bluff.
+- Draws don't get their own group. **Every flush draw and straight draw with no pair and no showdown value is worth zero.** Which ones actually bet belongs to the later bluff drill.
+- **A hand's strongest feature decides its group** *(draft, proposed and accepted)*: a pair plus a draw stays in its pair group, and an A-high or K-high draw counts as that high card.
+
+### No pair on the flop and turn *(Noam and Uri, 2026-11-02)*
+- **Flop:** A-high (K-high when an ace is on board) is a tiny pot. Every other no-pair hand is zero. On Q-T-2, AK and AJ are a tiny pot; KJ and J9 are zero despite their straight draws.
+- **Turn:** A-high and K-high have almost always lost their showdown value, so **they are zero on every turn**. *(Draft; feedback adds the exceptions.)*
 
 ### Showdown value on the river *(Noam, 2026-10-30, from his note on A72 · 5♣ · 6♣)*
 - It depends on **how many draws arrived and how many missed**.
-- **The river completes the draws** (flush comes in, more straights): K-high loses its showdown value and becomes a **potential bluff**, because the ranges are polar.
-- **The draws brick** (for example the turn brought two flush draws and straight draws, and the river misses them all): BB has many missed draws, so **K-high can keep showdown value**.
+- **The river completes the draws** (flush comes in, more straights): K-high loses its showdown value and is **zero**, because the ranges are polar.
+- **The draws brick** (for example the turn brought two flush draws and straight draws, and the river misses them all): BB has many missed draws, so **K-high can go back to a tiny pot**.
 
 ### Every pair wants money on the flop *(Noam, 2026-10-31)*
 - In a single-raised pot (BTN raises, BB calls) both ranges are wide, so **any pair on the flop wants to put some money in**, even the worst pair: at least 5%. No pair is showdown value on the flop yet.
@@ -98,7 +104,7 @@ Every hand goes into exactly one group, checked from the top down. Groups are re
 - The current group is **lit in its own color** on the matrix. Groups not answered yet are **grey**, and answered groups take **their box's money color**. By the end of a street the matrix is a money map.
 - Obvious groups place themselves: straight+ always, and sets & two pair when they're all-in. Everything else is asked.
 - **No-pair names use only ranks that aren't on the board** *(Noam, 2026-10-31)*: on K♦Q♦4♠ the groups are "A-high" and "J-high & below", never "K-high".
-- **Names are neutral.** A piece says what the hands are ("AT–A8", "66–33", "K-high", "Q-high & below"), never what to do. The words "bluff", "give up" and "showdown" only appear on the boxes, never on a piece.
+- **Names are neutral.** A piece says what the hands are ("AT–A8", "66–33", "K-high", "Q-high & below"), never what to do. The words "bluff", "give up" and "showdown" never appear on a piece or a box.
 - A wrong drop says only "worth more" or "worth less", never the right box.
 - Tapping a piece shows its full name and every hand in it.
 
@@ -141,12 +147,12 @@ Their answers are not written one by one: they come from a **value plan**, the r
 - Every other top pair: 2 *(20% on the flop, 20% more on a brick turn)*
 - Pairs under the top card that sit right below it, and second pair: 1 *(one small bet, then showdown)*
 - Everything else with a pair: 0 (showdown value)
-- No pair: showdown value if it holds the highest missing card (A-high, or K-high when an ace is on board), otherwise a potential bluff
+- No pair: a tiny pot on the flop if it holds the highest missing card (A-high, or K-high when an ace is on board), otherwise zero. Zero on every turn.
 
 **Spending them, street by street:**
 - **Flop:** 3 → 50% · 2 → 20% · 1 → 5% · 0 → showdown value. Sets and two pair all-in.
 - **Turn** (with what's left): brick → 50% or 20% (its last bet) · dynamic → 50% or 5% · wet → 20% or 5% · nothing left → showdown value. Sets and two pair stay all-in, except on a wet turn (50%).
-- **River:** a group with value left bets a third time on a blank: big pot (small pot if the turn was wet, or if the river completes draws); everything else shows down. On a river that completes the draws, sets and two pair drop to medium pot and the high-card hands become potential bluffs.
+- **River:** a group with value left bets a third time on a blank: big pot (small pot if the turn was wet, or if the river completes draws); everything else shows down. On a river that completes the draws, sets and two pair drop to medium pot and the high-card hands stay zero; on other rivers they go back to a tiny pot.
 - **Very wet boards** (section 3) override all of this on the turn and river: every pair, set and two pair shows down.
 - **Kickers:** the two best kickers make "strong" (AK/AQ on an ace, AK/KQ on a king, AQ/KQ below); every other kicker is one group.
 - **The turn bet size** (overbet on a brick, 66% otherwise) is shown as information only.
@@ -154,11 +160,12 @@ Their answers are not written one by one: they come from a **value plan**, the r
 ## 7. Open questions for Uri
 
 1. Is "Top pair, weak kicker" A6–A3 one group, or A6 alone plus the wheel draws A5–A3?
-2. Should K-high draws stay in showdown value, or be their own group?
+2. *(Settled 2026-11-02: draws add nothing; a K-high draw counts as K-high.)*
 3. On rivers where the K pairs (K♦, K♠, K♥), no K-high no-pair hands exist. Should the showdown cutoff drop to Q-high there?
 4. *(Settled 2026-10-31: groups stay, and the bet size changes no answer; it is information only.)*
 5. All the turn and river buckets are drafts. Please correct them; the gold dots in the app's summary mark them.
-6. *(Noam)* Should some spots accept two answers? For example, sets on a very wet turn (check or a small bet), or AK/AJ on Q-T-3 (a draw with some showdown value: bluff or showdown).
+6. *(Noam)* Should some spots accept two answers? For example, sets on a very wet turn (check or a small bet). AK/AJ on Q-T-3 no longer needs this: it is a tiny pot on the flop (2026-11-02).
+7. A-high and K-high are zero on the turn but can go back to a tiny pot on a river where the draws miss. Is that right, or should they stay zero?
 
 ## Change log
 
@@ -175,3 +182,4 @@ Their answers are not written one by one: they come from a **value plan**, the r
 - **2026-10-31 (afternoon)**: Any pair on the flop wants at least 5% (single-raised pot, wide ranges); applied to every board.
 - **2026-10-31 (evening)**: Money paddles renamed to pot sizes: Small pot, Medium pot, Big pot, Stacks. Open: is top pair a small pot (two small bets) or a medium pot?
 - **2026-10-31 (night)**: From Noam's notes on T♥8♥7♠ · 9♥ and Q♥T♦7♠, applied to every board (143 answers changed): very wet boards (one card to a straight, or a flush plus straights) send every pair, set and two pair to showdown value on the turn and river; a third bet on a blank river is a big pot; Q♥T♦7♠ counts as a dry flop, so AQ/KQ want a big pot.
+- **2026-11-02**: From Noam and Uri, applied to every board: the drill only asks what a group is worth. "Potential bluffs" became Zero and "Showdown value" became Tiny pot. A-high (K-high on an ace board) is a tiny pot on the flop and zero on every turn.

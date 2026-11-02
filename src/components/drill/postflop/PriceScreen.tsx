@@ -273,7 +273,7 @@ export function PriceScreen() {
             </p>
           </div>
           <div className="flex flex-col gap-1.5 rounded-2xl p-3 text-[13px]" style={{ background: "var(--panel)", border: "1px solid var(--line)" }}>
-            <Row label="Boxes" text="Bluffs · Showdown · Small, medium or big pot · Stacks" />
+            <Row label="Boxes" text="Zero · Tiny, small, medium or big pot · Stacks" />
             <Row label="Flop bet" text="Small, BB calls" />
             <Row label="Turn bet" text="Overbet (polar) on bricks · 66% on wet cards" />
           </div>
@@ -542,7 +542,7 @@ function Summary({ runout, missed, onNext, onReplay }: { runout: Runout; missed:
                     <i className="inline-block h-[8px] w-[8px] rounded-[2px]" style={{ background: PGROUP_INFO[g].color }} />
                     {s.labels[g]}
                     <b className="font-[family-name:var(--font-display)]" style={{ color }}>
-                      {ans.bucket === "sd" ? "SD" : bucketTiny(ans.bucket)}
+                      {bucketTiny(ans.bucket)}
                     </b>
                     {wrong && <span style={{ color: "var(--raise)" }}>✕</span>}
                     {!ans.sure && <span className="inline-block h-[5px] w-[5px] rounded-full" style={{ background: "var(--mix)" }} />}
@@ -561,7 +561,7 @@ function Summary({ runout, missed, onNext, onReplay }: { runout: Runout; missed:
             {!pickedAns.sure && <span style={{ color: "var(--mix)" }}> (draft, Uri to check)</span>}
           </>
         ) : (
-          <>Tap a group to see why. A gold dot marks a draft answer for Uri to check. SD = showdown value.</>
+          <>Tap a group to see why. A gold dot marks a draft answer for Uri to check.</>
         )}
       </p>
 

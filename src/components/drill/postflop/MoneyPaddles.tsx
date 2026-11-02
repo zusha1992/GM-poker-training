@@ -4,13 +4,13 @@ import type { CSSProperties } from "react";
 import { BUCKET_COLOR, type Bucket } from "@/lib/drill/postflop/price-hands";
 import styles from "./MoneyPaddles.module.css";
 
-/** Where each paddle sits, clockwise from small money to big: bluffs in the
+/** Where each paddle sits, clockwise from small money to big: zero in the
  * bottom-left corner, 5% on the left side, 20% and 50% in the top corners,
- * 100% on the right side, showdown value in the bottom-right corner. */
+ * 100% on the right side, tiny pot in the bottom-right corner. */
 type Spot = "bl" | "left" | "tl" | "tr" | "right" | "br";
-const SPOT: Record<Bucket, Spot> = { bluff: "bl", little: "left", "20": "tl", "50": "tr", all: "right", sd: "br" };
+const SPOT: Record<Bucket, Spot> = { zero: "bl", little: "left", "20": "tl", "50": "tr", all: "right", tiny: "br" };
 /** How big a pot each paddle stands for (Noam 2026-10-31: pot sizes, not percentages). */
-const LABEL: Record<Bucket, string> = { bluff: "Potential\nbluffs", sd: "Showdown\nvalue", little: "Small\npot", "20": "Medium\npot", "50": "Big\npot", all: "Stacks" };
+const LABEL: Record<Bucket, string> = { zero: "Zero", tiny: "Tiny\npot", little: "Small\npot", "20": "Medium\npot", "50": "Big\npot", all: "Stacks" };
 
 const INSET = 6;
 const STROKE = 12;
@@ -79,7 +79,6 @@ export function MoneyPaddles({ w, h, armed, holding, flash, hitRef }: Props) {
         const hz = spot[1] === "l" ? "left" : "right";
         const radius = { [`border${cap(v)}${cap(hz)}Radius`]: r } as CSSProperties;
         const innerRadius = { [`border${cap(v)}${cap(hz)}Radius`]: Math.max(4, r - 6) } as CSSProperties;
-        const word = b === "bluff" || b === "sd";
         return (
           <div key={key} ref={(el) => hitRef(b, el)} className={cls} style={{ ...style, [v]: INSET, [hz]: INSET, width: a, height: a }} data-testid={`bucket-${b}`}>
             <span
@@ -90,7 +89,7 @@ export function MoneyPaddles({ w, h, armed, holding, flash, hitRef }: Props) {
             <span className={styles.inner} style={{ ...innerRadius, [v]: 5, [hz]: 5, width: a - 5, height: a - 5, borderStyle: "solid", ...edges(v, hz, 2) }} />
             <span
               className={styles.label}
-              style={{ [v]: STROKE + 9, [hz]: STROKE + 10, fontSize: word ? 13 : 15, textAlign: hz, whiteSpace: "pre-line", transformOrigin: `${hz} ${v}` }}
+              style={{ [v]: STROKE + 9, [hz]: STROKE + 10, fontSize: 15, textAlign: hz, whiteSpace: "pre-line", transformOrigin: `${hz} ${v}` }}
             >
               {LABEL[b]}
             </span>
