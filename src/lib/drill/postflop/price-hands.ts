@@ -18,8 +18,8 @@ import type { MatrixSnap } from "@/components/drill/postflop/LineMatrix";
 /** Strongest first; a hand is in exactly one group, checked top-down.
  *  pp1/pp2/pp3 = pocket pairs below the top card, by how many board ranks
  *  sit above them (pp3 = three or more). mp = pairs the second board rank,
- *  bp = pairs a lower one. spp = 66 and lower on a flop with two or more
- *  broadway cards. aho = ace-high with two overcards on a flop with at most
+ *  bp = pairs a lower one. spp = 88 and lower when the flop had two or more
+ *  broadway cards, on every street until they improve. aho = ace-high with two overcards on a flop with at most
  *  one broadway card, or a paired one. sd = no pair, high card at or above the
  *  board's showdown cutoff (draws included); air = every other no-pair hand. */
 export type PGroup = "monster" | "twopair" | "op" | "tpgk" | "tpmk" | "tpwk" | "pp1" | "pp2" | "pp3" | "spp" | "mp" | "bp" | "aho" | "sd" | "air";
@@ -812,7 +812,7 @@ export function priceGroupOf(hole: [Card, Card], board: Card[], cut: Pick<Street
 
   const texture = flopTexture(board);
   if (pocket) {
-    if (texture === "high" && x.r <= 6) return "spp";
+    if (flopTexture(board.slice(0, 3)) === "high" && x.r <= 8) return "spp";
     if (x.r > top) return "op";
     const above = ranks.filter((r) => r > x.r).length;
     return above === 1 ? "pp1" : above === 2 ? "pp2" : "pp3";
@@ -965,14 +965,14 @@ function everyBoardRule(g: PGroup, street: Street, ans: Answer | undefined): Ans
 }
 
 /** Noam/Uri 2026-11-02: the flop by broadway cards (see flopTexture). On two or
- * more, small pairs are zero, other underpairs and lower pairs a tiny pot, and
- * only second pair or better starts at a small pot. */
+ * more, 88 and lower are zero until they improve, 99 and up under the top card
+ * are a small pot, and lower pairs a tiny pot. */
 function flopRule(g: PGroup, board: Card[]): Answer | undefined {
-  if (g === "spp") return a("zero", "Two or more broadway cards on the flop: small pairs want no money in the pot.", true);
+  if (g === "spp") return a("zero", "The flop had two or more broadway cards: small pairs want no money in the pot unless they improve.", true);
   if (g === "aho") return a("little", "At most one broadway card, or a paired flop: ace-high with two overcards is worth a small bet.", true);
-  if (flopTexture(board) === "high" && (g === "pp1" || g === "pp2" || g === "pp3" || g === "bp")) {
-    return a("tiny", "Two or more broadway cards on the flop: only second pair or better starts at a small pot.", true);
-  }
+  if (flopTexture(board) !== "high") return undefined;
+  if (g === "pp1" || g === "pp2" || g === "pp3") return a("little", "Two or more broadway cards on the flop: 99 to JJ are still worth a small pot.", true);
+  if (g === "bp") return a("tiny", "Two or more broadway cards on the flop: third pair or lower is only worth a tiny pot.", true);
   return undefined;
 }
 

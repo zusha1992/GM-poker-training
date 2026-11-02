@@ -67,11 +67,12 @@ Every hand goes into exactly one group, checked from the top down. Groups are re
 - **A hand's strongest feature decides its group** *(draft, proposed and accepted)*: a pair plus a draw stays in its pair group, and an A-high or K-high draw counts as that high card.
 
 ### Small pairs and ace-high on the flop: count the broadway cards *(Noam, from Uri, 2026-11-02)*
-Broadway cards are A, K, Q, J and T. Small pairs are 66 and lower *(draft)*.
+Broadway cards are A, K, Q, J and T.
 - **At most one broadway card, or a paired flop:** small pairs are worth one small bet (Small pot). **Ace-high with two overcards** (9-8-6: AK to AT; T-8-7: AK to AJ) is worth a small bet too. Its own group: "Ace-high, two overcards". Other ace-high stays a tiny pot.
-- **Two or more broadway cards:** only **second pair or better** starts at a small pot.
-  - Ace-high, underpairs and lower pairs (third pair) are a **tiny pot**.
-  - Small pocket pairs go to **Zero**. Their own group: "Small pocket pairs". *(Draft reading of two notes: small pairs Zero, other underpairs tiny pot. To confirm.)*
+- **Two or more broadway cards:**
+  - **Underpairs from 99 to JJ** are a **small pot**, and so is second pair or better. *(Noam, from Uri)*
+  - **Ace-high and third pair or lower** are a **tiny pot**.
+  - **Lower pocket pairs are Zero** and **stay Zero on the turn and river unless they improve**. Their own group: "Small pocket pairs". 66 and lower are confirmed; 88 and 77 are included because they're below 99 *(draft)*.
 - **A paired flop follows the first rule**, even KK or QQ *(draft)*.
 
 ### No pair on the flop and turn *(Noam and Uri, 2026-11-02)*
@@ -84,7 +85,7 @@ Broadway cards are A, K, Q, J and T. Small pairs are 66 and lower *(draft)*.
 - **The draws brick** (for example the turn brought two flush draws and straight draws, and the river misses them all): BB has many missed draws, so **K-high can go back to a tiny pot**.
 
 ### Every pair wants money on the flop *(Noam, 2026-10-31)*
-- In a single-raised pot (BTN raises, BB calls) both ranges are wide, so **any pair on the flop wants to put some money in**, even the worst pair: at least 5%. No pair is showdown value on the flop yet. *Exception (2026-11-02): on a flop with two or more broadway cards, only second pair or better wants a small pot (see "Small pairs and ace-high on the flop").*
+- In a single-raised pot (BTN raises, BB calls) both ranges are wide, so **any pair on the flop wants to put some money in**, even the worst pair: at least 5%. No pair is showdown value on the flop yet. *Exception (2026-11-02): on a flop with two or more broadway cards, 88 and lower want no money and third pair or lower only a tiny pot (see "Small pairs and ace-high on the flop").*
 
 ### Weak pairs on the river *(Noam, 2026-10-31, from his note on K♦Q♦4♠ · 8♠ · 3♥)*
 - **A pocket pair under three or more board cards on the river (fourth pair or worse) is a potential bluff**, not showdown value: it rarely wins at showdown.
@@ -174,8 +175,8 @@ Their answers are not written one by one: they come from a **value plan**, the r
 5. All the turn and river buckets are drafts. Please correct them; the gold dots in the app's summary mark them.
 6. *(Noam)* Should some spots accept two answers? For example, sets on a very wet turn (check or a small bet). AK/AJ on Q-T-3 no longer needs this: it is a tiny pot on the flop (2026-11-02).
 7. A-high and K-high are zero on the turn but can go back to a tiny pot on a river where the draws miss. Is that right, or should they stay zero?
-8. On two or more broadway cards, are small pairs Zero while other underpairs are a tiny pot, or are all underpairs a tiny pot? Is "66 and lower" the right line for small pairs?
-9. Small pairs that are Zero on the flop go back to their usual answers on the turn and river, often a tiny pot. Is that right?
+8. On two or more broadway cards, do 88 and 77 belong with the Zero pairs? (99–JJ small pot and 66 and lower Zero are settled.)
+9. *(Settled 2026-11-02: small pairs that are Zero on the flop stay Zero unless they improve.)*
 
 ## Change log
 
@@ -193,4 +194,4 @@ Their answers are not written one by one: they come from a **value plan**, the r
 - **2026-10-31 (evening)**: Money paddles renamed to pot sizes: Small pot, Medium pot, Big pot, Stacks. Open: is top pair a small pot (two small bets) or a medium pot?
 - **2026-10-31 (night)**: From Noam's notes on T♥8♥7♠ · 9♥ and Q♥T♦7♠, applied to every board (143 answers changed): very wet boards (one card to a straight, or a flush plus straights) send every pair, set and two pair to showdown value on the turn and river; a third bet on a blank river is a big pot; Q♥T♦7♠ counts as a dry flop, so AQ/KQ want a big pot.
 - **2026-11-02**: From Noam and Uri, applied to every board: the drill only asks what a group is worth. "Potential bluffs" became Zero and "Showdown value" became Tiny pot. A-high (K-high on an ace board) is a tiny pot on the flop and zero on every turn.
-- **2026-11-02**: From Noam, from Uri: flops with at most one broadway card or paired: small pairs and ace-high with two overcards are worth a small bet. Flops with two or more broadway cards: small pairs are Zero; ace-high, other underpairs and lower pairs are a tiny pot; only second pair or better starts at a small pot.
+- **2026-11-02**: From Noam, from Uri: flops with at most one broadway card or paired: small pairs and ace-high with two overcards are worth a small bet. Flops with two or more broadway cards: 99–JJ and second pair or better are a small pot; ace-high and third pair or lower are a tiny pot; 88 and lower are Zero and stay Zero on the turn and river unless they improve.
