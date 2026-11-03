@@ -43,7 +43,7 @@ function genStrat5(opener: Seat, hero: Seat): Record<string, [number, number]> {
  * (they're the bluff-3-bet candidates even when they rank lower). */
 function threebetRangeKeys(opener: Seat): string[] {
   const n = 4 + SEATS.indexOf(opener);
-  const keys = Object.keys(STRENGTH)
+  const keys = FAMS.map((f) => f.key)
     .sort((a, b) => STRENGTH[b] - STRENGTH[a])
     .slice(0, n);
   if (!keys.includes("SAH")) keys.push("SAH");

@@ -1,7 +1,12 @@
 # 3-bet drill vs a UTG open: read from solver screenshots
 
 **Date:** 2026-11-03
-**Status:** read only, waiting for Noam's corrections. No drill code changed yet.
+**Status:** approved by Noam (the five splits, the 75/25 rule) and applied 2026-11-03.
+
+**Applied:**
+- The 3-bet drill reads `decisions/ranges/3bet/*.txt` through `npm run ranges` → `solver-reads.ts`.
+- New 3-bet-only groups (`THREEBET_FAMS` in `families.ts`): JJ TT, 99–77, ATs–AKs, A6s–A9s, A5s A4s, A3s A2s, KQs KJs KTs QJs, QTs JTs, AKo AQo, AJo KQo, plus "Other suited hands", narrowed to the 16 suited hands BB calls with.
+- The other 10 3-bet seat pairs still use the placeholder until their charts come in.
 
 ## Current state
 

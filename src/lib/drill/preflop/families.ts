@@ -43,8 +43,25 @@ export const FAMS: Family[] = [
   fam("WO", "Weak offsuit", "Q8o J8o T8o 98o 87o 76o", "#8E8478", "Q8o J8o T8o 98o 87o 76o"),
 ];
 
+/** Noam 2026-11-03, from the 3-bet vs UTG solver charts: in the 3-bet drill
+ * five groups split in the middle (the top half 3-bets, the bottom half calls
+ * or folds), and BB calls with suited hands that no group held. Raise-first-in
+ * keeps the groups above. */
+const SPLITS: Record<string, Family[]> = {
+  MP: [fam("MPH", "Jacks and tens", "JJ TT", "#B49CFF", "JJ TT"), fam("MPL", "Medium pairs", "99–77", "#A38BF0", "99 88 77")],
+  SAH: [fam("SAT", "Suited aces, high", "ATs–AKs", "#5EE0C0", "ATs AJs AQs AKs"), fam("SAM", "Suited aces, middle", "A6s–A9s", "#4FD4B4", "A6s A7s A8s A9s")],
+  SAL: [fam("SAW", "Suited wheel aces", "A5s A4s", "#3FCBA8", "A5s A4s"), fam("SAX", "Suited aces, lowest", "A3s A2s", "#33B596", "A3s A2s")],
+  SBW: [fam("SBT", "Suited broadways, top", "KQs KJs KTs QJs", "#FFD36B", "KQs KJs KTs QJs"), fam("SBL", "Suited broadways, low", "QTs JTs", "#F2C75E", "QTs JTs")],
+  BO: [fam("BOT", "Big offsuit aces", "AKo AQo", "#F3E2A9", "AKo AQo"), fam("BOL", "Big offsuit, lower", "AJo KQo", "#E6D394", "AJo KQo")],
+};
+export const THREEBET_FAMS: Family[] = [
+  ...FAMS.flatMap((f) => SPLITS[f.key] ?? [f]),
+  // The suited hands outside every group that BB calls vs UTG; the rest (72s, T2s...) stay trash.
+  fam("OS", "Other suited hands", "Q4s–Q2s, J6s–J3s, T6s, 95s, 85s, 74s, 63s, 53s…", "#A88C7A", "Q4s Q3s Q2s J6s J5s J4s J3s T6s 95s 85s 74s 63s 53s 52s 42s 32s"),
+];
+
 export const FAM_BY_KEY: Record<string, Family> = Object.fromEntries(
-  FAMS.map((f) => [f.key, f]),
+  [...FAMS, ...THREEBET_FAMS].map((f) => [f.key, f]),
 );
 
 /** Each group's own Tetris shape (see Tetromino in SortPiece.tsx), so a
@@ -69,6 +86,18 @@ export const FAMILY_SHAPE: Record<string, string> = {
   OK: "N",
   LK: "Y",
   WO: "F",
+  // The 3-bet drill's split groups keep their parent's shape; the color tells them apart.
+  MPH: "block6",
+  MPL: "block6",
+  SAT: "I",
+  SAM: "I",
+  SAW: "dot2",
+  SAX: "dot2",
+  SBT: "plus",
+  SBL: "plus",
+  BOT: "U",
+  BOL: "U",
+  OS: "whole",
 };
 
 export function shapeOf(key: string): string {
@@ -96,6 +125,17 @@ export const FAMILY_DESC: Record<string, string> = {
   OK: "Offsuit kings and offsuit connectors. Mostly steals from late position.",
   LK: "A king with a tiny offsuit card. Usually a fold, except from the blinds.",
   WO: "Weak offsuit hands. They rarely make strong hands, so they are usually folds.",
+  MPH: "The two biggest medium pairs. Strong enough to 3-bet for value from many seats.",
+  MPL: "Pairs that beat most unpaired hands but don't love a big pot: often a call.",
+  SAT: "Suited aces with a broadway kicker. Strong enough to 3-bet for value.",
+  SAM: "Suited aces with a middle kicker. Flush potential, but often dominated.",
+  SAW: "A5s and A4s: the ace blocks strong hands, and they can make a wheel straight.",
+  SAX: "The weakest suited aces.",
+  SBT: "The best suited broadways.",
+  SBL: "Suited broadways with a ten: they play well but often get dominated.",
+  BOT: "AK and AQ offsuit: the strongest offsuit hands.",
+  BOL: "AJ and KQ offsuit: good high cards that are often dominated by an early open.",
+  OS: "Every other suited hand. The flush potential makes them playable when the price is good, like in the big blind.",
 };
 
 /** Rough relative strength per family (0-100), used only to generate the
@@ -121,6 +161,17 @@ export const STRENGTH: Record<string, number> = {
   OK: 18,
   LK: 12,
   WO: 10,
+  MPH: 92,
+  BOT: 90,
+  SBT: 88,
+  SAT: 87,
+  MPL: 72,
+  SBL: 64,
+  BOL: 62,
+  SAW: 58,
+  SAM: 45,
+  SAX: 27,
+  OS: 15,
 };
 
 /** A clear group filled in before the drill starts, with its answer. */

@@ -14,7 +14,7 @@ import { SeatPicker, type AnyPreflopSpot } from "./SeatPicker";
 import { ExplainSheet } from "./ExplainSheet";
 import { LegendSheet } from "./LegendSheet";
 import { FinishSheet } from "./FinishSheet";
-import { FAMS, FAM_BY_KEY, FAMILY_DESC, shapeOf, type PreFilledGroup } from "@/lib/drill/preflop/families";
+import { FAMS, FAM_BY_KEY, FAMILY_DESC, THREEBET_FAMS, shapeOf, type PreFilledGroup } from "@/lib/drill/preflop/families";
 import { PREFLOP_MODES, type PreflopModeKey } from "@/lib/drill/preflop/modes";
 import { RFI_SPOTS, rfiSpot, type RfiSpot } from "@/lib/drill/preflop/rfi";
 import type { Seat } from "@/lib/drill/preflop/seats";
@@ -345,7 +345,8 @@ export function PreflopDrillScreen({ modeKey }: PreflopDrillScreenProps) {
       setExplainAnswered(resultLabelByKey.has(existing.key) || revealedColors.has(hand));
       return;
     }
-    const family = FAMS.find((f) => f.hands.includes(hand));
+    const groups = spot.modeKey === "tb" && spot.drill.fromSolver ? THREEBET_FAMS : FAMS;
+    const family = groups.find((f) => f.hands.includes(hand));
     if (!family || outOfRange.has(hand)) {
       showToast(
         `${hand}${family ? (modeKey === "fv" ? " is not in your 3-bet range here." : " is not in your opening range here.") : " is trash here. Filled in as a fold."}`,

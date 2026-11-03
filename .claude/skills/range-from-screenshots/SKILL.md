@@ -83,13 +83,15 @@ Wait for his corrections. Fold them into the read file, rerun the calculator, an
 
 ## 6. After approval (not part of this skill)
 
-The drill data lives in `src/lib/drill/preflop/`:
-- `rfi.ts`: raise first in.
-- `threebet.ts`: 3-bet.
-- `facing3bet.ts`: facing a 3-bet.
-- `facing4bet.ts`: facing a 4-bet.
-
-Replace the placeholder formula (`genStrat` / `genStrat4` / `genStrat5`) for that spot with the approved table. Keep the drill rules already in place: obvious groups start filled in (`obviousKeys`), and AA–QQ is never asked. Then test in a real browser and push.
+1. Run `npm run ranges`. It copies every read file in `decisions/ranges/` into `src/lib/drill/preflop/solver-reads.ts`, which the app reads. `prebuild` runs it too, but commit the generated file.
+2. Hook up the drill, if it isn't reading solver data yet. The drill data lives in `src/lib/drill/preflop/`:
+   - `rfi.ts`: raise first in.
+   - `threebet.ts`: 3-bet.
+   - `facing3bet.ts`: facing a 3-bet.
+   - `facing4bet.ts`: facing a 4-bet.
+3. **The 3-bet drill already reads solver data.** For a spot keyed `3bet/<hero>-vs-<opener>` it uses the read automatically, with the split groups (`THREEBET_FAMS`) and the same 75/25 rule (`solver.ts`). For the other drills, wire them the same way, replacing their placeholder formula (`genStrat4` / `genStrat5`).
+4. Keep the drill rules already in place: obvious groups start filled in (`obviousKeys`), and AA–QQ is never asked.
+5. Test in a real browser and push.
 
 ## Don't
 

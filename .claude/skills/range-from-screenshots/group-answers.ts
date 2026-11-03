@@ -18,13 +18,13 @@
  * Then every hand that isn't a pure fold but belongs to no group.
  */
 import { readFileSync } from "node:fs";
-import { FAMS } from "../../../src/lib/drill/preflop/families";
+import { FAMS, THREEBET_FAMS } from "../../../src/lib/drill/preflop/families";
+import { ruleAnswer } from "../../../src/lib/drill/preflop/solver";
 import { RFI_POSITIONS } from "../../../src/lib/drill/preflop/rfi";
 import { combosOf, MATRIX_HANDS } from "../../../src/lib/drill/matrix";
 
 type Split = { r: number; c: number; f: number };
 const ACTIONS = ["r", "c", "f"] as const;
-const NAME = { r: "aggressive", c: "call", f: "fold" };
 
 const [file, flag, seat] = process.argv.slice(2);
 if (!file) {
@@ -56,18 +56,19 @@ if (flag === "--range" && !strat) {
 /** How much of a hand's combos are in play (all of them, or the opening share). */
 const weightOf = (key: string) => (strat ? (strat[key] ?? 0) / 100 : 1);
 
+/** The drills' own rule (src/lib/drill/preflop/solver.ts), so this matches the app exactly. */
 function answerOf(s: Split): string {
-  const kept = ACTIONS.filter((a) => s[a] > 25).sort((a, b) => s[b] - s[a]);
-  const top = ACTIONS.slice().sort((a, b) => s[b] - s[a])[0];
-  if (s[top] >= 75 || kept.length <= 1) return NAME[kept[0] ?? top];
-  const [a, b] = kept;
-  const share = Math.round((s[a] / (s[a] + s[b])) * 100);
-  return `mix ${NAME[a]}/${NAME[b]} ${share}/${100 - share}${kept.length === 3 ? " (3-way)" : ""}`;
+  const { answer, mixSplit, threeWay } = ruleAnswer({ raise: s.r, call: s.c, fold: s.f });
+  if (!mixSplit) return answer === "raise" ? "aggressive" : answer;
+  const name = (a: string) => (a === "raise" ? "aggressive" : a);
+  return `mix ${name(mixSplit[0])}/${name(mixSplit[1])} ${mixSplit[2]}/${100 - mixSplit[2]}${threeWay ? " (3-way)" : ""}`;
 }
 
 const pct = (n: number) => Math.round(n).toString().padStart(3);
 console.log("group".padEnd(26) + "agg call fold  answer");
-for (const g of FAMS) {
+/** The 3-bet drill splits five groups and adds "Other suited hands". */
+const GROUPS = file.replace(/\\/g, "/").includes("/3bet/") ? THREEBET_FAMS : FAMS;
+for (const g of GROUPS) {
   const w = weightOf(g.key);
   if (w === 0) continue;
   let n = 0;
@@ -85,6 +86,6 @@ for (const g of FAMS) {
   console.log(`${label}${pct(avg.r)} ${pct(avg.c)} ${pct(avg.f)}   ${answerOf(avg)}${flags ? "   " + flags : ""}${w < 1 ? `   (opened ${Math.round(w * 100)}%)` : ""}`);
 }
 
-const inGroup = new Set(FAMS.flatMap((g) => g.hands));
+const inGroup = new Set(GROUPS.flatMap((g) => g.hands));
 const loose = MATRIX_HANDS.map((h) => h.key).filter((h) => !inGroup.has(h) && at(h).f < 75);
 if (loose.length) console.log(`\nNot in any group but not a fold: ${loose.map((h) => `${h} (${answerOf(at(h))})`).join(", ")}`);

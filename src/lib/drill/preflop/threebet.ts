@@ -1,6 +1,7 @@
-import { combosOf } from "@/lib/drill/matrix";
+import { combosOf, MATRIX_HANDS } from "@/lib/drill/matrix";
 import type { DrillAction, DrillPiece } from "@/lib/drill/types";
-import { FAMS, FAM_BY_KEY, FAMILY_DESC, STRENGTH, nearFolds, obviousKeys, type Family, type PreFilledGroup } from "./families";
+import { FAMS, FAM_BY_KEY, FAMILY_DESC, STRENGTH, THREEBET_FAMS, nearFolds, obviousKeys, type Family, type PreFilledGroup } from "./families";
+import { groupSplit, ruleAnswer, solverRead, splitOf } from "./solver";
 import { SEATS, SEAT_NAME, type Seat } from "./seats";
 
 function foldPiece(g: Family): DrillPiece {
@@ -17,9 +18,9 @@ function foldPiece(g: Family): DrillPiece {
 
 type Split = { raise: number; call: number; fold: number };
 
-/** 3-bet: any opener, any later seat. Sample strategy built from rough
- * group strength, how wide the opener is, and the hero's seat. Placeholder
- * numbers for the prototype — not reviewed by Uri yet. */
+/** 3-bet: any opener, any later seat, for the spots with no solver chart yet.
+ * Sample strategy built from rough group strength, how wide the opener is,
+ * and the hero's seat. Placeholder numbers, not reviewed by Uri. */
 function genStrat(opener: Seat, hero: Seat): Record<string, [number, number]> {
   const o = SEATS.indexOf(opener);
   const T = 72 - 9 * o + (hero === "BB" ? -14 : 0) + (hero === "SB" ? 4 : 0);
@@ -52,12 +53,50 @@ export type ThreebetSpot = {
     pieces: DrillPiece[];
     /** Clear groups everybody knows, filled in before the drill starts. */
     preFilled: PreFilledGroup[];
+    /** True when the answers come from a solver chart (and the 3-bet groups). */
+    fromSolver: boolean;
     tbPct: number;
     callPct: number;
   };
 };
 
+/** A spot with a solver chart (decisions/ranges/3bet/): the split groups,
+ * each answered from its hands' combo-weighted average by Noam's 75/25 rule. */
+function buildFromRead(read: Record<string, [number, number, number]>): ThreebetSpot["drill"] {
+  const pieces: DrillPiece[] = [];
+  const folds: string[] = [];
+  const answers: [string, DrillAction][] = [];
+  for (const g of THREEBET_FAMS) {
+    const { answer, mixSplit } = ruleAnswer(groupSplit(read, g.hands));
+    answers.push([g.key, answer]);
+    if (answer === "fold") {
+      folds.push(g.key);
+      continue;
+    }
+    pieces.push({ key: g.key, label: g.name, sub: g.sub, color: g.color, hands: g.hands, answer, mixSplit, desc: FAMILY_DESC[g.key] });
+  }
+  const obvious = obviousKeys(answers);
+  nearFolds(folds).forEach((k) => pieces.push(foldPiece(FAM_BY_KEY[k])));
+
+  let raiseCombos = 0;
+  let callCombos = 0;
+  for (const { key } of MATRIX_HANDS) {
+    const s = splitOf(read, key);
+    raiseCombos += (combosOf(key) * s.raise) / 100;
+    callCombos += (combosOf(key) * s.call) / 100;
+  }
+  return {
+    pieces: pieces.filter((p) => !obvious.has(p.key)),
+    preFilled: pieces.filter((p) => obvious.has(p.key)).map((p) => ({ key: p.key, answer: p.answer, mixSplit: p.mixSplit })),
+    fromSolver: true,
+    tbPct: Math.round((raiseCombos / 1326) * 100),
+    callPct: Math.round((callCombos / 1326) * 100),
+  };
+}
+
 function buildThreebet(hero: Seat, opener: Seat): ThreebetSpot["drill"] {
+  const read = solverRead(`3bet/${hero}-vs-${opener}`);
+  if (read) return buildFromRead(read);
   const strat = genStrat(opener, hero);
   const pieces: DrillPiece[] = [];
   const folds: string[] = [];
@@ -104,6 +143,7 @@ function buildThreebet(hero: Seat, opener: Seat): ThreebetSpot["drill"] {
   return {
     pieces: pieces.filter((p) => !obvious.has(p.key)),
     preFilled: pieces.filter((p) => obvious.has(p.key)).map((p) => ({ key: p.key, answer: p.answer, mixSplit: p.mixSplit })),
+    fromSolver: false,
     tbPct: Math.round((raiseCombos / 1326) * 100),
     callPct: Math.round((callCombos / 1326) * 100),
   };

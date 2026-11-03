@@ -16,7 +16,8 @@
     "db:migrate:remote": "wrangler d1 migrations apply poker-training --remote",
     "db:studio": "drizzle-kit studio",
     "rulebook": "node scripts/gen-rulebook.mjs",
-    "prebuild": "node scripts/gen-rulebook.mjs"
+    "ranges": "node scripts/gen-ranges.mjs",
+    "prebuild": "node scripts/gen-rulebook.mjs && node scripts/gen-ranges.mjs"
   },
   "dependencies": {
     "@opennextjs/cloudflare": "^1.20.2",
