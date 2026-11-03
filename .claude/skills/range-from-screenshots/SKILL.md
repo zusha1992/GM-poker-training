@@ -28,16 +28,32 @@ Noam sends solver charts to replace placeholder drill data. This skill reads the
   - Fully **blue** = fold.
 - Dark or highlighted cells are just hovered: read the colour under the shading.
 - **Ignore the numbers in the cells.** They are EV, not frequencies.
-- **Mixed cells:** estimate each colour's share of the cell's width, to the nearest 5%.
+- **Mixed cells:** each colour's share of the cell's width, measured by the pixel reader (step 3).
 - **The rule, applied to a group's combo-weighted average:**
   - An action at **75% or more** → pure.
   - An action at **25% or less** → drops out.
   - Anything in between → **mix**.
   - If three actions stay above 25%, the answer is a mix of the two biggest. Flag it.
 
-## 3. Write the read down, hand by hand
+## 3. Measure the chart by its pixels, never by eye
 
-Save one text file per chart at `decisions/ranges/<drill>/<seat>.txt`, for example `decisions/ranges/3bet/HJ-vs-UTG.txt`. One line per hand that isn't a pure fold:
+**Never read a chart by eye.** On 2026-11-03, by-eye reads were badly off:
+- A7o was read as fold when it calls.
+- AKo was read as 85% 3-bet when it's 55%.
+- QJs was read as 20% 3-bet when it's 66%.
+
+Noam caught it. Measure every chart with the pixel reader instead:
+
+```
+npx tsx .claude/skills/range-from-screenshots/read-chart.ts <screenshot.png> > decisions/ranges/3bet/HJ-vs-UTG.txt
+```
+
+- The reader finds the 13×13 grid and measures each cell's red / green / blue share of its width. White text and dark borders are ignored, and highlighted (darker) cells still count.
+- **It needs the screenshot as a file.** The images Noam drags into the chat are saved in the session's `images/` folder as numbered files. An image that has no file can't be measured: ask Noam to send it again as a file.
+- **Spot-check before trusting it.** Crop and enlarge a few cells with sharp, look at them, and compare with the numbers. If the grid isn't found (13 rows and 13 columns), say so and don't fall back to reading by eye.
+- Add a top comment line naming the drill, the spot and the file.
+
+The read file has one line per hand that isn't a pure fold:
 
 ```
 # 3-bet drill, HJ vs UTG, solver screenshot 2026-11-03. aggressive call fold
@@ -46,7 +62,7 @@ QQ  90 10 0
 A9s 45 10 45
 ```
 
-Hands left out count as pure folds. Go row by row across the whole grid; don't skip cells. Pairs are on the diagonal, suited hands above it, offsuit below. Keeping this file means a correction later is a one-line edit, and the group answers can be recalculated.
+Hands left out count as pure folds. Pairs are on the diagonal, suited hands above it, offsuit below. Keeping this file means a correction later is a one-line edit, and the group answers can be recalculated.
 
 ## 4. Turn it into group answers with the calculator
 
