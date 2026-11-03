@@ -9,7 +9,6 @@ import { Celebration, type CelebrationTrigger } from "@/components/drill/Celebra
 import { Toast, useToast } from "@/components/drill/Toast";
 import { FeedbackSheet } from "@/components/drill/FeedbackSheet";
 import { SeatsRow } from "./SeatsRow";
-import { PositionPicker } from "./PositionPicker";
 import { SeatPicker, type AnyPreflopSpot } from "./SeatPicker";
 import { ExplainSheet } from "./ExplainSheet";
 import { LegendSheet } from "./LegendSheet";
@@ -17,6 +16,7 @@ import { FinishSheet } from "./FinishSheet";
 import { FAMS, FAM_BY_KEY, FAMILY_DESC, THREEBET_FAMS, shapeOf, type PreFilledGroup } from "@/lib/drill/preflop/families";
 import { PREFLOP_MODES, type PreflopModeKey } from "@/lib/drill/preflop/modes";
 import { RFI_SPOTS, rfiSpot, type RfiSpot } from "@/lib/drill/preflop/rfi";
+import { currentRfiSeat, finishRfiSeat } from "@/lib/drill/preflop/rfi-progress";
 import type { Seat } from "@/lib/drill/preflop/seats";
 import { colorOf, mixGradient } from "@/lib/drill/colors";
 import { MATRIX_HANDS } from "@/lib/drill/matrix";
@@ -125,7 +125,6 @@ export function PreflopDrillScreen({ modeKey }: PreflopDrillScreenProps) {
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [explainPiece, setExplainPiece] = useState<DrillPiece | null>(null);
   const [explainAnswered, setExplainAnswered] = useState(false);
-  const [doneSpots, setDoneSpots] = useState<Set<string>>(new Set());
 
   const { toast, show: showToast } = useToast();
   const generation = useRef(0);
@@ -174,14 +173,17 @@ export function PreflopDrillScreen({ modeKey }: PreflopDrillScreenProps) {
     if (deepLinkChecked.current) return;
     deepLinkChecked.current = true;
     if (modeKey !== "rfi") return;
+    // No seat picker (Noam/Uri 2026-11-03): play the next unfinished seat,
+    // unless a feedback link names one.
     const pos = searchParams.get("pos");
-    if (!pos) return;
+    let seat = currentRfiSeat();
     try {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- initializing from the URL on mount, not mirroring a changing value
-      resetForSpot(rfiSpot(pos as Seat));
+      if (pos) seat = rfiSpot(pos as Seat).key;
     } catch {
-      // unknown seat in URL — fall through to the picker
+      // unknown seat in URL: play the current one
     }
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- initializing from the URL and saved progress on mount, not mirroring a changing value
+    resetForSpot(rfiSpot(seat));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -328,7 +330,7 @@ export function PreflopDrillScreen({ modeKey }: PreflopDrillScreenProps) {
   }
 
   function finishDrill(finishedSpot: AnySpot) {
-    setDoneSpots((prev) => new Set(prev).add(finishedSpot.key));
+    if (finishedSpot.modeKey === "rfi") finishRfiSeat(finishedSpot.heroSeat);
     later(() => setFinished(true), 0);
   }
 
@@ -587,14 +589,6 @@ export function PreflopDrillScreen({ modeKey }: PreflopDrillScreenProps) {
         )}
       </div>
 
-      {!spot && modeKey === "rfi" && (
-        <PositionPicker
-          open
-          onClose={goToLobby}
-          onPick={(seat) => resetForSpot(rfiSpot(seat))}
-          doneSeats={doneSpots}
-        />
-      )}
       {!spot && modeKey !== "rfi" && (
         <SeatPicker
           open
