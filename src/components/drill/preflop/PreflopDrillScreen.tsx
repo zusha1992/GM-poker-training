@@ -71,7 +71,14 @@ function modeNoteFor(modeKey: PreflopModeKey): string {
   return "AA–QQ and other clear groups start filled in. Real trash is filled in.";
 }
 
-function pureFirstOrder(pieces: DrillPiece[], actionOrder: DrillAction[]): DrillPiece[] {
+function pureFirstOrder(pieces: DrillPiece[], actionOrder: DrillAction[], shuffle: boolean): DrillPiece[] {
+  if (shuffle) {
+    const mixed = (p: DrillPiece) => (p.answer === "mix" ? 1 : 0);
+    return pieces
+      .map((p) => ({ p, r: Math.random() }))
+      .sort((a, b) => mixed(a.p) - mixed(b.p) || a.r - b.r)
+      .map(({ p }) => p);
+  }
   const rank = (a: DrillAction) => {
     const i = actionOrder.indexOf(a);
     return i === -1 ? actionOrder.length : i;
@@ -140,7 +147,7 @@ export function PreflopDrillScreen({ modeKey }: PreflopDrillScreenProps) {
 
   const resetForSpot = useCallback((nextSpot: AnySpot) => {
     generation.current += 1;
-    const ordered = pureFirstOrder(nextSpot.drill.pieces, mode.actionOrder);
+    const ordered = pureFirstOrder(nextSpot.drill.pieces, mode.actionOrder, mode.shuffle);
     setSpot(nextSpot);
     setOrder(ordered);
     setIndex(0);
@@ -164,7 +171,7 @@ export function PreflopDrillScreen({ modeKey }: PreflopDrillScreenProps) {
     setResultLabelByKey(new Map());
 
     later(() => showToast(nextSpot.roleText, true, 2600), 0);
-  }, [mode.actionOrder, later, showToast]);
+  }, [mode.actionOrder, mode.shuffle, later, showToast]);
 
   useEffect(() => {
     // Guarded by a ref (not state) so this runs exactly once per mount even

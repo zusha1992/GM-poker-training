@@ -14,6 +14,9 @@ export type PreflopModeMeta = {
   legend: LegendEntry[];
   /** Pieces are sorted "pure decisions first, mixed ones last" at drill start. */
   actionOrder: DrillAction[];
+  /** Noam 2026-11-03: ask the groups in random order (mixed ones still last),
+   * so the order never gives the answer away. */
+  shuffle: boolean;
   /** Whether this mode has hands fully outside the hero's range (fb/fv). */
   hasOutOfRange: boolean;
 };
@@ -40,6 +43,7 @@ export const PREFLOP_MODES: Record<PreflopModeKey, PreflopModeMeta> = {
     ],
     // Uri 2026-11-01: start with the hands that fold (gappers first).
     actionOrder: ["fold", "raise", "mix"],
+    shuffle: false,
     hasOutOfRange: false,
   },
   tb: {
@@ -59,6 +63,7 @@ export const PREFLOP_MODES: Record<PreflopModeKey, PreflopModeMeta> = {
       { swatch: "var(--pending)", label: "Still to place" },
     ],
     actionOrder: ["raise", "call", "fold", "mix"],
+    shuffle: true,
     hasOutOfRange: false,
   },
   fv: {
@@ -78,6 +83,7 @@ export const PREFLOP_MODES: Record<PreflopModeKey, PreflopModeMeta> = {
       { swatch: "var(--pending)", label: "Still to place" },
     ],
     actionOrder: ["raise", "call", "fold", "mix"],
+    shuffle: true,
     hasOutOfRange: true,
   },
   fb: {
@@ -97,6 +103,7 @@ export const PREFLOP_MODES: Record<PreflopModeKey, PreflopModeMeta> = {
       { swatch: "var(--pending)", label: "Still to place" },
     ],
     actionOrder: ["raise", "call", "fold", "mix"],
+    shuffle: true,
     hasOutOfRange: true,
   },
 };
