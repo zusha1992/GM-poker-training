@@ -1,6 +1,6 @@
 import { combosOf, labelAt } from "@/lib/drill/matrix";
 import type { DrillAction, DrillPiece } from "@/lib/drill/types";
-import { FAMS, FAM_BY_KEY, FAMILY_DESC, STRENGTH, nearFolds, obviousKeys, type Family, type PreFilledGroup } from "./families";
+import { FAMS, FAM_BY_KEY, FAMILY_DESC, STRENGTH, obviousKeys, type Family, type PreFilledGroup } from "./families";
 import { RFI_POSITIONS } from "./rfi";
 import { SEATS, SEAT_NAME, type Seat } from "./seats";
 
@@ -110,8 +110,11 @@ function buildFacing3bet(hero: Seat, villain: Seat): Facing3betSpot["drill"] {
     });
   }
 
-  const obvious = obviousKeys(answers);
-  nearFolds(folds).forEach((k) => pieces.push(foldPiece(FAM_BY_KEY[k])));
+  // Uri 2026-11-03 (BTN vs SB): ask AKo and the other strong groups instead of
+  // filling them in (only AA–QQ stays filled), and ask every group that folds
+  // (suited queens, offsuit aces...), not just the two strongest.
+  const obvious = new Set<string>([...obviousKeys(answers)].filter((k) => k === "PP"));
+  folds.forEach((k) => pieces.push(foldPiece(FAM_BY_KEY[k])));
 
   return {
     pieces: pieces.filter((p) => !obvious.has(p.key)),

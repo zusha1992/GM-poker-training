@@ -22,8 +22,9 @@ export const RFI_POSITIONS: RfiPosition[] = [
     key: "UTG",
     name: "Under the gun",
     // Uri: suited connectors mix; ask about the gappers and suited kings that fold.
+    // Uri 2026-11-03: also the bad offsuit aces (A9o–A2o) and the suited queens and jacks.
     strat: { PP: 100, MP: 100, LP: 100, SAH: 100, SAL: 100, SBW: 100, SBF: 100, BO: 100, OBWF: 100, SC: 50 },
-    ask: ["SG", "SK", "OF"],
+    ask: ["SG", "SK", "SQ", "OA", "OF"],
   },
   {
     key: "HJ",
@@ -71,6 +72,15 @@ const LADDERS: string[][] = [
  * seat, so asking them isn't a challenge: they start filled in. */
 const ALWAYS_RAISE = ["PP", "MP", "LP", "SAH", "SAL"];
 
+/** Uri 2026-11-03: ask category by category, weakest first inside each
+ * (suited hands, then offsuit hands, then pairs). The answers then run fold →
+ * mix → raise inside a category instead of every fold first and every raise last. */
+const ASK_ORDER = [
+  "LS", "SG", "SQ", "SK", "SC", "SAL", "SAH", "SBF", "SBW",
+  "WO", "LK", "OK", "OA", "OF", "OBWF", "BO",
+  "LP", "MP", "PP",
+];
+
 function foldPiece(g: Family): DrillPiece {
   return {
     key: g.key,
@@ -92,7 +102,7 @@ export type RfiDrill = {
   pct: number;
 };
 
-/** Builds one seat's drill: the pieces to ask, in ladder order, plus which
+/** Builds one seat's drill: the pieces to ask, in ASK_ORDER, plus which
  * hands from a wider seat are already known-raise and shown pre-filled.
  * `known` accumulates across seats as they're built tightest-to-widest. */
 function buildRfi(pos: RfiPosition, known: Set<string>): RfiDrill {
@@ -155,6 +165,7 @@ function buildRfi(pos: RfiPosition, known: Set<string>): RfiDrill {
     for (const h of g.hands) combos += combosOf(h) * (f / 100);
   }
 
+  pieces.sort((a, b) => ASK_ORDER.indexOf(a.key) - ASK_ORDER.indexOf(b.key));
   return { pieces, preFilled, pct: Math.round((combos / 1326) * 100) };
 }
 

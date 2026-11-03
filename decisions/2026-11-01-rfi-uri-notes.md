@@ -27,3 +27,10 @@ Source: Uri's in-app feedback notes on the UTG and HJ opening drills, 2026-11-01
 
 ## Still placeholder
 The mix percentages (50%, 60%) are placeholders for Uri to correct. HJ, CO, BTN and SB are still not from real solver ranges.
+
+## Uri's notes of 2026-11-03 (the technical ones; the design notes wait for Noam's review)
+
+- **Order:** raise first in asks category by category, weakest first inside each: suited hands, then offsuit hands, then pairs (`ASK_ORDER` in `rfi.ts`). Inside a category the answers then run fold → mix → raise, instead of every fold first and every raise last.
+- **No phase message:** "Clear decisions done. Now the mixed hands" and the "Clear decisions / Mixed hands" counter are removed from every preflop drill, because they gave the answer away. The counter now reads "Question n of N". The random-order drills (3-bet, facing a 3-bet, facing a 4-bet) now shuffle the mixed groups in with the rest.
+- **UTG asks more:** the bad offsuit aces (A9o–A2o) and the suited queens and jacks are now asked too.
+- **Facing a 3-bet:** only AA–QQ is filled in, so AKo and the other strong groups are asked. Every folding group in the opening range is asked, not just the two strongest. The numbers are still placeholders until Noam's screenshots arrive.

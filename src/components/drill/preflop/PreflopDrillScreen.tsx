@@ -71,19 +71,13 @@ function modeNoteFor(modeKey: PreflopModeKey): string {
   return "AA–QQ and other clear groups start filled in. Real trash is filled in.";
 }
 
-function pureFirstOrder(pieces: DrillPiece[], actionOrder: DrillAction[], shuffle: boolean): DrillPiece[] {
-  if (shuffle) {
-    const mixed = (p: DrillPiece) => (p.answer === "mix" ? 1 : 0);
-    return pieces
-      .map((p) => ({ p, r: Math.random() }))
-      .sort((a, b) => mixed(a.p) - mixed(b.p) || a.r - b.r)
-      .map(({ p }) => p);
-  }
-  const rank = (a: DrillAction) => {
-    const i = actionOrder.indexOf(a);
-    return i === -1 ? actionOrder.length : i;
-  };
-  return pieces.slice().sort((a, b) => rank(a.answer) - rank(b.answer));
+/** The order the groups are asked in (see PreflopModeMeta.order). */
+function askOrder(pieces: DrillPiece[], order: "asked" | "random"): DrillPiece[] {
+  if (order === "asked") return pieces.slice();
+  return pieces
+    .map((p) => ({ p, r: Math.random() }))
+    .sort((a, b) => a.r - b.r)
+    .map(({ p }) => p);
 }
 
 function paintColorFor(piece: DrillPiece, action: DrillAction): string {
@@ -147,7 +141,7 @@ export function PreflopDrillScreen({ modeKey }: PreflopDrillScreenProps) {
 
   const resetForSpot = useCallback((nextSpot: AnySpot) => {
     generation.current += 1;
-    const ordered = pureFirstOrder(nextSpot.drill.pieces, mode.actionOrder, mode.shuffle);
+    const ordered = askOrder(nextSpot.drill.pieces, mode.order);
     setSpot(nextSpot);
     setOrder(ordered);
     setIndex(0);
@@ -171,7 +165,7 @@ export function PreflopDrillScreen({ modeKey }: PreflopDrillScreenProps) {
     setResultLabelByKey(new Map());
 
     later(() => showToast(nextSpot.roleText, true, 2600), 0);
-  }, [mode.actionOrder, mode.shuffle, later, showToast]);
+  }, [mode.order, later, showToast]);
 
   useEffect(() => {
     // Guarded by a ref (not state) so this runs exactly once per mount even
@@ -192,7 +186,6 @@ export function PreflopDrillScreen({ modeKey }: PreflopDrillScreenProps) {
   }, []);
 
   const piece = order[index];
-  const nPure = useMemo(() => order.filter((p) => p.answer !== "mix").length, [order]);
   const askedHands = useMemo(() => new Set(order.flatMap((p) => p.hands)), [order]);
   const revealTargetHands = useMemo(
     () => new Set(order.flatMap((p) => p.reveal ?? [])),
@@ -311,12 +304,7 @@ export function PreflopDrillScreen({ modeKey }: PreflopDrillScreenProps) {
       setFlying({ action, rect: paddles.current[action]?.getBoundingClientRect() ?? null });
       setFlash((f) => ({ ...f, [action]: (f[action] ?? 0) + 1 }));
 
-      const prevPure = piece.answer !== "mix";
       const nextIndex = index + 1;
-      const nextPiece = order[nextIndex];
-      if (prevPure && nextPiece && nextPiece.answer === "mix") {
-        later(() => showToast(mode.phaseDone, true), 150);
-      }
 
       later(() => {
         setIndex(nextIndex);
@@ -443,9 +431,7 @@ export function PreflopDrillScreen({ modeKey }: PreflopDrillScreenProps) {
           <span className="text-[11px] leading-[1.2]" style={{ color: "var(--muted)" }}>
             {spot
               ? piece
-                ? piece.answer !== "mix"
-                  ? `${mode.phase} · ${index + 1} of ${nPure}`
-                  : `Mixed hands · ${index - nPure + 1} of ${order.length - nPure}`
+                ? `Question ${index + 1} of ${order.length}`
                 : "6-max cash · 100bb"
               : "6-max cash · 100bb"}
           </span>

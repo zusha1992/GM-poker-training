@@ -9,14 +9,11 @@ export type PreflopModeMeta = {
   swipes: Partial<Record<SwipeDirection, DrillAction>>;
   labels: Record<DrillAction, string>;
   intro: string;
-  phase: string;
-  phaseDone: string;
   legend: LegendEntry[];
-  /** Pieces are sorted "pure decisions first, mixed ones last" at drill start. */
-  actionOrder: DrillAction[];
-  /** Noam 2026-11-03: ask the groups in random order (mixed ones still last),
-   * so the order never gives the answer away. */
-  shuffle: boolean;
+  /** "asked" keeps the order the drill built (raise first in: category by
+   * category); "random" shuffles every group, mixed ones too (Noam 2026-11-03).
+   * Either way the order never gives the answer away (Uri 2026-11-03). */
+  order: "asked" | "random";
   /** Whether this mode has hands fully outside the hero's range (fb/fv). */
   hasOutOfRange: boolean;
 };
@@ -32,8 +29,6 @@ export const PREFLOP_MODES: Record<PreflopModeKey, PreflopModeMeta> = {
     swipes: { up: "raise", left: "fold", right: "mix" },
     labels: { raise: "Raise", fold: "Fold", mix: "Mix" },
     intro: "Everyone folds to you. Build your opening range one piece at a time.",
-    phase: "Clear decisions",
-    phaseDone: "Clear decisions done. Now the mixed hands",
     legend: [
       { swatch: r, label: "Raise" },
       { swatch: f, label: "Fold" },
@@ -41,9 +36,8 @@ export const PREFLOP_MODES: Record<PreflopModeKey, PreflopModeMeta> = {
       { swatch: mixGradient(r, f, 50), label: "Mix" },
       { swatch: "var(--pending)", label: "Still to place" },
     ],
-    // Uri 2026-11-01: start with the hands that fold (gappers first).
-    actionOrder: ["fold", "raise", "mix"],
-    shuffle: false,
+    // Uri 2026-11-03: category by category, weakest first (ASK_ORDER in rfi.ts).
+    order: "asked",
     hasOutOfRange: false,
   },
   tb: {
@@ -52,8 +46,6 @@ export const PREFLOP_MODES: Record<PreflopModeKey, PreflopModeMeta> = {
     swipes: { up: "raise", left: "fold", right: "call", down: "mix" },
     labels: { raise: "3-bet", call: "Call", fold: "Fold", mix: "Mix" },
     intro: "Someone opens before you. Decide each group: 3-bet, call, fold or mix.",
-    phase: "Clear decisions",
-    phaseDone: "Clear decisions done. Now the mixed hands",
     legend: [
       { swatch: r, label: "3-bet" },
       { swatch: c, label: "Call" },
@@ -62,8 +54,7 @@ export const PREFLOP_MODES: Record<PreflopModeKey, PreflopModeMeta> = {
       { swatch: mixGradient(r, c, 50), label: "Mix" },
       { swatch: "var(--pending)", label: "Still to place" },
     ],
-    actionOrder: ["raise", "call", "fold", "mix"],
-    shuffle: true,
+    order: "random",
     hasOutOfRange: false,
   },
   fv: {
@@ -72,8 +63,6 @@ export const PREFLOP_MODES: Record<PreflopModeKey, PreflopModeMeta> = {
     swipes: { up: "raise", left: "fold", right: "call", down: "mix" },
     labels: { raise: "All in", call: "Call", fold: "Fold", mix: "Mix" },
     intro: "You 3-bet and got 4-bet. Decide each group of your 3-bet range: all in, call, fold or mix.",
-    phase: "Clear decisions",
-    phaseDone: "Clear decisions done. Now the mixed hands",
     legend: [
       { swatch: r, label: "All in" },
       { swatch: c, label: "Call" },
@@ -82,8 +71,7 @@ export const PREFLOP_MODES: Record<PreflopModeKey, PreflopModeMeta> = {
       { swatch: OUT_OF_RANGE_PATTERN, label: "Not in your range" },
       { swatch: "var(--pending)", label: "Still to place" },
     ],
-    actionOrder: ["raise", "call", "fold", "mix"],
-    shuffle: true,
+    order: "random",
     hasOutOfRange: true,
   },
   fb: {
@@ -92,8 +80,6 @@ export const PREFLOP_MODES: Record<PreflopModeKey, PreflopModeMeta> = {
     swipes: { up: "raise", left: "fold", right: "call", down: "mix" },
     labels: { raise: "4-bet", call: "Call", fold: "Fold", mix: "Mix" },
     intro: "You opened and got 3-bet. Decide each group of your range: 4-bet, call, fold or mix.",
-    phase: "Clear decisions",
-    phaseDone: "Clear decisions done. Now the mixed hands",
     legend: [
       { swatch: r, label: "4-bet" },
       { swatch: c, label: "Call" },
@@ -102,8 +88,7 @@ export const PREFLOP_MODES: Record<PreflopModeKey, PreflopModeMeta> = {
       { swatch: OUT_OF_RANGE_PATTERN, label: "Not in your range" },
       { swatch: "var(--pending)", label: "Still to place" },
     ],
-    actionOrder: ["raise", "call", "fold", "mix"],
-    shuffle: true,
+    order: "random",
     hasOutOfRange: true,
   },
 };
