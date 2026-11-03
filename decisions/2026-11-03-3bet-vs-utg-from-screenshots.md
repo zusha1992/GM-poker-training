@@ -7,6 +7,9 @@
 - The 3-bet drill reads `decisions/ranges/3bet/*.txt` through `npm run ranges` → `solver-reads.ts`.
 - New 3-bet-only groups (`THREEBET_FAMS` in `families.ts`): JJ TT, 99–77, ATs–AKs, A6s–A9s, A5s A4s, A3s A2s, KQs KJs KTs QJs, QTs JTs, AKo AQo, AJo KQo, plus "Other suited hands", narrowed to the 16 suited hands BB calls with.
 - The other 10 3-bet seat pairs still use the placeholder until their charts come in.
+- **Later the same day:**
+  - All charts were re-measured by pixels with `read-chart.ts`. The by-eye reads above were off; Noam caught A7o on BB vs HJ. The group table above is from the by-eye reads, so the read files are the source of truth now.
+  - All 15 seat pairs of the 3-bet drill are now on solver data: vs UTG, HJ, CO, BTN and SB.
 
 ## Current state
 
