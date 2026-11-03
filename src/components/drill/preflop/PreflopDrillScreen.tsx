@@ -14,7 +14,7 @@ import { SeatPicker, type AnyPreflopSpot } from "./SeatPicker";
 import { ExplainSheet } from "./ExplainSheet";
 import { LegendSheet } from "./LegendSheet";
 import { FinishSheet } from "./FinishSheet";
-import { FAMS, FAM_BY_KEY, FAMILY_DESC, shapeOf } from "@/lib/drill/preflop/families";
+import { FAMS, FAM_BY_KEY, FAMILY_DESC, shapeOf, type PreFilledGroup } from "@/lib/drill/preflop/families";
 import { PREFLOP_MODES, type PreflopModeKey } from "@/lib/drill/preflop/modes";
 import { RFI_SPOTS, rfiSpot, type RfiSpot } from "@/lib/drill/preflop/rfi";
 import type { Seat } from "@/lib/drill/preflop/seats";
@@ -42,9 +42,9 @@ function outOfRangeHands(spot: AnySpot): string[] {
 
 /** Hands that start filled in, with their answer: raise-first-in's known
  * raises, and the clear groups of the other drills. */
-function preFilledHands(spot: AnySpot): Map<string, DrillAction> {
-  if (spot.modeKey === "rfi") return new Map(spot.drill.preFilled.map((h) => [h, "raise"]));
-  return new Map(spot.drill.preFilled.flatMap((g) => FAM_BY_KEY[g.key].hands.map((h) => [h, g.answer] as const)));
+function preFilledHands(spot: AnySpot): Map<string, Omit<PreFilledGroup, "key">> {
+  if (spot.modeKey === "rfi") return new Map(spot.drill.preFilled.map((h) => [h, { answer: "raise" }]));
+  return new Map(spot.drill.preFilled.flatMap((g) => FAM_BY_KEY[g.key].hands.map((h) => [h, g] as const)));
 }
 
 function evContextFor(spot: AnySpot): EvContext {
@@ -157,7 +157,9 @@ export function PreflopDrillScreen({ modeKey }: PreflopDrillScreenProps) {
     setDragPreview(null);
     setFinished(false);
     const pre = new Map<string, string>();
-    for (const [h, a] of preFilledHands(nextSpot)) pre.set(h, colorOf(a));
+    for (const [h, g] of preFilledHands(nextSpot)) {
+      pre.set(h, g.answer === "mix" && g.mixSplit ? mixGradient(colorOf(g.mixSplit[0]), colorOf(g.mixSplit[1]), g.mixSplit[2]) : colorOf(g.answer));
+    }
     setRevealedColors(pre);
     setResultLabelByKey(new Map());
 
@@ -359,7 +361,8 @@ export function PreflopDrillScreen({ modeKey }: PreflopDrillScreenProps) {
       sub: family.sub,
       color: family.color,
       hands: family.hands,
-      answer: pre ?? "fold",
+      answer: pre?.answer ?? "fold",
+      mixSplit: pre?.mixSplit,
       desc: FAMILY_DESC[family.key],
     });
     setExplainAnswered(true);

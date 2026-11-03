@@ -103,7 +103,7 @@ function buildThreebet(hero: Seat, opener: Seat): ThreebetSpot["drill"] {
 
   return {
     pieces: pieces.filter((p) => !obvious.has(p.key)),
-    preFilled: pieces.filter((p) => obvious.has(p.key)).map((p) => ({ key: p.key, answer: p.answer })),
+    preFilled: pieces.filter((p) => obvious.has(p.key)).map((p) => ({ key: p.key, answer: p.answer, mixSplit: p.mixSplit })),
     tbPct: Math.round((raiseCombos / 1326) * 100),
     callPct: Math.round((callCombos / 1326) * 100),
   };

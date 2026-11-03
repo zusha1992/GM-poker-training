@@ -124,21 +124,23 @@ export const STRENGTH: Record<string, number> = {
 };
 
 /** A clear group filled in before the drill starts, with its answer. */
-export type PreFilledGroup = { key: string; answer: DrillAction };
+export type PreFilledGroup = { key: string; answer: DrillAction; mixSplit?: [DrillAction, DrillAction, number] };
 
 /** Noam 2026-11-01: never ask what everybody already knows (3-betting
  * AA–QQ). Lined up strongest to weakest, a clear group with the same answer
  * as the groups on both sides of it starts filled in; only the borders
- * between answers (and every mix) are asked. Premium pairs that just raise
- * are always filled in. `answers` holds every group in play, folds too. */
+ * between answers (and every mix) are asked. Premium pairs are always filled
+ * in, even as a mix (Noam 2026-11-03). `answers` holds every group in play,
+ * folds too. */
 export function obviousKeys(answers: [string, DrillAction][]): Set<string> {
   const sorted = answers.slice().sort((a, b) => STRENGTH[b[0]] - STRENGTH[a[0]]);
   const out = new Set<string>();
   sorted.forEach(([k, a], i) => {
+    if (k === "PP" && a !== "fold") return void out.add(k);
     if (a === "mix" || a === "fold") return;
     const above = sorted[i - 1]?.[1] ?? a;
     const below = sorted[i + 1]?.[1];
-    if ((k === "PP" && a === "raise") || (above === a && below === a)) out.add(k);
+    if (above === a && below === a) out.add(k);
   });
   return out;
 }

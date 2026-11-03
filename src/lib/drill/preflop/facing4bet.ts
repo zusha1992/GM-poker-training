@@ -125,7 +125,7 @@ function buildFacing4bet(hero: Seat, opener: Seat): Facing4betSpot["drill"] {
 
   return {
     pieces: pieces.filter((p) => !obvious.has(p.key)),
-    preFilled: pieces.filter((p) => obvious.has(p.key)).map((p) => ({ key: p.key, answer: p.answer })),
+    preFilled: pieces.filter((p) => obvious.has(p.key)).map((p) => ({ key: p.key, answer: p.answer, mixSplit: p.mixSplit })),
     outOfRange,
     allInPct: allCombos ? Math.round((raiseCombos / allCombos) * 100) : 0,
     callPct: allCombos ? Math.round((callCombos / allCombos) * 100) : 0,
