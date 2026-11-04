@@ -1,7 +1,7 @@
 import { combosOf, MATRIX_HANDS } from "@/lib/drill/matrix";
 import type { DrillAction, DrillPiece } from "@/lib/drill/types";
 import { FAMS, FAM_BY_KEY, FAMILY_DESC, STRENGTH, THREEBET_FAMS, nearFolds, obviousKeys, type Family, type PreFilledGroup } from "./families";
-import { groupSplit, ruleAnswer, solverRead, splitOf } from "./solver";
+import { familyPieces, solverRead, splitOf } from "./solver";
 import { SEATS, SEAT_NAME, type Seat } from "./seats";
 
 function foldPiece(g: Family): DrillPiece {
@@ -60,23 +60,57 @@ export type ThreebetSpot = {
   };
 };
 
-/** A spot with a solver chart (decisions/ranges/3bet/): the split groups,
- * each answered from its hands' combo-weighted average by Noam's 75/25 rule. */
+/** The hands of a piece as its caption, short enough for the screen. */
+function caption(hands: string[]): string {
+  return hands.length <= 6 ? hands.join(" ") : `${hands.slice(0, 5).join(" ")} +${hands.length - 5} more`;
+}
+
+/** A spot with a solver chart (decisions/ranges/3bet/). Each family splits into
+ * the hands that play the same way here (familyPieces), so every hand is
+ * taught its own chart answer. A family that plays one way throughout is one
+ * piece; it starts filled in when the families on both sides play the same
+ * way too (obviousKeys), and a family that only folds is trash, except the
+ * two strongest of those, which are asked. */
 function buildFromRead(read: Record<string, [number, number, number]>): ThreebetSpot["drill"] {
-  const pieces: DrillPiece[] = [];
+  const asked: DrillPiece[] = [];
+  const filled: PreFilledGroup[] = [];
   const folds: string[] = [];
   const answers: [string, DrillAction][] = [];
+  const whole = new Map<string, DrillPiece>();
   for (const g of THREEBET_FAMS) {
-    const { answer, mixSplit } = ruleAnswer(groupSplit(read, g.hands));
-    answers.push([g.key, answer]);
-    if (answer === "fold") {
-      folds.push(g.key);
+    const parts = familyPieces(read, g.hands);
+    const piece = (p: (typeof parts)[number], key: string): DrillPiece => ({
+      key,
+      label: g.name,
+      sub: caption(p.hands),
+      color: g.color,
+      hands: p.hands,
+      answer: p.answer,
+      mixSplit: p.mixSplit,
+      desc: FAMILY_DESC[g.key],
+    });
+    // AA–QQ always start filled in, even when QQ plays differently from AA and KK.
+    if (g.key === "PP") {
+      for (const p of parts) filled.push({ key: `${g.key}-${p.kind}`, answer: p.answer, mixSplit: p.mixSplit, hands: p.hands });
+      answers.push([g.key, parts.length === 1 ? parts[0].answer : "mix"]);
       continue;
     }
-    pieces.push({ key: g.key, label: g.name, sub: g.sub, color: g.color, hands: g.hands, answer, mixSplit, desc: FAMILY_DESC[g.key] });
+    if (parts.length === 1) {
+      answers.push([g.key, parts[0].answer]);
+      if (parts[0].answer === "fold") folds.push(g.key);
+      else whole.set(g.key, piece(parts[0], g.key));
+      continue;
+    }
+    // A family that splits sits on a border: every part is asked.
+    answers.push([g.key, "mix"]);
+    for (const p of parts) asked.push(piece(p, `${g.key}-${p.kind}`));
   }
   const obvious = obviousKeys(answers);
-  nearFolds(folds).forEach((k) => pieces.push(foldPiece(FAM_BY_KEY[k])));
+  for (const [key, p] of whole) {
+    if (obvious.has(key)) filled.push({ key, answer: p.answer, mixSplit: p.mixSplit, hands: p.hands });
+    else asked.push(p);
+  }
+  nearFolds(folds).forEach((k) => asked.push(foldPiece(FAM_BY_KEY[k])));
 
   let raiseCombos = 0;
   let callCombos = 0;
@@ -86,8 +120,8 @@ function buildFromRead(read: Record<string, [number, number, number]>): Threebet
     callCombos += (combosOf(key) * s.call) / 100;
   }
   return {
-    pieces: pieces.filter((p) => !obvious.has(p.key)),
-    preFilled: pieces.filter((p) => obvious.has(p.key)).map((p) => ({ key: p.key, answer: p.answer, mixSplit: p.mixSplit })),
+    pieces: asked,
+    preFilled: filled,
     fromSolver: true,
     tbPct: Math.round((raiseCombos / 1326) * 100),
     callPct: Math.round((callCombos / 1326) * 100),

@@ -44,7 +44,7 @@ function outOfRangeHands(spot: AnySpot): string[] {
  * raises, and the clear groups of the other drills. */
 function preFilledHands(spot: AnySpot): Map<string, Omit<PreFilledGroup, "key">> {
   if (spot.modeKey === "rfi") return new Map(spot.drill.preFilled.map((h) => [h, { answer: "raise" }]));
-  return new Map(spot.drill.preFilled.flatMap((g) => FAM_BY_KEY[g.key].hands.map((h) => [h, g] as const)));
+  return new Map(spot.drill.preFilled.flatMap((g) => (g.hands ?? FAM_BY_KEY[g.key].hands).map((h) => [h, g] as const)));
 }
 
 function evContextFor(spot: AnySpot): EvContext {

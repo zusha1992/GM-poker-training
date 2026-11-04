@@ -43,21 +43,38 @@ export const FAMS: Family[] = [
   fam("WO", "Weak offsuit", "Q8o J8o T8o 98o 87o 76o", "#8E8478", "Q8o J8o T8o 98o 87o 76o"),
 ];
 
-/** Noam 2026-11-03, from the 3-bet vs UTG solver charts: in the 3-bet drill
- * five groups split in the middle (the top half 3-bets, the bottom half calls
- * or folds), and BB calls with suited hands that no group held. Raise-first-in
- * keeps the groups above. */
-const SPLITS: Record<string, Family[]> = {
-  MP: [fam("MPH", "Jacks and tens", "JJ TT", "#B49CFF", "JJ TT"), fam("MPL", "Medium pairs", "99–77", "#A38BF0", "99 88 77")],
-  SAH: [fam("SAT", "Suited aces, high", "ATs–AKs", "#5EE0C0", "ATs AJs AQs AKs"), fam("SAM", "Suited aces, middle", "A6s–A9s", "#4FD4B4", "A6s A7s A8s A9s")],
-  SAL: [fam("SAW", "Suited wheel aces", "A5s A4s", "#3FCBA8", "A5s A4s"), fam("SAX", "Suited aces, lowest", "A3s A2s", "#33B596", "A3s A2s")],
-  SBW: [fam("SBT", "Suited broadways, top", "KQs KJs KTs QJs", "#FFD36B", "KQs KJs KTs QJs"), fam("SBL", "Suited broadways, low", "QTs JTs", "#F2C75E", "QTs JTs")],
-  BO: [fam("BOT", "Big offsuit aces", "AKo AQo", "#F3E2A9", "AKo AQo"), fam("BOL", "Big offsuit, lower", "AJo KQo", "#E6D394", "AJo KQo")],
-};
+const handsOf = (...keys: string[]) => keys.flatMap((k) => FAMS.find((f) => f.key === k)!.hands).join(" ");
+
+/** Every suited (or offsuit) hand no group above holds: Q4s, 95s, 32s... */
+function leftovers(kind: "s" | "o"): string {
+  const ranks = "AKQJT98765432";
+  const taken = new Set(FAMS.flatMap((f) => f.hands));
+  const out: string[] = [];
+  for (let i = 0; i < 13; i++) for (let j = i + 1; j < 13; j++) {
+    const h = `${ranks[i]}${ranks[j]}${kind}`;
+    if (!taken.has(h)) out.push(h);
+  }
+  return out.join(" ");
+}
+
+/** The 3-bet drill's families (Noam 2026-11-04). Inside each family the hands
+ * that play the same way in a spot become one question, even when they aren't
+ * next to each other: on BTN vs UTG, A6s folds together with A3s and A2s.
+ * Every hand belongs to one family, so nothing is filled in by mistake.
+ * Raise-first-in keeps the groups above. */
 export const THREEBET_FAMS: Family[] = [
-  ...FAMS.flatMap((f) => SPLITS[f.key] ?? [f]),
-  // The suited hands outside every group that BB calls vs UTG; the rest (72s, T2s...) stay trash.
-  fam("OS", "Other suited hands", "Q4s–Q2s, J6s–J3s, T6s, 95s, 85s, 74s, 63s, 53s…", "#A88C7A", "Q4s Q3s Q2s J6s J5s J4s J3s T6s 95s 85s 74s 63s 53s 52s 42s 32s"),
+  fam("PP", "Premium pairs", "AA–QQ", "#D6C8FF", "AA KK QQ"),
+  fam("PRS", "Pairs", "JJ–22", "#B49CFF", handsOf("MP", "LP")),
+  fam("SAA", "Suited aces", "AKs–A2s", "#5EE0C0", handsOf("SAH", "SAL")),
+  fam("SBX", "Suited broadways", "KQs–JTs, K9s–T9s", "#FFD36B", handsOf("SBW", "SBF")),
+  fam("SK", "Suited kings", "K8s–K2s", "#7FE3F0", handsOf("SK")),
+  fam("SQ", "Suited queens and jacks", "Q8s–Q5s, J8s–J7s", "#C3CBFF", handsOf("SQ")),
+  fam("SCG", "Suited connectors and gappers", "98s–43s, T8s–64s", "#FF8FC1", handsOf("SC", "SG", "LS")),
+  fam("OS", "Other suited hands", "Q4s–Q2s, J6s–J2s, T6s–T2s, 95s–32s", "#A88C7A", leftovers("s")),
+  fam("OBX", "Offsuit broadways", "AKo–KQo, ATo–JTo", "#F3E2A9", handsOf("BO", "OBWF", "OF")),
+  fam("OA", "Offsuit aces", "A9o–A2o", "#D9B88F", handsOf("OA")),
+  fam("OKX", "Offsuit kings", "K9o–K2o, Q9o J9o T9o", "#B8A08A", handsOf("OK", "LK")),
+  fam("OOX", "Other offsuit hands", "Q8o–32o", "#8E8478", `${handsOf("WO")} ${leftovers("o")}`),
 ];
 
 export const FAM_BY_KEY: Record<string, Family> = Object.fromEntries(
@@ -86,22 +103,20 @@ export const FAMILY_SHAPE: Record<string, string> = {
   OK: "N",
   LK: "Y",
   WO: "F",
-  // The 3-bet drill's split groups keep their parent's shape; the color tells them apart.
-  MPH: "block6",
-  MPL: "block6",
-  SAT: "I",
-  SAM: "I",
-  SAW: "dot2",
-  SAX: "dot2",
-  SBT: "plus",
-  SBL: "plus",
-  BOT: "U",
-  BOL: "U",
+  // The 3-bet drill's families (THREEBET_FAMS).
+  PRS: "block6",
+  SAA: "I",
+  SBX: "plus",
+  SCG: "bluff",
   OS: "whole",
+  OBX: "U",
+  OKX: "N",
+  OOX: "F",
 };
 
+/** A 3-bet piece is keyed "<family>-<how it plays>" (e.g. "SAA-fold"): it takes its family's shape. */
 export function shapeOf(key: string): string {
-  return FAMILY_SHAPE[key] ?? "O";
+  return FAMILY_SHAPE[key] ?? FAMILY_SHAPE[key.split("-")[0]] ?? "O";
 }
 
 /** Longer explanation shown in the per-piece "explain" sheet. */
@@ -125,17 +140,14 @@ export const FAMILY_DESC: Record<string, string> = {
   OK: "Offsuit kings and offsuit connectors. Mostly steals from late position.",
   LK: "A king with a tiny offsuit card. Usually a fold, except from the blinds.",
   WO: "Weak offsuit hands. They rarely make strong hands, so they are usually folds.",
-  MPH: "The two biggest medium pairs. Strong enough to 3-bet for value from many seats.",
-  MPL: "Pairs that beat most unpaired hands but don't love a big pot: often a call.",
-  SAT: "Suited aces with a broadway kicker. Strong enough to 3-bet for value.",
-  SAM: "Suited aces with a middle kicker. Flush potential, but often dominated.",
-  SAW: "A5s and A4s: the ace blocks strong hands, and they can make a wheel straight.",
-  SAX: "The weakest suited aces.",
-  SBT: "The best suited broadways.",
-  SBL: "Suited broadways with a ten: they play well but often get dominated.",
-  BOT: "AK and AQ offsuit: the strongest offsuit hands.",
-  BOL: "AJ and KQ offsuit: good high cards that are often dominated by an early open.",
+  PRS: "Every pair below the premium ones.",
+  SAA: "Every suited ace. The ace blocks strong hands and makes the nut flush.",
+  SBX: "Two suited broadway cards, and the suited nines with a broadway card.",
+  SCG: "Suited cards close together, with or without a gap. They make straights and flushes.",
   OS: "Every other suited hand. The flush potential makes them playable when the price is good, like in the big blind.",
+  OBX: "Two offsuit broadway cards.",
+  OKX: "A king with an offsuit kicker, and the offsuit nines.",
+  OOX: "Every other offsuit hand.",
 };
 
 /** Rough relative strength per family (0-100), used only to generate the
@@ -161,21 +173,19 @@ export const STRENGTH: Record<string, number> = {
   OK: 18,
   LK: 12,
   WO: 10,
-  MPH: 92,
-  BOT: 90,
-  SBT: 88,
-  SAT: 87,
-  MPL: 72,
-  SBL: 64,
-  BOL: 62,
-  SAW: 58,
-  SAM: 45,
-  SAX: 27,
+  SBX: 75,
+  PRS: 70,
+  SAA: 66,
+  OBX: 60,
+  SCG: 45,
+  OKX: 16,
   OS: 15,
+  OOX: 8,
 };
 
-/** A clear group filled in before the drill starts, with its answer. */
-export type PreFilledGroup = { key: string; answer: DrillAction; mixSplit?: [DrillAction, DrillAction, number] };
+/** A clear group filled in before the drill starts, with its answer (and its
+ * hands, when it's a 3-bet piece rather than a whole family). */
+export type PreFilledGroup = { key: string; answer: DrillAction; mixSplit?: [DrillAction, DrillAction, number]; hands?: string[] };
 
 /** Noam 2026-11-01: never ask what everybody already knows (3-betting
  * AA–QQ). Lined up strongest to weakest, a clear group with the same answer
