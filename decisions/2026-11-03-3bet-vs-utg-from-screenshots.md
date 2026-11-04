@@ -11,7 +11,23 @@
   - All charts were re-measured by pixels with `read-chart.ts`. The by-eye reads above were off; Noam caught A7o on BB vs HJ. The group table above is from the by-eye reads, so the read files are the source of truth now.
   - All 15 seat pairs of the 3-bet drill are now on solver data: vs UTG, HJ, CO, BTN and SB.
 
-## Current state
+## 2026-11-04: groups follow each hand's own answer *(Noam)*
+
+**The problem.** Noam found A6s shown as a mix on BTN vs UTG, though the chart folds it. The read was right. The fixed groups were the problem: A6s sat with A9s–A7s, and the drill painted the whole group with its average answer. Across the 15 spots, **97 hands** were taught plainly wrong this way (a fold shown as playable, or a 3-bet shown as a call).
+
+**The rules now:**
+1. **Families:** pairs, suited aces, suited broadways, suited kings, suited queens and jacks, suited connectors and gappers, other suited hands, offsuit broadways, offsuit aces, offsuit kings, and other offsuit hands. Every hand belongs to one.
+2. **One question per way of playing:** inside a family, the hands that play the same way are one question, even when they aren't next to each other. *"A6s needs to be connected to the hands that fold, like A2s"* (Noam). Each hand's answer is its own chart answer under the 75/25 rule; mixes of the same two actions count as one way of playing.
+3. **No single-hand questions:** a hand that would be a question on its own joins another question that plays the same way. It prefers one of the same kind (suited, offsuit, pairs), like the cross-family frontier pieces.
+   - The name shows both families; three or more become "Mixed hands", with the hands listed under the piece.
+   - Four hands in the 15 spots have no partner at all and stay single.
+4. **Filled in:** AA–QQ always start filled in. A family that plays one way throughout starts filled in when the families on both sides play the same way. Families that only fold are trash, except the two strongest of them, which are asked.
+5. **The check:** `check-spots.ts` compares all 169 hands of every spot with the chart, and must report 0 differences before a push.
+6. **The pictures:** side-by-side pictures (screenshot | what the drill teaches) are in `reference-ranges/3bet-check/`.
+
+**Result:** every hand in all 15 spots matches its chart. A spot has 12–15 questions, except BB (19–27).
+
+## State before this decision
 
 The 3-bet drill (`src/lib/drill/preflop/threebet.ts`) uses a placeholder formula (`genStrat`). Some of its answers are clearly wrong: for example, it says to fold A6s–AKs against a UTG open from HJ, CO and BTN.
 

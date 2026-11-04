@@ -1,7 +1,7 @@
 import { combosOf, MATRIX_HANDS } from "@/lib/drill/matrix";
 import type { DrillAction, DrillPiece } from "@/lib/drill/types";
 import { FAMS, FAM_BY_KEY, FAMILY_DESC, STRENGTH, THREEBET_FAMS, nearFolds, obviousKeys, type Family, type PreFilledGroup } from "./families";
-import { familyPieces, solverRead, splitOf } from "./solver";
+import { familyPieces, groupSplit, solverRead, splitOf } from "./solver";
 import { SEATS, SEAT_NAME, type Seat } from "./seats";
 
 function foldPiece(g: Family): DrillPiece {
@@ -65,6 +65,38 @@ function caption(hands: string[]): string {
   return hands.length <= 6 ? hands.join(" ") : `${hands.slice(0, 5).join(" ")} +${hands.length - 5} more`;
 }
 
+/** How a piece plays: a pure action, or a mix of two (in either order). */
+const kindOf = (p: DrillPiece) => (p.answer === "mix" && p.mixSplit ? `mix_${[p.mixSplit[0], p.mixSplit[1]].sort().join("_")}` : p.answer);
+const shapeKind = (h: string) => (h.length === 2 ? "pair" : h[2]);
+
+/** Noam 2026-11-04: a hand is never a question on its own. A hand that plays
+ * differently from the rest of its family joins another question that plays
+ * the same way, of the same kind (suited, offsuit, pairs) when there is one,
+ * like the cross-family frontier pieces (K9s+Q9s+J9s+T9s). Every hand keeps
+ * its own chart answer; only the grouping changes. Mutates `asked`. */
+function bundleLoners(asked: DrillPiece[], read: Record<string, [number, number, number]>) {
+  const families = new Map<DrillPiece, string[]>(asked.map((p) => [p, [p.label]]));
+  for (const loner of asked.filter((p) => p.hands.length === 1)) {
+    const same = asked.filter((q) => q !== loner && kindOf(q) === kindOf(loner));
+    // Nothing else plays this way: it stays a question of its own.
+    if (!same.length) continue;
+    const host = same.find((q) => q.hands.some((h) => shapeKind(h) === shapeKind(loner.hands[0]))) ?? same[0];
+    host.hands = [...host.hands, ...loner.hands];
+    const names = [...new Set([...families.get(host)!, ...families.get(loner)!])];
+    families.set(host, names);
+    // Short enough for a phone: two families by name, more as "Mixed hands" (the caption lists them).
+    host.label = names.length <= 2 ? names.join(" + ") : "Mixed hands";
+    host.sub = caption(host.hands);
+    if (host.mixSplit) {
+      const s = groupSplit(read, host.hands);
+      const [x, y] = [host.mixSplit[0], host.mixSplit[1]] as (keyof typeof s)[];
+      const [a, b] = s[x] >= s[y] ? [x, y] : [y, x];
+      host.mixSplit = [a, b, Math.round((s[a] / (s[a] + s[b])) * 100)];
+    }
+    asked.splice(asked.indexOf(loner), 1);
+  }
+}
+
 /** A spot with a solver chart (decisions/ranges/3bet/). Each family splits into
  * the hands that play the same way here (familyPieces), so every hand is
  * taught its own chart answer. A family that plays one way throughout is one
@@ -111,6 +143,7 @@ function buildFromRead(read: Record<string, [number, number, number]>): Threebet
     else asked.push(p);
   }
   nearFolds(folds).forEach((k) => asked.push(foldPiece(FAM_BY_KEY[k])));
+  bundleLoners(asked, read);
 
   let raiseCombos = 0;
   let callCombos = 0;

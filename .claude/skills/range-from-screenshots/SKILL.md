@@ -107,7 +107,10 @@ Wait for his corrections. Fold them into the read file, rerun the calculator, an
    - `facing4bet.ts`: facing a 4-bet.
 3. **The 3-bet drill already reads solver data.** For a spot keyed `3bet/<hero>-vs-<opener>` it uses the read automatically, with the split groups (`THREEBET_FAMS`) and the same 75/25 rule (`solver.ts`). For the other drills, wire them the same way, replacing their placeholder formula (`genStrat4` / `genStrat5`).
 4. Keep the drill rules already in place: obvious groups start filled in (`obviousKeys`), and AA–QQ is never asked.
-5. Test in a real browser and push.
+5. **Groups follow each hand's own answer** (Noam 2026-11-04): inside a family, the hands that play the same way are one question, even when they aren't next to each other (BTN vs UTG: A6s folds with A2s). Never let a family average hide a hand: that taught 97 hands wrong.
+6. **Before pushing, run the check:** `npx tsx .claude/skills/range-from-screenshots/check-spots.ts`. It must say every hand matches its chart.
+7. **Make the side-by-side picture** for Noam: `npx tsx .claude/skills/range-from-screenshots/compare-chart.ts <screenshot.png> <hero> <opener> reference-ranges/3bet-check/<hero>-vs-<opener>.png`.
+8. Test in a real browser and push.
 
 ## Don't
 
