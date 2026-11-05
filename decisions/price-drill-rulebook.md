@@ -78,6 +78,13 @@ Every hand goes into exactly one group, checked from the top down. Groups are re
   - a straight: 50–100bb, but 25–50bb when three cards of a suit are on the board;
   - trips follow sets and two pair.
 
+### A pair on a flush turn *(Noam, 2026-11-05, from Uri on J♠T♠3♣ 9♠)*
+- **Only when the flush is on the board** (three cards of a suit) **on the turn:** a fourth card of that suit can still come.
+- **Two groups:**
+  - **"Pair + a ♠"**: one pair plus a card of the suit. It can still improve to a flush, so it bets more: **5–15bb** *(draft)*.
+  - **Every other pair**: it can't make a flush, so it doesn't bet any more: **0–5bb**.
+- **Every street sorts the hands again.** A hand that improves (to a flush on the river, for example) goes straight to its stronger group and wants a bigger pot, and a hand that gets worse goes down. *(Noam)*
+
 ### No pair: draws, high card with no draw, trash *(Noam, 2026-11-05, from A♣7♦2♠; on every board and street)*
 - **There's no "Q-high and below" group any more**, on any street. The hands with no pair are split into three groups:
 

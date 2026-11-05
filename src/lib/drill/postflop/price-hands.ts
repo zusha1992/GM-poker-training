@@ -39,13 +39,14 @@ export type PGroup =
   | "mp"
   | "bp"
   | "aho"
+  | "pfl"
   | "imp"
   | "khnd"
   | "sd"
   | "air";
 /** imp/khnd/air: the no-pair hands split by whether they can improve (see
  * noPairGroupOf). "sd" is no longer used: kept for old feedback notes. */
-export const PGROUP_ORDER: PGroup[] = ["boat", "flush", "straight", "trips", "twopair", "op", "tpgk", "tpmk", "tpwk", "pp1", "pp2", "pp3", "spp", "mp", "bp", "aho", "imp", "khnd", "sd", "air"];
+export const PGROUP_ORDER: PGroup[] = ["boat", "flush", "straight", "trips", "twopair", "op", "tpgk", "tpmk", "tpwk", "pp1", "pp2", "pp3", "spp", "mp", "bp", "pfl", "aho", "imp", "khnd", "sd", "air"];
 
 /** Same color and shape on every board and street. */
 export const PGROUP_INFO: Record<PGroup, { color: string; shape: string }> = {
@@ -65,6 +66,7 @@ export const PGROUP_INFO: Record<PGroup, { color: string; shape: string }> = {
   mp: { color: "#9DB4C4", shape: "I3" },
   bp: { color: "#7F97A8", shape: "dot2" },
   aho: { color: "#D4E86B", shape: "P" },
+  pfl: { color: "#4FC1A6", shape: "U" },
   imp: { color: "#5FD3E8", shape: "F" },
   khnd: { color: "#E8C76B", shape: "N" },
   sd: { color: "#9BE07A", shape: "plus" },
@@ -891,6 +893,12 @@ function noPairGroupOf(hole: [Card, Card], board: Card[], sdCutoff: number): PGr
   return Math.max(x.r, y.r) >= sdCutoff ? "khnd" : "air";
 }
 
+/** The suit with three cards on a four-card board (the flush is in, one more card can come). */
+function flushSuitOnTurn(board: Card[]): string | null {
+  if (board.length !== 4) return null;
+  return SUITS.find((s) => board.filter((c) => c.s === s).length === 3) ?? null;
+}
+
 export function priceGroupOf(hole: [Card, Card], board: Card[], cut: Pick<StreetSpec, "goodKicker" | "midKicker" | "sdCutoff">): PGroup {
   const all = [...hole, ...board];
   const [x, y] = hole;
@@ -918,6 +926,13 @@ export function priceGroupOf(hole: [Card, Card], board: Card[], cut: Pick<Street
   const twoPair = !pocket && boardCount(x.r) > 0 && boardCount(y.r) > 0;
   if (trips.length || twoPair) return "twopair";
 
+  // Noam 2026-11-05: on a turn with three cards of a suit, a pair holding one
+  // card of that suit can still make a flush on the river; a pair without one can't.
+  const fs4 = flushSuitOnTurn(board);
+  if (fs4 && (x.s === fs4) !== (y.s === fs4)) {
+    const paired = pocket || boardCount(x.r) > 0 || boardCount(y.r) > 0;
+    if (paired) return "pfl";
+  }
   const texture = flopTexture(board);
   if (pocket) {
     if (flopTexture(board.slice(0, 3)) === "high" && x.r <= 8) return "spp";
@@ -998,6 +1013,10 @@ function namesOf(g: PGroup, board: Card[], hands: string[], cut: Pick<StreetSpec
     }
     case "spp":
       return { label: runs(hands.map((h) => rv(h[0])), (r) => `${ch(r)}${ch(r)}`), name: "Small pocket pairs" };
+    case "pfl": {
+      const glyph = { s: "♠", h: "♥", d: "♦", c: "♣" }[flushSuitOnTurn(board) ?? "s"];
+      return { label: `Pair + a ${glyph}`, name: `One pair with a ${glyph}: a fourth ${glyph} on the river makes a flush` };
+    }
     case "aho":
       return { label: runs(hands.map((h) => rv(h[1])), (r) => `A${ch(r)}`), name: "Ace-high, two overcards" };
     case "mp":
@@ -1105,6 +1124,15 @@ function flopRule(g: PGroup, board: Card[]): Answer | undefined {
   return undefined;
 }
 
+/** Noam 2026-11-05: on a turn where the flush is on the board, a pair that
+ * can still make a flush bets more, and a pair that can't doesn't bet any more. */
+function flushTurnRule(g: PGroup, board: Card[]): Answer | undefined {
+  if (!flushSuitOnTurn(board)) return undefined;
+  if (g === "pfl") return a("b5", "One pair plus a card of the flush suit: it can still improve to a flush, so it bets more: 5–15bb.");
+  if (PAIR_GROUPS.has(g) || g === "spp") return a("b0", "The flush is on the board and this pair can't make one: it doesn't bet any more.");
+  return undefined;
+}
+
 function riverRule(g: PGroup, street: Street): Answer | undefined {
   if (street === "river" && g === "pp3") return a("b0", "Fourth pair or worse on the river: it rarely wins at showdown, so it's worth zero.");
   return undefined;
@@ -1170,7 +1198,7 @@ export function buildRunout(index: number): Runout {
     const pieces: PricePiece[] = [];
     for (const g of PGROUP_ORDER) {
       if (snap.byGroup[g] <= 0) continue;
-      const found = flopRule(g, board) ?? veryWetRule(g, street, board, everyBoardRule(g, street, riverRule(g, street) ?? st.answers[g] ?? noPairFallback(g, st) ?? madeHandAnswer(g, board)));
+      const found = flushTurnRule(g, board) ?? flopRule(g, board) ?? veryWetRule(g, street, board, everyBoardRule(g, street, riverRule(g, street) ?? st.answers[g] ?? noPairFallback(g, st) ?? madeHandAnswer(g, board)));
       if (!found) throw new Error(`price-hands: no answer for ${g} on ${spec.id} (${street})`);
       // Noam 2026-11-05: trips, like straights and flushes, are always the player's call.
       const ans = g === "trips" && found.auto ? { ...found, auto: false, sure: false } : found;
