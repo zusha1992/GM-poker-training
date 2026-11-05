@@ -69,6 +69,15 @@ Every hand goes into exactly one group, checked from the top down. Groups are re
 | 12 | No pair, showdown | Highest card ≥ the board's **showdown cutoff** *(Uri/Noam: K-high on A72)* |
 | 13 | No pair, the rest | Everything else |
 
+### Made hands are always the player's call *(Noam, 2026-11-05)*
+- **Straights, flushes and full houses are never filled in automatically.** "That's a very important group: the user needs to decide where to put it." This holds on every board and runout.
+- **Groups:** Full houses+ (with quads), Flushes and Straights, each its own group whenever it shows up.
+- **Trips** (one hole card with the pair on the board, e.g. A8 on 8♠8♦6♣) are their own group too, and also the player's call. *(Noam, 886)*
+- **Draft boxes:**
+  - full houses and flushes: 50–100bb;
+  - a straight: 50–100bb, but 25–50bb when three cards of a suit are on the board;
+  - trips follow sets and two pair.
+
 ### No pair: draws, high card with no draw, trash *(Noam, 2026-11-05, from A♣7♦2♠; on every board and street)*
 - **There's no "Q-high and below" group any more**, on any street. The hands with no pair are split into three groups:
 

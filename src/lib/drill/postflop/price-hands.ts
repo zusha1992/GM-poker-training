@@ -23,7 +23,10 @@ import type { MatrixSnap } from "@/components/drill/postflop/LineMatrix";
  *  one broadway card, or a paired one. sd = no pair, high card at or above the
  *  board's showdown cutoff (draws included); air = every other no-pair hand. */
 export type PGroup =
-  | "monster"
+  | "boat"
+  | "flush"
+  | "straight"
+  | "trips"
   | "twopair"
   | "op"
   | "tpgk"
@@ -42,11 +45,14 @@ export type PGroup =
   | "air";
 /** imp/khnd/air: the no-pair hands split by whether they can improve (see
  * noPairGroupOf). "sd" is no longer used: kept for old feedback notes. */
-export const PGROUP_ORDER: PGroup[] = ["monster", "twopair", "op", "tpgk", "tpmk", "tpwk", "pp1", "pp2", "pp3", "spp", "mp", "bp", "aho", "imp", "khnd", "sd", "air"];
+export const PGROUP_ORDER: PGroup[] = ["boat", "flush", "straight", "trips", "twopair", "op", "tpgk", "tpmk", "tpwk", "pp1", "pp2", "pp3", "spp", "mp", "bp", "aho", "imp", "khnd", "sd", "air"];
 
 /** Same color and shape on every board and street. */
 export const PGROUP_INFO: Record<PGroup, { color: string; shape: string }> = {
-  monster: { color: "#E0413A", shape: "block6" },
+  boat: { color: "#E0413A", shape: "block6" },
+  flush: { color: "#F25C9A", shape: "Y" },
+  straight: { color: "#F2A03D", shape: "L5" },
+  trips: { color: "#E86A4A", shape: "W" },
   twopair: { color: "#F2853D", shape: "O" },
   op: { color: "#E46FC8", shape: "I" },
   tpgk: { color: "#3FA9F5", shape: "value" },
@@ -114,10 +120,17 @@ type StreetSpec = {
 const a = (bucket: Bucket, why: string, sure = false): Answer => ({ bucket, why, sure });
 const autoAll = (why: string): Answer => ({ bucket: "b50", why, sure: true, auto: true });
 
-/** Straights and better place themselves unless a street says otherwise. */
-const AUTO: Partial<Record<PGroup, Answer>> = {
-  monster: autoAll("Straights and better want every chip in."),
-};
+/** Noam 2026-11-05: straights, flushes and full houses are never filled in
+ * automatically: the player decides where they go, on every board and runout.
+ * Drafts: the nuts-ish hands want the stacks in; a straight with three cards
+ * of a suit on the board is behind every flush, so it wants less. */
+function madeHandAnswer(g: PGroup, board: Card[]): Answer | undefined {
+  if (g === "boat") return a("b50", "A full house or quads: it wants every chip in.");
+  if (g === "flush") return a("b50", "A flush: it wants every chip in.");
+  if (g !== "straight") return undefined;
+  const flushOut = Object.values(board.reduce<Record<string, number>>((m, c) => ({ ...m, [c.s]: (m[c.s] ?? 0) + 1 }), {})).some((n) => n >= 3);
+  return flushOut ? a("b25", "A straight, but three cards of a suit are on the board: every flush beats it, so a big pot, not stacks.") : a("b50", "A straight: it wants every chip in.");
+}
 
 /** The same cutoffs on every street of this board. K-high is the showdown
  * cutoff (Noam 2026-10-29); AK and AQ are the strong kickers, AJ–A8 the
@@ -600,14 +613,13 @@ function connectedFlop(flop: Card[]): boolean {
 
 /** What one group wants on one street of a generated board. */
 function ruleAnswer(g: PGroup, street: Street, k: RunoutKinds): Answer {
-  if (g === "monster") return autoAll("Straights and better want every chip in.");
   if (g === "air") return a("b0", "No pair and no showdown value: it can't win by checking, so it's worth zero.", true);
   if (g === "imp") return a("b0", "No pair yet, but a draw: worth 0–5bb, like every draw.", true);
   if (g === "sd" || g === "khnd") {
     if (street === "river" && k.river === "wet") return a("b0", "The draws arrived and the ranges are polar: this high card can't win at showdown any more.");
     return a("b0", "No pair, but the highest cards sometimes win at showdown. Draws included.", true);
   }
-  if (g === "twopair") {
+  if (g === "twopair" || g === "trips") {
     if (street === "flop" || (street === "turn" && k.turn !== "wet")) return autoAll("Sets and two pair want every chip in.");
     // Noam 2026-11-05 (A72, 5♣ turn): a wet turn takes sets and two pair down to 15–25bb.
     if (street === "turn") return a("b15", "A wet turn: straights and flush draws are out there, so sets and two pair go down to 15–25bb.");
@@ -653,7 +665,7 @@ function rulesCut(board: Card[]): Pick<StreetSpec, "goodKicker" | "midKicker" | 
 }
 
 function ruleAnswers(street: Street, board: Card[], k: RunoutKinds): Partial<Record<PGroup, Answer>> {
-  return Object.fromEntries(PGROUP_ORDER.map((g) => [g, ruleAnswer(g, street, k)])) as Partial<Record<PGroup, Answer>>;
+  return Object.fromEntries(PGROUP_ORDER.map((g) => [g, madeHandAnswer(g, board) ?? ruleAnswer(g, street, k)])) as Partial<Record<PGroup, Answer>>;
 }
 
 type RuleTurn = { card: string; kind: Exclude<StreetKind, "flop" | "wet"> | "wet"; story: string; rivers: [{ card: string; story: string }, { card: string; story: string }] };
@@ -896,9 +908,13 @@ export function priceGroupOf(hole: [Card, Card], board: Card[], cut: Pick<Street
   const trips = [...counts].filter(([r, n]) => n >= 3 && usesHole(r));
   const boat = trips.length > 0 && [...counts].some(([r, n]) => n >= 2 && r !== trips[0][0]);
   const quads = [...counts].some(([r, n]) => n === 4 && usesHole(r));
-  if (flush || straight || boat || quads) return "monster";
+  if (boat || quads) return "boat";
+  if (flush) return "flush";
+  if (straight) return "straight";
 
-  // Sets, trips and two pair (both hole cards paired with the board).
+  // Trips: one hole card with a pair on the board (Noam 2026-11-05, 8♠8♦6♣: its own group).
+  if (trips.length && !pocket) return "trips";
+  // Sets and two pair (both hole cards paired with the board).
   const twoPair = !pocket && boardCount(x.r) > 0 && boardCount(y.r) > 0;
   if (trips.length || twoPair) return "twopair";
 
@@ -949,10 +965,18 @@ function namesOf(g: PGroup, board: Card[], hands: string[], cut: Pick<StreetSpec
   const ranks = boardRanks(board);
   const top = ch(ranks[0]);
   switch (g) {
-    case "monster":
-      return { label: "Straight+", name: "Straights, flushes and full houses" };
+    case "boat":
+      return { label: "Full houses+", name: "Full houses and quads" };
+    case "flush":
+      return { label: "Flushes", name: "Flushes" };
+    case "straight":
+      return { label: "Straights", name: "Straights" };
+    case "trips": {
+      const r = ranks.find((v) => board.filter((c) => c.r === v).length >= 2) ?? ranks[0];
+      return { label: `Trips ${ch(r)}s`, name: `Trips: one ${ch(r)} with the pair on the board` };
+    }
     case "twopair":
-      return { label: "Sets & 2 pair", name: "Sets, trips and two pair" };
+      return { label: "Sets & 2 pair", name: "Sets and two pair" };
     case "op":
       return { label: "Overpairs", name: `Pocket pairs above the ${top}` };
     case "tpgk":
@@ -1107,12 +1131,12 @@ function veryWet(board: Card[]): boolean {
  * two pair only get called by better: they check and show down. */
 function veryWetRule(g: PGroup, street: Street, board: Card[], ans: Answer | undefined): Answer | undefined {
   if (!ans || street === "flop" || !veryWet(board)) return ans;
-  if (g !== "twopair" && !PAIR_GROUPS.has(g)) return ans;
+  if (g !== "twopair" && g !== "trips" && !PAIR_GROUPS.has(g)) return ans;
   if (BUCKET_RANK[ans.bucket] <= BUCKET_RANK.b0) return ans;
   // Noam 2026-11-05 (A72 · 6♦ · 8♦): with the flush in but no four to a straight,
   // sets and two pair are still worth more than showdown.
-  if (g === "twopair" && mostInStraightWindow(board) < 4) return a("b5", "The flush came in, but sets and two pair are still worth more than showdown: 5–15bb.");
-  return a("b0", g === "twopair" ? "One card makes a straight or a flush is in: sets and two pair only get called by better. Check and show down." : "A very wet board: one pair only gets called by better. Check and show down.");
+  if ((g === "twopair" || g === "trips") && mostInStraightWindow(board) < 4) return a("b5", "The flush came in, but sets and two pair are still worth more than showdown: 5–15bb.");
+  return a("b0", g === "twopair" || g === "trips" ? "One card makes a straight or a flush is in: sets and two pair only get called by better. Check and show down." : "A very wet board: one pair only gets called by better. Check and show down.");
 }
 /** Streets written before the no-pair split (Noam 2026-11-05) answer "sd"
  * (the high card that sometimes wins at showdown) and "air". Their K-high (or
@@ -1120,6 +1144,7 @@ function veryWetRule(g: PGroup, street: Street, board: Card[], ans: Answer | und
  * (Noam, A72: the drill is about the size of the pot, and a draw is 0–5bb). */
 function noPairFallback(g: PGroup, st: StreetSpec): Answer | undefined {
   if (g === "khnd") return st.answers.sd;
+  if (g === "trips") return st.answers.twopair;
   if (g === "imp") return a("b0", "No pair yet, but a draw: worth 0–5bb, like every draw.");
   return undefined;
 }
@@ -1143,8 +1168,10 @@ export function buildRunout(index: number): Runout {
     const pieces: PricePiece[] = [];
     for (const g of PGROUP_ORDER) {
       if (snap.byGroup[g] <= 0) continue;
-      const ans = flopRule(g, board) ?? veryWetRule(g, street, board, everyBoardRule(g, street, riverRule(g, street) ?? st.answers[g] ?? noPairFallback(g, st) ?? AUTO[g]));
-      if (!ans) throw new Error(`price-hands: no answer for ${g} on ${spec.id} (${street})`);
+      const found = flopRule(g, board) ?? veryWetRule(g, street, board, everyBoardRule(g, street, riverRule(g, street) ?? st.answers[g] ?? noPairFallback(g, st) ?? madeHandAnswer(g, board)));
+      if (!found) throw new Error(`price-hands: no answer for ${g} on ${spec.id} (${street})`);
+      // Noam 2026-11-05: trips, like straights and flushes, are always the player's call.
+      const ans = g === "trips" && found.auto ? { ...found, auto: false, sure: false } : found;
       answers[g] = ans;
       const entries: { hand: string; part: number }[] = [];
       for (const [hand, cell] of snap.cells) {
