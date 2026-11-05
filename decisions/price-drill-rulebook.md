@@ -107,6 +107,23 @@ Every hand goes into exactly one group, checked from the top down. Groups are re
 - **Rule, as a draft:** on the turn, **flush draws and combo draws** are their own group, **"Strong draws"**, worth **5–15bb**. Straight draws without a flush draw stay at **0–5bb**. On the flop, every draw is still "Can improve" at 0–5bb: all are under about 40%, and BTN bets small with the whole range.
 - The other boards are unchanged until Noam has looked at A72.
 
+### The solver's EV decides the box *(Noam, 2026-11-05, first on the A♣7♦2♠ flop)*
+- **Source:** Noam sent GTO Wizard's seven equity buckets for the A72 flop (data in `decisions/ranges/equity-buckets/A72-flop.md`).
+- **The flop bet can't decide the box:** BTN bets small with the whole range, and every bucket puts in only 0.2–1.9bb on the flop.
+- **But the solver's EV per hand lines up exactly with Noam's boxes:**
+
+  | Box | EV |
+  |---|---|
+  | 50–100bb | above ~6.2bb |
+  | 15–25bb | ~4.5–6.2bb |
+  | 5–15bb | ~3.4–4.5bb |
+  | 0–5bb | below ~3.4bb |
+
+- **Noam: "make the decisions for me" on this flop.** Every answer stayed the same, except:
+  - **54s and 43s**, the real draws (gutshots to the wheel, a straight that would be the nuts), have EV about 3.6bb, like 7x. They now form their own group at **5–15bb**.
+  - The backdoor draws stay in "Can improve" at 0–5bb (EV 1.2–2.1).
+- **Plan for other boards:** the same screenshots, then the box from each group's EV with these cut-offs, then Noam corrects the exceptions.
+
 ### No pair: draws, high card with no draw, trash *(Noam, 2026-11-05, from A♣7♦2♠; on every board and street)*
 - **There's no "Q-high and below" group any more**, on any street. The hands with no pair are split into three groups:
 

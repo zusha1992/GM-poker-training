@@ -156,7 +156,9 @@ const A72_FLOP: StreetSpec = {
   kind: "flop",
   story: "A dry ace-high flop. BTN has far more strong aces than BB.",
   ...CUT,
-  // Noam 2026-11-05: every answer on this flop checked by Noam.
+  // Noam 2026-11-05: every answer on this flop checked by Noam. Then the solver's equity
+  // buckets (decisions/ranges/equity-buckets/A72-flop.md): EV lines up with these boxes.
+  strongDraws: true,
   answers: {
     twopair: autoAll("Sets and two pair want every chip in on a dry board."),
     tpgk: a("b50", "AK and AQ on a dry board: if nothing changes by the river, they want to get the stacks in.", true),
@@ -168,6 +170,7 @@ const A72_FLOP: StreetSpec = {
     bp: a("b0", "Bottom pair: a little money at most.", true),
     sd: SD(),
     // BTN bets small with everything here, so the no-pair hands are three big groups.
+    sdraw: a("b5", "Gutshots to the wheel, a straight that would be the nuts: solver EV about 3.6bb, like 7x, so 5–15bb."),
     imp: a("b0", "No pair yet, but it can improve: a gutshot, a backdoor straight or a backdoor flush draw.", true),
     khnd: SD("King-high with no draw: no pair, but it sometimes wins at showdown."),
     air: a("b0", "Queen-high or lower with no draw: it can't win by checking, so it's worth zero.", true),
@@ -885,6 +888,20 @@ function flopTexture(board: Card[]): "low" | "high" | null {
  *   since every draw is worth 0–5bb).
  * - khnd: king-high (the showdown cutoff) with no draw, e.g. K9o, K5 of hearts.
  * - air: trash, queen-high or lower with no draw. */
+/** A real draw on the flop: four to a straight with a hole card in it, or four to a flush. */
+function realDraw(hole: [Card, Card], board: Card[]): boolean {
+  const all = [...hole, ...board];
+  if (SUITS.some((s) => hole.some((c) => c.s === s) && all.filter((c) => c.s === s).length >= 4)) return true;
+  const low = (r: number) => (r === 14 ? [1, 14] : [r]);
+  const have = new Set(all.flatMap((c) => low(c.r)));
+  for (let lo = 1; lo <= 10; lo++) {
+    let n = 0;
+    for (let r = lo; r < lo + 5; r++) if (have.has(r)) n++;
+    if (n >= 4 && hole.some((c) => low(c.r).some((r) => r >= lo && r < lo + 5))) return true;
+  }
+  return false;
+}
+
 function noPairGroupOf(hole: [Card, Card], board: Card[], sdCutoff: number, strongDraws = false): PGroup {
   const [x, y] = hole;
   const flop = board.length === 3;
@@ -905,7 +922,8 @@ function noPairGroupOf(hole: [Card, Card], board: Card[], sdCutoff: number, stro
   const flushDraw = !flop && SUITS.some((s) => (x.s === s || y.s === s) && [...hole, ...board].filter((c) => c.s === s).length === 4);
   // Noam 2026-11-05: strong draws have equity and a reason to build the pot. On the A72
   // turns flush and combo draws have about 35–45% against BB's range, straight draws alone 20–30%.
-  if (strongDraws && flushDraw) return "sdraw";
+  // On the flop the real draws (not backdoors): on A72 the wheel gutshots, solver EV 3.6bb like 7x.
+  if (strongDraws && (flushDraw || (flop && realDraw(hole, board)))) return "sdraw";
   if (straightDraw || (strongDraws && flushDraw) || suitOnBoard >= (flop ? 1 : 2)) return "imp";
   return Math.max(x.r, y.r) >= sdCutoff ? "khnd" : "air";
 }
@@ -1045,9 +1063,10 @@ function namesOf(g: PGroup, board: Card[], hands: string[], cut: Pick<StreetSpec
     // No-pair names use only ranks that are NOT on the board (Noam: "K-high" makes
     // no sense on a board with a king), e.g. "A-high" and "J-high & below" on K♦Q♦4♠.
     case "sdraw":
+      if (board.length === 3) return { label: hands.length <= 3 ? hands.join(", ") : "Real draws", name: "No pair, but a real draw (not a backdoor): a straight or flush draw" };
       return { label: "Strong draws", name: "Flush draws and combo draws: no pair, but a lot of equity" };
     case "imp":
-      if (cut.strongDraws) return { label: "Straight draws", name: "No pair, a straight draw (no flush draw)" };
+      if (cut.strongDraws && board.length === 4) return { label: "Straight draws", name: "No pair, a straight draw (no flush draw)" };
       return board.length === 3
         ? { label: "Can improve", name: "No pair, but a draw: gutshots, backdoor straights, backdoor flushes" }
         : { label: "Draws", name: "No pair, but a draw: flush draws, straight draws, gutshots, combo draws" };
