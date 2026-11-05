@@ -1098,7 +1098,9 @@ function flopRule(g: PGroup, board: Card[]): Answer | undefined {
   if (g === "spp") return a("b0", "The flop had two or more broadway cards: small pairs want no money in the pot unless they improve.", true);
   if (g === "aho") return a("b5", "At most one broadway card, or a paired flop: ace-high with two overcards is worth a small bet.", true);
   if (flopTexture(board) !== "high") return undefined;
-  if (g === "pp1" || g === "pp2" || g === "pp3") return a("b5", "Two or more broadway cards on the flop: 99 to JJ are still worth 5–15bb.", true);
+  if (g === "pp1") return a("b5", "Two or more broadway cards on the flop: a pocket pair between the top two cards is still worth 5–15bb.", true);
+  // Uri 2026-11-05 (J♠T♠3♣: "Nines is worth 0-5bb"): below the second card it only puts in a little.
+  if (g === "pp2" || g === "pp3") return a("b0", "Two or more broadway cards on the flop: a pocket pair below the second card only puts in a little, 0–5bb.", true);
   if (g === "bp") return a("b0", "Two or more broadway cards on the flop: third pair or lower is only worth 0–5bb.", true);
   return undefined;
 }

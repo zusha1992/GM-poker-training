@@ -101,6 +101,7 @@ Broadway cards are A, K, Q, J and T.
 - **At most one broadway card, or a paired flop:** small pairs are worth one small bet (Small pot). **Ace-high with two overcards** (9-8-6: AK to AT; T-8-7: AK to AJ) is worth a small bet too. Its own group: "Ace-high, two overcards". Other ace-high stays a tiny pot.
 - **Two or more broadway cards:**
   - **Underpairs from 99 to JJ** are a **small pot**, and so is second pair or better. *(Noam, from Uri)*
+  - *Updated 2026-11-05 (Uri on J♠T♠3♣: "Nines is worth 0-5bb"; Noam: make it general):* a pocket pair **between the top two cards** stays 5–15bb. One **below the second card** only puts in a little: **0–5bb**. This changed 99 on JT3 and QT7, JJ and 99 on KQT, and JJ–99 on KQ4.
   - **Ace-high and third pair or lower** are a **tiny pot**.
   - **Lower pocket pairs are Zero** and **stay Zero on the turn and river unless they improve**. Their own group: "Small pocket pairs". 66 and lower are confirmed; 88 and 77 are included because they're below 99 *(draft)*.
 - **A paired flop follows the first rule**, even K-K or Q-Q *(Noam, 2026-11-02)*. The drill's paired board is 8♠8♦6♣.
