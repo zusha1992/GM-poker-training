@@ -123,6 +123,13 @@ Every hand goes into exactly one group, checked from the top down. Groups are re
   - **54s and 43s**, the real draws (gutshots to the wheel, a straight that would be the nuts), have EV about 3.6bb, like 7x. They now form their own group at **5–15bb**.
   - The backdoor draws stay in "Can improve" at 0–5bb (EV 1.2–2.1).
 - **Plan for other boards:** the same screenshots, then the box from each group's EV with these cut-offs, then Noam corrects the exceptions.
+- **A72 · 5♣ turn** (data in `decisions/ranges/equity-buckets/A72-5c-turn.md`). On later streets the cut-offs scale with the pot: on the turn, ×1.65, so 50–100bb above ~10.3bb EV, 15–25bb 7.4–10.3bb, 5–15bb 5.6–7.4bb.
+  - **Sets and two pair → 50–100bb** (was 15–25bb from Noam's earlier call). The solver bets them 125–250% pot 83% of the time, with EV about 12bb.
+  - **New group, "Pair + draw" (5–15bb):** a pair below top pair with a flush draw or an open-ender, e.g. 7x with a club and 76s. EV 5.8–7.4bb, 2–3bb above the same pair alone.
+  - **Everything else stayed:**
+    - AJ–A8 at 5–15bb is on the edge: AJ and AT bet, while A9 and A8 check 98%.
+    - The strong draws stay at 5–15bb: their EV is lower, but they're the hands that bet big as semi-bluffs.
+- **The solver also shows that EV isn't the whole story.** On the 5♣ turn KK–88 have EV 4.3–4.75bb but check 99%, so they put almost nothing in. The box is set from EV and the strategy together.
 
 ### No pair: draws, high card with no draw, trash *(Noam, 2026-11-05, from A♣7♦2♠; on every board and street)*
 - **There's no "Q-high and below" group any more**, on any street. The hands with no pair are split into three groups:

@@ -40,6 +40,7 @@ export type PGroup =
   | "bp"
   | "aho"
   | "pfl"
+  | "pdraw"
   | "sdraw"
   | "imp"
   | "khnd"
@@ -47,7 +48,7 @@ export type PGroup =
   | "air";
 /** imp/khnd/air: the no-pair hands split by whether they can improve (see
  * noPairGroupOf). "sd" is no longer used: kept for old feedback notes. */
-export const PGROUP_ORDER: PGroup[] = ["boat", "flush", "straight", "trips", "twopair", "op", "tpgk", "tpmk", "tpwk", "pp1", "pp2", "pp3", "spp", "mp", "bp", "pfl", "aho", "sdraw", "imp", "khnd", "sd", "air"];
+export const PGROUP_ORDER: PGroup[] = ["boat", "flush", "straight", "trips", "twopair", "op", "tpgk", "tpmk", "tpwk", "pp1", "pp2", "pp3", "spp", "mp", "bp", "pfl", "pdraw", "aho", "sdraw", "imp", "khnd", "sd", "air"];
 
 /** Same color and shape on every board and street. */
 export const PGROUP_INFO: Record<PGroup, { color: string; shape: string }> = {
@@ -68,6 +69,7 @@ export const PGROUP_INFO: Record<PGroup, { color: string; shape: string }> = {
   bp: { color: "#7F97A8", shape: "dot2" },
   aho: { color: "#D4E86B", shape: "P" },
   pfl: { color: "#4FC1A6", shape: "U" },
+  pdraw: { color: "#7FD6B0", shape: "V" },
   sdraw: { color: "#3FD0F0", shape: "I3" },
   imp: { color: "#5FD3E8", shape: "F" },
   khnd: { color: "#E8C76B", shape: "N" },
@@ -120,6 +122,9 @@ type StreetSpec = {
   sdCutoff: number;
   /** Noam 2026-11-05 (A72 turns first): flush and combo draws apart from the other draws, by equity. */
   strongDraws?: boolean;
+  /** Noam 2026-11-05 (A72 · 5♣, from the solver's equity buckets): a pair below top pair
+   * with a flush draw or an open-ender is its own group (EV 2–3bb above the same pair alone). */
+  pairDraws?: boolean;
   answers: Partial<Record<PGroup, Answer>>;
 };
 
@@ -314,9 +319,12 @@ const A72_TURNS: TurnSpec[] = [
     story: "5♣ · Wet. 43 makes the wheel, and a club flush draw and more straight draws arrive: BTN bets 66%.",
     ...CUT,
     strongDraws: true,
-    // Noam 2026-11-05: every answer on this turn checked by Noam.
+    pairDraws: true,
+    // Noam 2026-11-05: every answer on this turn checked by Noam, then checked against the
+    // solver's equity buckets (decisions/ranges/equity-buckets/A72-5c-turn.md).
     answers: {
-      twopair: a("b15", "A wet turn: the wheel is possible and a flush draw arrived, so sets and two pair go down to 15–25bb.", true),
+      twopair: a("b50", "The solver bets sets and two pair 125–250% pot 83% of the time here (EV about 12bb): stacks by the river, even on a wet turn."),
+      pdraw: a("b5", "A pair plus a draw (7x with a club, 76s): solver EV 5.8–7.4bb, 2–3bb more than the same pair alone, so 5–15bb."),
       tpgk: a("b15", "BB's range got stronger: one step down.", true),
       tpmk: a("b5", "One small bet, then showdown.", true),
       tpwk: a("b5", "A4 and A3 picked up a wheel draw: one small bet.", true),
@@ -934,7 +942,35 @@ function flushSuitOnTurn(board: Card[]): string | null {
   return SUITS.find((s) => board.filter((c) => c.s === s).length === 3) ?? null;
 }
 
-export function priceGroupOf(hole: [Card, Card], board: Card[], cut: Pick<StreetSpec, "goodKicker" | "midKicker" | "sdCutoff" | "strongDraws">): PGroup {
+export function priceGroupOf(hole: [Card, Card], board: Card[], cut: Pick<StreetSpec, "goodKicker" | "midKicker" | "sdCutoff" | "strongDraws" | "pairDraws">): PGroup {
+  const g = baseGroupOf(hole, board, cut);
+  if (cut.pairDraws && board.length === 4 && ["pp1", "pp2", "pp3", "mp", "bp"].includes(g) && pairPlusDraw(hole, board)) return "pdraw";
+  return g;
+}
+
+/** A flush draw (four of a suit with a hole card) or an open-ender (two ranks that each make a straight with a hole card). */
+function pairPlusDraw(hole: [Card, Card], board: Card[]): boolean {
+  const all = [...hole, ...board];
+  if (SUITS.some((s) => hole.some((c) => c.s === s) && all.filter((c) => c.s === s).length === 4)) return true;
+  const have = new Set(all.flatMap((c) => (c.r === 14 ? [1, 14] : [c.r])));
+  let outs = 0;
+  for (let r = 2; r <= 14; r++) {
+    if (have.has(r)) continue;
+    const t = new Set(have).add(r);
+    if (r === 14) t.add(1);
+    for (let lo = 1; lo <= 10; lo++) {
+      let ok = true;
+      for (let x = lo; x < lo + 5; x++) if (!t.has(x)) ok = false;
+      if (ok && hole.some((c) => (c.r === 14 ? [1, 14] : [c.r]).some((v) => v >= lo && v < lo + 5))) {
+        outs++;
+        break;
+      }
+    }
+  }
+  return outs >= 2;
+}
+
+function baseGroupOf(hole: [Card, Card], board: Card[], cut: Pick<StreetSpec, "goodKicker" | "midKicker" | "sdCutoff" | "strongDraws">): PGroup {
   const all = [...hole, ...board];
   const [x, y] = hole;
   const pocket = x.r === y.r;
@@ -1048,6 +1084,8 @@ function namesOf(g: PGroup, board: Card[], hands: string[], cut: Pick<StreetSpec
     }
     case "spp":
       return { label: runs(hands.map((h) => rv(h[0])), (r) => `${ch(r)}${ch(r)}`), name: "Small pocket pairs" };
+    case "pdraw":
+      return { label: "Pair + draw", name: "A pair below top pair plus a flush draw or an open-ender" };
     case "pfl": {
       const glyph = { s: "♠", h: "♥", d: "♦", c: "♣" }[flushSuitOnTurn(board) ?? "s"];
       return { label: `Pair + a ${glyph}`, name: `One pair with a ${glyph}: a fourth ${glyph} on the river makes a flush` };
