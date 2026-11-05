@@ -3,8 +3,8 @@
  * with Uri 2026-10-28; grouping rules: decisions/price-drill-rulebook.md).
  * SRP BTN vs BB, 100bb, BTN is the player. On every street BTN's range is
  * split into hand groups of the SAME strength, and the player drags each
- * group, one at a time, into what it's worth from here: Zero, Tiny pot, or
- * 5%, 20%, 50% or 100% of the stack, assuming the rest of the board bricks.
+ * group, one at a time, into how many big blinds it's worth from here:
+ * 0–5, 5–15, 15–25, 25–50 or 50–100bb, assuming the rest of the board bricks.
  * Bet sizes are never asked.
  *
  * Hands never leave the matrix: every street the whole range re-sorts into
@@ -44,35 +44,33 @@ export const PGROUP_INFO: Record<PGroup, { color: string; shape: string }> = {
   air: { color: "#56626C", shape: "U" },
 };
 
-/** What a group is worth from here, as a share of the stack that's left
- * (Noam 2026-10-30: rough shares, not exact bb). Noam/Uri 2026-11-02: the
- * drill only asks what a group is worth, so "zero" = wants no money (it can't
- * win by checking) and "tiny" = about 1bb (it sometimes wins at showdown, and
- * the pot is already as big as it wants). "little" ≈ 5%, "20" ≈ 20%,
- * "50" ≈ half the stack, "all" = 100%. */
-export type Bucket = "zero" | "tiny" | "little" | "20" | "50" | "all";
-export const BUCKETS: Bucket[] = ["zero", "tiny", "little", "20", "50", "all"];
-export const BUCKET_RANK: Record<Bucket, number> = { zero: 0, tiny: 1, little: 2, "20": 3, "50": 4, all: 5 };
+/** How many big blinds a group is worth from here, by the river (Noam
+ * 2026-11-05: plain bb ranges instead of "small pot / big pot / stacks",
+ * which were too abstract). Five boxes: 0–5, 5–15, 15–25, 25–50, 50–100bb.
+ * The old Zero and Tiny pot both became 0–5bb. */
+export type Bucket = "b0" | "b5" | "b15" | "b25" | "b50";
+export const BUCKETS: Bucket[] = ["b0", "b5", "b15", "b25", "b50"];
+export const BUCKET_RANK: Record<Bucket, number> = { b0: 0, b5: 1, b15: 2, b25: 3, b50: 4 };
 
-/** The neon paddle colors (Noam 2026-10-30): warmer = more money, violet
- * for zero, teal for a tiny pot. The matrix uses them too. */
+/** The neon paddle colors (Noam 2026-10-30): warmer = more money. The matrix uses them too. */
 export const BUCKET_COLOR: Record<Bucket, string> = {
-  zero: "#8B6CFF",
-  tiny: "#2EC4B6",
-  little: "#F2C14E",
-  "20": "#F59E3B",
-  "50": "#FF6B3B",
-  all: "#FF3D6E",
+  b0: "#8B6CFF",
+  b5: "#2EC4B6",
+  b15: "#F2C14E",
+  b25: "#FF7A3B",
+  b50: "#FF3D6E",
 };
 
-/** Tiny text for the legend and summary chips: just the number. */
+const BB_RANGE: Record<Bucket, string> = { b0: "0–5bb", b5: "5–15bb", b15: "15–25bb", b25: "25–50bb", b50: "50–100bb" };
+
+/** Tiny text for the legend and summary chips. */
 export function bucketTiny(b: Bucket): string {
-  return { zero: "Zero", tiny: "Tiny pot", little: "Small pot", "20": "Medium pot", "50": "Big pot", all: "Stacks" }[b];
+  return BB_RANGE[b];
 }
 
 /** Short text for toasts and feedback notes. */
 export function bucketShort(b: Bucket): string {
-  return { zero: "zero", tiny: "tiny pot", little: "small pot", "20": "medium pot", "50": "big pot", all: "stacks (all-in)" }[b];
+  return BB_RANGE[b];
 }
 
 export type Answer = { bucket: Bucket; why: string; sure: boolean; auto?: boolean };
@@ -93,7 +91,7 @@ type StreetSpec = {
 };
 
 const a = (bucket: Bucket, why: string, sure = false): Answer => ({ bucket, why, sure });
-const autoAll = (why: string): Answer => ({ bucket: "all", why, sure: true, auto: true });
+const autoAll = (why: string): Answer => ({ bucket: "b50", why, sure: true, auto: true });
 
 /** Straights and better place themselves unless a street says otherwise. */
 const AUTO: Partial<Record<PGroup, Answer>> = {
@@ -106,12 +104,12 @@ const AUTO: Partial<Record<PGroup, Answer>> = {
  * AQ is very strong on A72, grouped with AK). */
 const CUT = { goodKicker: 12, midKicker: 8, sdCutoff: 13 };
 
-const AIR = a("zero", "No pair and no high card: it can't win by checking, so it's worth zero.", true);
-const SD = (why = "K-high: no pair, but it sometimes wins at showdown. Draws included.") => a("tiny", why, true);
+const AIR = a("b0", "No pair and no high card: it can't win by checking, so it's worth zero.", true);
+const SD = (why = "K-high: no pair, but it sometimes wins at showdown. Draws included.") => a("b0", why, true);
 /** Noam 2026-10-30: when the river completes the draws, K-high has no showdown value left. */
-const SD_GONE = a("zero", "The draws arrived and the ranges are polar: K-high can't win at showdown any more, so it's worth zero.");
+const SD_GONE = a("b0", "The draws arrived and the ranges are polar: K-high can't win at showdown any more, so it's worth zero.");
 /** A hand that has already put in what it wants: check and show down. */
-const CHECKS = (why = "Check and show down.") => a("tiny", why);
+const CHECKS = (why = "Check and show down.") => a("b0", why);
 
 const A72_FLOP: StreetSpec = {
   card: "",
@@ -120,13 +118,13 @@ const A72_FLOP: StreetSpec = {
   ...CUT,
   answers: {
     twopair: autoAll("Sets and two pair want every chip in on a dry board."),
-    tpgk: a("50", "AK and AQ beat all of BB's weaker aces: three streets of value."),
-    tpmk: a("20", "AJ–A8 get called by better aces too often: two thin streets."),
-    tpwk: a("20", "Any ace is worth two small bets: even A6–A3 bet small now and small again."),
-    pp1: a("little", "KK–88 beat every 7x and 2x: one small bet, then showdown."),
-    pp2: a("tiny", "66–33 lose to every 7x: check and show down."),
-    mp: a("little", "Middle pair: one small bet at most."),
-    bp: a("tiny", "Bottom pair: check and show down."),
+    tpgk: a("b25", "AK and AQ beat all of BB's weaker aces: three streets of value."),
+    tpmk: a("b15", "AJ–A8 get called by better aces too often: two thin streets."),
+    tpwk: a("b15", "Any ace is worth two small bets: even A6–A3 bet small now and small again."),
+    pp1: a("b5", "KK–88 beat every 7x and 2x: one small bet, then showdown."),
+    pp2: a("b0", "66–33 lose to every 7x: check and show down."),
+    mp: a("b5", "Middle pair: one small bet at most."),
+    bp: a("b0", "Bottom pair: check and show down."),
     sd: SD(),
     air: AIR,
   },
@@ -148,16 +146,16 @@ const A72_TURNS: TurnSpec[] = [
     // keep putting money in; everything else checks back the turn.
     answers: {
       twopair: autoAll("Two pair and better want every chip in."),
-      tpgk: a("50", "AK keeps going for three streets of value: another big bet on a blank."),
-      tpmk: a("20", "Top pair on a brick turn: another 20%. That's its last bet."),
-      tpwk: a("20", "Top pair on a brick turn: another 20%. That's its last bet."),
+      tpgk: a("b25", "AK keeps going for three streets of value: another big bet on a blank."),
+      tpmk: a("b15", "Top pair on a brick turn: another 20%. That's its last bet."),
+      tpwk: a("b15", "Top pair on a brick turn: another 20%. That's its last bet."),
       pp1: CHECKS(),
       pp2: CHECKS(),
       pp3: CHECKS(),
       mp: CHECKS("Second pair (Qx): check and show down."),
       bp: CHECKS(),
       sd: SD(),
-      air: a("zero", "No showdown value: worth zero.", true),
+      air: a("b0", "No showdown value: worth zero.", true),
     },
     rivers: [
       {
@@ -167,7 +165,7 @@ const A72_TURNS: TurnSpec[] = [
         ...CUT,
         answers: {
           twopair: autoAll("After the overbet the rest is less than two pots: all-in."),
-          tpgk: a("50", "AK: a third healthy bet on a blank river, a big pot."),
+          tpgk: a("b25", "AK: a third healthy bet on a blank river: 25–50bb."),
           tpmk: CHECKS("AJ–A8 bet the flop and the turn: that was their last bet. Show down."),
           tpwk: CHECKS("A6–A3 bet the flop and the turn: show down."),
           pp1: CHECKS(),
@@ -185,7 +183,7 @@ const A72_TURNS: TurnSpec[] = [
         story: "K♦ · Wet. JT makes broadway.",
         ...CUT,
         answers: {
-          twopair: a("all", "Two pair and better stay the polar value, even with broadway out there."),
+          twopair: a("b50", "Two pair and better stay the polar value, even with broadway out there."),
           tpmk: CHECKS(),
           tpwk: CHECKS(),
           pp3: CHECKS(),
@@ -204,15 +202,15 @@ const A72_TURNS: TurnSpec[] = [
     ...CUT,
     answers: {
       twopair: autoAll("Still way ahead: charge every new draw."),
-      tpgk: a("50", "Still well ahead: keep charging the new draws."),
-      tpmk: a("little", "BB's range improved: the medium kickers slow down."),
-      tpwk: a("little", "One small bet, then showdown."),
-      pp1: a("tiny", "KK–88 under an ace: one small bet on the flop, then check down unless they improve."),
-      pp3: a("tiny", "55–33 are under three cards: check and show down."),
-      mp: a("little", "Keep the pot small."),
-      bp: a("tiny", "6x and 2x: check and show down."),
+      tpgk: a("b25", "Still well ahead: keep charging the new draws."),
+      tpmk: a("b5", "BB's range improved: the medium kickers slow down."),
+      tpwk: a("b5", "One small bet, then showdown."),
+      pp1: a("b0", "KK–88 under an ace: one small bet on the flop, then check down unless they improve."),
+      pp3: a("b0", "55–33 are under three cards: check and show down."),
+      mp: a("b5", "Keep the pot small."),
+      bp: a("b0", "6x and 2x: check and show down."),
       sd: SD(),
-      air: a("zero", "No showdown value: every flush and straight draw is worth zero here.", true),
+      air: a("b0", "No showdown value: every flush and straight draw is worth zero here.", true),
     },
     rivers: [
       {
@@ -222,13 +220,13 @@ const A72_TURNS: TurnSpec[] = [
         ...CUT,
         answers: {
           twopair: autoAll("The draws missed: get the rest in."),
-          tpgk: a("50", "AK and AQ: a third healthy bet against BB's weaker aces, a big pot."),
-          tpmk: a("little", "One small value bet at most."),
-          tpwk: a("tiny", "Check and show down."),
-          pp2: a("tiny", "Check and show down."),
-          pp3: a("tiny", "Check and show down."),
-          mp: a("tiny", "Check and show down."),
-          bp: a("tiny", "Check and show down."),
+          tpgk: a("b25", "AK and AQ: a third healthy bet against BB's weaker aces: 25–50bb."),
+          tpmk: a("b5", "One small value bet at most."),
+          tpwk: a("b0", "Check and show down."),
+          pp2: a("b0", "Check and show down."),
+          pp3: a("b0", "Check and show down."),
+          mp: a("b0", "Check and show down."),
+          bp: a("b0", "Check and show down."),
           air: AIR,
         },
       },
@@ -238,14 +236,14 @@ const A72_TURNS: TurnSpec[] = [
         story: "8♦ · Wet. The diamond flush and the 95, T9 and 54 straights all complete.",
         ...CUT,
         answers: {
-          twopair: a("20", "Behind every flush and straight: one value bet at most."),
-          tpgk: a("little", "Top pair is a bluff-catcher now."),
-          tpmk: a("tiny", "Check and show down."),
-          tpwk: a("tiny", "Check and show down."),
-          pp1: a("tiny", "Check and show down.", true),
-          pp3: a("tiny", "Check and show down.", true),
-          mp: a("tiny", "Check and show down.", true),
-          bp: a("tiny", "Check and show down.", true),
+          twopair: a("b15", "Behind every flush and straight: one value bet at most."),
+          tpgk: a("b5", "Top pair is a bluff-catcher now."),
+          tpmk: a("b0", "Check and show down."),
+          tpwk: a("b0", "Check and show down."),
+          pp1: a("b0", "Check and show down.", true),
+          pp3: a("b0", "Check and show down.", true),
+          mp: a("b0", "Check and show down.", true),
+          bp: a("b0", "Check and show down.", true),
           sd: SD_GONE,
           air: AIR,
         },
@@ -259,17 +257,17 @@ const A72_TURNS: TurnSpec[] = [
     story: "5♣ · Wet. 43 makes the wheel, and a club flush draw and more straight draws arrive: BTN bets 66%.",
     ...CUT,
     answers: {
-      twopair: a("50", "The wheel is possible now: still big, but not all-in."),
-      tpgk: a("20", "BB's range got stronger: one step down."),
-      tpmk: a("little", "One small bet, then showdown."),
-      tpwk: a("little", "A4 and A3 picked up a wheel draw: one small bet."),
-      pp1: a("tiny", "KK–88 under an ace: one small bet on the flop, then check down unless they improve."),
-      pp2: a("tiny", "66 is between the 7 and the 5: check and show down."),
-      pp3: a("tiny", "Check and show down."),
-      mp: a("tiny", "7x: check and show down."),
-      bp: a("tiny", "5x and 2x: check and show down."),
+      twopair: a("b25", "The wheel is possible now: still big, but not all-in."),
+      tpgk: a("b15", "BB's range got stronger: one step down."),
+      tpmk: a("b5", "One small bet, then showdown."),
+      tpwk: a("b5", "A4 and A3 picked up a wheel draw: one small bet."),
+      pp1: a("b0", "KK–88 under an ace: one small bet on the flop, then check down unless they improve."),
+      pp2: a("b0", "66 is between the 7 and the 5: check and show down."),
+      pp3: a("b0", "Check and show down."),
+      mp: a("b0", "7x: check and show down."),
+      bp: a("b0", "5x and 2x: check and show down."),
       sd: SD(),
-      air: a("zero", "No showdown value: every flush and straight draw is worth zero here.", true),
+      air: a("b0", "No showdown value: every flush and straight draw is worth zero here.", true),
     },
     rivers: [
       {
@@ -278,14 +276,14 @@ const A72_TURNS: TurnSpec[] = [
         story: "K♥ · Brick. The draws missed.",
         ...CUT,
         answers: {
-          twopair: a("50", "The draws missed, but the wheel is still out there: big, not all-in."),
-          tpgk: a("20", "The draws missed: back to a value bet."),
-          tpmk: a("little", "One small value bet at most."),
-          tpwk: a("tiny", "Check and show down."),
-          pp2: a("tiny", "Check and show down."),
-          pp3: a("tiny", "Check and show down."),
-          mp: a("tiny", "Check and show down."),
-          bp: a("tiny", "Check and show down."),
+          twopair: a("b25", "The draws missed, but the wheel is still out there: big, not all-in."),
+          tpgk: a("b15", "The draws missed: back to a value bet."),
+          tpmk: a("b5", "One small value bet at most."),
+          tpwk: a("b0", "Check and show down."),
+          pp2: a("b0", "Check and show down."),
+          pp3: a("b0", "Check and show down."),
+          mp: a("b0", "Check and show down."),
+          bp: a("b0", "Check and show down."),
           air: AIR,
         },
       },
@@ -295,15 +293,15 @@ const A72_TURNS: TurnSpec[] = [
         story: "6♣ · Wet. The club flush and the 43, 84 and 98 straights complete.",
         ...CUT,
         answers: {
-          twopair: a("20", "Behind every flush and straight: one value bet at most."),
-          tpgk: a("little", "Top pair is a bluff-catcher now."),
-          tpmk: a("tiny", "Check and show down."),
-          tpwk: a("tiny", "Check and show down."),
-          pp1: a("tiny", "Check and show down.", true),
-          pp2: a("tiny", "Check and show down.", true),
-          pp3: a("tiny", "Check and show down.", true),
-          mp: a("tiny", "Check and show down.", true),
-          bp: a("tiny", "Check and show down.", true),
+          twopair: a("b15", "Behind every flush and straight: one value bet at most."),
+          tpgk: a("b5", "Top pair is a bluff-catcher now."),
+          tpmk: a("b0", "Check and show down."),
+          tpwk: a("b0", "Check and show down."),
+          pp1: a("b0", "Check and show down.", true),
+          pp2: a("b0", "Check and show down.", true),
+          pp3: a("b0", "Check and show down.", true),
+          mp: a("b0", "Check and show down.", true),
+          bp: a("b0", "Check and show down.", true),
           sd: SD_GONE,
           air: AIR,
         },
@@ -318,10 +316,10 @@ const A72_TURNS: TurnSpec[] = [
  * every other jack (QJ–J2) one group: Noam 2026-10-31. No ace pairs here, so A-high is the
  * showdown cutoff. */
 const JT3_CUT = { goodKicker: 13, midKicker: 2, sdCutoff: 14 };
-const A_HIGH_SD = (why = "A-high: no pair, but it sometimes wins at showdown. Draws included.") => a("tiny", why);
-const A_HIGH_GONE = a("zero", "The draws arrived and the ranges are polar: A-high can't win at showdown any more, so it's worth zero.");
-const JT3_AIR = a("zero", "No pair and no ace: it can't win by checking, so it's worth zero. Flush and straight draws live here.", true);
-const SHOW = (why = "Check and show down.") => a("tiny", why);
+const A_HIGH_SD = (why = "A-high: no pair, but it sometimes wins at showdown. Draws included.") => a("b0", why);
+const A_HIGH_GONE = a("b0", "The draws arrived and the ranges are polar: A-high can't win at showdown any more, so it's worth zero.");
+const JT3_AIR = a("b0", "No pair and no ace: it can't win by checking, so it's worth zero. Flush and straight draws live here.", true);
+const SHOW = (why = "Check and show down.") => a("b0", why);
 
 const JT3_FLOP: StreetSpec = {
   card: "",
@@ -330,14 +328,14 @@ const JT3_FLOP: StreetSpec = {
   ...JT3_CUT,
   answers: {
     twopair: autoAll("Sets and JT want every chip in on a wet board."),
-    op: a("50", "QQ–AA beat every jack, but this board moves: build the pot now."),
-    tpgk: a("20", "AJ and KJ: two streets of value against BB's weaker jacks and draws."),
-    tpmk: a("20", "Top pair wants 20% on the flop, even on a moving board, assuming it bricks."),
-    tpwk: a("little", "J8 and below: one small bet at most."),
+    op: a("b25", "QQ–AA beat every jack, but this board moves: build the pot now."),
+    tpgk: a("b15", "AJ and KJ: two streets of value against BB's weaker jacks and draws."),
+    tpmk: a("b15", "Top pair wants 20% on the flop, even on a moving board, assuming it bricks."),
+    tpwk: a("b5", "J8 and below: one small bet at most."),
     pp1: SHOW(),
     pp2: SHOW("99–44 are under two broadway cards: check and show down."),
     pp3: SHOW("22 is under every card: check and show down."),
-    mp: a("little", "Second pair (Tx): one small bet at most."),
+    mp: a("b5", "Second pair (Tx): one small bet at most."),
     bp: SHOW("Bottom pair (3x): check and show down."),
     sd: A_HIGH_SD(),
     air: JT3_AIR,
@@ -353,9 +351,9 @@ const JT3_TURNS: TurnSpec[] = [
     ...JT3_CUT,
     answers: {
       twopair: autoAll("Sets and two pair want every chip in."),
-      op: a("50", "QQ–AA beat every jack: another big bet on a blank."),
-      tpgk: a("20", "Top pair on a brick turn: another 20%. That's its last bet."),
-      tpmk: a("20", "Top pair on a brick turn: another 20%. That's its last bet."),
+      op: a("b25", "QQ–AA beat every jack: another big bet on a blank."),
+      tpgk: a("b15", "Top pair on a brick turn: another 20%. That's its last bet."),
+      tpmk: a("b15", "Top pair on a brick turn: another 20%. That's its last bet."),
       tpwk: CHECKS(),
       pp1: CHECKS(),
       pp2: CHECKS(),
@@ -363,7 +361,7 @@ const JT3_TURNS: TurnSpec[] = [
       mp: CHECKS(),
       bp: CHECKS(),
       sd: A_HIGH_SD(),
-      air: a("zero", "Flush draws, straight draws and air: no showdown value, so worth zero.", true),
+      air: a("b0", "Flush draws, straight draws and air: no showdown value, so worth zero.", true),
     },
     rivers: [
       {
@@ -373,7 +371,7 @@ const JT3_TURNS: TurnSpec[] = [
         ...JT3_CUT,
         answers: {
           twopair: autoAll("Nothing got there: get the rest in."),
-          op: a("50", "QQ–AA: a third healthy bet on a blank river, a big pot."),
+          op: a("b25", "QQ–AA: a third healthy bet on a blank river: 25–50bb."),
           tpgk: CHECKS("Top pair bet the flop and the turn: that was its last bet. Show down."),
           tpmk: CHECKS("Top pair bet the flop and the turn: that was its last bet. Show down."),
           tpwk: CHECKS(),
@@ -392,7 +390,7 @@ const JT3_TURNS: TurnSpec[] = [
         story: "9♠ · Wet. The spade flush and the KQ, Q8 and 87 straights complete.",
         ...JT3_CUT,
         answers: {
-          twopair: a("20", "Behind every flush and straight now: one value bet at most."),
+          twopair: a("b15", "Behind every flush and straight now: one value bet at most."),
           op: SHOW("Overpairs are bluff-catchers now."),
           tpgk: SHOW(),
           tpmk: SHOW(),
@@ -416,9 +414,9 @@ const JT3_TURNS: TurnSpec[] = [
     ...JT3_CUT,
     answers: {
       twopair: autoAll("Still way ahead: charge both flush draws."),
-      op: a("50", "QQ–AA are still ahead: keep charging the draws."),
-      tpgk: a("20", "AJ and KJ: the second small bet goes in now."),
-      tpmk: a("little", "QJ–J7: one more small bet at most."),
+      op: a("b25", "QQ–AA are still ahead: keep charging the draws."),
+      tpgk: a("b15", "AJ and KJ: the second small bet goes in now."),
+      tpmk: a("b5", "QJ–J7: one more small bet at most."),
       tpwk: SHOW(),
       pp1: SHOW(),
       pp2: SHOW(),
@@ -436,8 +434,8 @@ const JT3_TURNS: TurnSpec[] = [
         ...JT3_CUT,
         answers: {
           twopair: autoAll("The draws missed: get the rest in."),
-          op: a("50", "A third healthy bet against BB's jacks: a big pot."),
-          tpgk: a("little", "One small value bet at most."),
+          op: a("b25", "A third healthy bet against BB's jacks: 25–50bb."),
+          tpgk: a("b5", "One small value bet at most."),
           tpmk: SHOW(),
           tpwk: SHOW(),
           pp1: SHOW(),
@@ -455,7 +453,7 @@ const JT3_TURNS: TurnSpec[] = [
         story: "Q♠ · Wet. The spade flush and the AK, K9 and 98 straights complete.",
         ...JT3_CUT,
         answers: {
-          twopair: a("20", "Behind every flush and straight now: one value bet at most."),
+          twopair: a("b15", "Behind every flush and straight now: one value bet at most."),
           op: SHOW("Overpairs are bluff-catchers now."),
           tpgk: SHOW(),
           tpmk: SHOW(),
@@ -478,9 +476,9 @@ const JT3_TURNS: TurnSpec[] = [
     story: "9♠ · Wet. The spade flush and the KQ, Q8 and 87 straights arrive: BTN bets 66%.",
     ...JT3_CUT,
     answers: {
-      twopair: a("50", "Strong, but every flush and straight beats it now: big, not all-in."),
-      op: a("little", "QQ–AA without a spade: one small bet at most."),
-      tpgk: a("little", "AJ and KJ: one small bet at most."),
+      twopair: a("b25", "Strong, but every flush and straight beats it now: big, not all-in."),
+      op: a("b5", "QQ–AA without a spade: one small bet at most."),
+      tpgk: a("b5", "AJ and KJ: one small bet at most."),
       tpmk: SHOW(),
       tpwk: SHOW(),
       pp1: SHOW(),
@@ -498,8 +496,8 @@ const JT3_TURNS: TurnSpec[] = [
         story: "2♦ · Brick. Nothing new completes.",
         ...JT3_CUT,
         answers: {
-          twopair: a("50", "Still strong, with the flush and straights already out: big, not all-in."),
-          op: a("little", "One small value bet at most."),
+          twopair: a("b25", "Still strong, with the flush and straights already out: big, not all-in."),
+          op: a("b5", "One small value bet at most."),
           tpgk: SHOW(),
           tpmk: SHOW(),
           tpwk: SHOW(),
@@ -518,7 +516,7 @@ const JT3_TURNS: TurnSpec[] = [
         story: "8♠ · Wet. A fourth spade: any single spade makes a flush.",
         ...JT3_CUT,
         answers: {
-          twopair: a("little", "Behind every spade now: one small bet at most."),
+          twopair: a("b5", "Behind every spade now: one small bet at most."),
           op: SHOW("Overpairs are bluff-catchers now."),
           tpgk: SHOW(),
           tpmk: SHOW(),
@@ -555,23 +553,23 @@ function valueStreets(g: PGroup, wetFlop: boolean): number {
   return 0;
 }
 
-const FLOP_BUCKET: Record<number, Bucket> = { 3: "50", 2: "20", 1: "little", 0: "tiny" };
+const FLOP_BUCKET: Record<number, Bucket> = { 3: "b25", 2: "b15", 1: "b5", 0: "b0" };
 
 type RunoutKinds = { wetFlop: boolean; turn?: StreetKind; river?: StreetKind };
 
 /** What one group wants on one street of a generated board. */
 function ruleAnswer(g: PGroup, street: Street, k: RunoutKinds): Answer {
   if (g === "monster") return autoAll("Straights and better want every chip in.");
-  if (g === "air") return a("zero", "No pair and no showdown value: it can't win by checking, so it's worth zero.", true);
+  if (g === "air") return a("b0", "No pair and no showdown value: it can't win by checking, so it's worth zero.", true);
   if (g === "sd") {
-    if (street === "river" && k.river === "wet") return a("zero", "The draws arrived and the ranges are polar: this high card can't win at showdown any more.");
-    return a("tiny", "No pair, but the highest cards sometimes win at showdown. Draws included.", true);
+    if (street === "river" && k.river === "wet") return a("b0", "The draws arrived and the ranges are polar: this high card can't win at showdown any more.");
+    return a("b0", "No pair, but the highest cards sometimes win at showdown. Draws included.", true);
   }
   if (g === "twopair") {
     if (street === "flop" || (street === "turn" && k.turn !== "wet")) return autoAll("Sets and two pair want every chip in.");
-    if (street === "turn") return a("50", "The turn completed draws: still big, not all-in.");
-    if (k.river === "wet") return a("20", "Behind every new flush and straight: one value bet at most.");
-    return k.turn === "wet" ? a("50", "The draws missed, but the turn already brought them: big, not all-in.") : autoAll("Nothing got there: get the rest in.");
+    if (street === "turn") return a("b25", "The turn completed draws: still big, not all-in.");
+    if (k.river === "wet") return a("b15", "Behind every new flush and straight: one value bet at most.");
+    return k.turn === "wet" ? a("b25", "The draws missed, but the turn already brought them: big, not all-in.") : autoAll("Nothing got there: get the rest in.");
   }
   const n = valueStreets(g, k.wetFlop);
   if (street === "flop") {
@@ -582,15 +580,15 @@ function ruleAnswer(g: PGroup, street: Street, k: RunoutKinds): Answer {
   }
   if (street === "turn") {
     const left = n - 1;
-    if (left <= 0) return a("tiny", n === 1 ? "It already made its one small bet: check and show down." : "Check and show down.");
-    if (k.turn === "brick") return left >= 2 ? a("50", "A blank: keep going for value.") : a("20", "Top pair on a brick turn: another 20%. That's its last bet.");
-    if (k.turn === "dynamic") return left >= 2 ? a("50", "Still ahead: keep charging the new draws.") : a("little", "BB's range improved: one more small bet at most.");
-    return left >= 2 ? a("20", "The turn completed draws: one step down.") : a("little", "The turn completed draws: one small bet at most.");
+    if (left <= 0) return a("b0", n === 1 ? "It already made its one small bet: check and show down." : "Check and show down.");
+    if (k.turn === "brick") return left >= 2 ? a("b25", "A blank: keep going for value.") : a("b15", "Top pair on a brick turn: another 20%. That's its last bet.");
+    if (k.turn === "dynamic") return left >= 2 ? a("b25", "Still ahead: keep charging the new draws.") : a("b5", "BB's range improved: one more small bet at most.");
+    return left >= 2 ? a("b15", "The turn completed draws: one step down.") : a("b5", "The turn completed draws: one small bet at most.");
   }
   const left = n - 2;
-  if (left <= 0) return a("tiny", n === 2 ? "It bet the flop and the turn: that was its last bet. Show down." : "Check and show down.");
-  if (k.river === "wet") return a("little", "The river completed draws: a bluff-catcher now, a small bet at most.");
-  return k.turn === "wet" ? a("little", "The draws missed, but the turn was scary: one small value bet.") : a("50", "A third healthy bet on a blank river: a big pot.");
+  if (left <= 0) return a("b0", n === 2 ? "It bet the flop and the turn: that was its last bet. Show down." : "Check and show down.");
+  if (k.river === "wet") return a("b5", "The river completed draws: a bluff-catcher now, a small bet at most.");
+  return k.turn === "wet" ? a("b5", "The draws missed, but the turn was scary: one small value bet.") : a("b25", "A third healthy bet on a blank river: 25–50bb.");
 }
 
 /** Kicker and showdown cutoffs from the board itself: the two best kickers
@@ -968,12 +966,12 @@ const STREET_NAMES: Street[] = ["flop", "turn", "river"];
  * on the flop wants some money, even the worst one: never showdown value yet. */
 const PAIR_GROUPS = new Set<PGroup>(["op", "tpgk", "tpmk", "tpwk", "pp1", "pp2", "pp3", "mp", "bp"]);
 function everyBoardRule(g: PGroup, street: Street, ans: Answer | undefined): Answer | undefined {
-  if (ans && street === "flop" && PAIR_GROUPS.has(g) && BUCKET_RANK[ans.bucket] < BUCKET_RANK.little) {
-    return a("little", "Any pair on the flop of a single-raised pot wants some money: both ranges are wide.");
+  if (ans && street === "flop" && PAIR_GROUPS.has(g) && BUCKET_RANK[ans.bucket] < BUCKET_RANK.b5) {
+    return a("b5", "Any pair on the flop of a single-raised pot wants some money: both ranges are wide.");
   }
   // Noam/Uri 2026-11-02: ace-high (king-high on an ace board) has showdown value
   // on the flop, almost never on the turn. Zero on every turn until feedback adds exceptions.
-  if (street === "turn" && g === "sd") return a("zero", "No pair on the turn: this high card has lost its showdown value, so it's worth zero.");
+  if (street === "turn" && g === "sd") return a("b0", "No pair on the turn: this high card has lost its showdown value, so it's worth zero.");
   return ans;
 }
 
@@ -981,16 +979,16 @@ function everyBoardRule(g: PGroup, street: Street, ans: Answer | undefined): Ans
  * more, 88 and lower are zero until they improve, 99 and up under the top card
  * are a small pot, and lower pairs a tiny pot. */
 function flopRule(g: PGroup, board: Card[]): Answer | undefined {
-  if (g === "spp") return a("zero", "The flop had two or more broadway cards: small pairs want no money in the pot unless they improve.", true);
-  if (g === "aho") return a("little", "At most one broadway card, or a paired flop: ace-high with two overcards is worth a small bet.", true);
+  if (g === "spp") return a("b0", "The flop had two or more broadway cards: small pairs want no money in the pot unless they improve.", true);
+  if (g === "aho") return a("b5", "At most one broadway card, or a paired flop: ace-high with two overcards is worth a small bet.", true);
   if (flopTexture(board) !== "high") return undefined;
-  if (g === "pp1" || g === "pp2" || g === "pp3") return a("little", "Two or more broadway cards on the flop: 99 to JJ are still worth a small pot.", true);
-  if (g === "bp") return a("tiny", "Two or more broadway cards on the flop: third pair or lower is only worth a tiny pot.", true);
+  if (g === "pp1" || g === "pp2" || g === "pp3") return a("b5", "Two or more broadway cards on the flop: 99 to JJ are still worth 5–15bb.", true);
+  if (g === "bp") return a("b0", "Two or more broadway cards on the flop: third pair or lower is only worth 0–5bb.", true);
   return undefined;
 }
 
 function riverRule(g: PGroup, street: Street): Answer | undefined {
-  if (street === "river" && g === "pp3") return a("zero", "Fourth pair or worse on the river: it rarely wins at showdown, so it's worth zero.");
+  if (street === "river" && g === "pp3") return a("b0", "Fourth pair or worse on the river: it rarely wins at showdown, so it's worth zero.");
   return undefined;
 }
 
@@ -1018,8 +1016,8 @@ function veryWet(board: Card[]): boolean {
 function veryWetRule(g: PGroup, street: Street, board: Card[], ans: Answer | undefined): Answer | undefined {
   if (!ans || street === "flop" || !veryWet(board)) return ans;
   if (g !== "twopair" && !PAIR_GROUPS.has(g)) return ans;
-  if (BUCKET_RANK[ans.bucket] <= BUCKET_RANK.tiny) return ans;
-  return a("tiny", g === "twopair" ? "One card makes a straight or a flush is in: sets and two pair only get called by better. Check and show down." : "A very wet board: one pair only gets called by better. Check and show down.");
+  if (BUCKET_RANK[ans.bucket] <= BUCKET_RANK.b0) return ans;
+  return a("b0", g === "twopair" ? "One card makes a straight or a flush is in: sets and two pair only get called by better. Check and show down." : "A very wet board: one pair only gets called by better. Check and show down.");
 }
 const RUNOUT_CACHE = new Map<number, Runout>();
 

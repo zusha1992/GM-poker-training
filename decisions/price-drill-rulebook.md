@@ -13,20 +13,27 @@ This is a living document. It holds every rule for splitting BTN's range into ha
 - Bet sizes are never asked. Only the money each group wants. *(Noam)*
 - Between streets, BTN bets and BB calls. The flop bet is always small (1.8bb). The turn bet depends on the card (section 2b). Pots: 5.5bb on the flop, 9.1bb on the turn, then about 36bb on the river after an overbet turn or about 21bb after a 66% turn. The player sees the pot, the stack behind and the bet size. *(draft numbers)*
 
-## 2. The six boxes
+## 2. The five boxes *(Noam, 2026-11-05)*
 
-*Older rules below may still say 5% / 20% / 50% / 100%: read them as Small pot / Medium pot / Big pot / Stacks. They may also say "potential bluff" and "showdown value": read them as Zero and Tiny pot.*
- *(Noam, 2026-10-29; money as stack shares since 2026-10-30)*
+**The boxes are big-blind ranges: 0–5bb, 5–15bb, 15–25bb, 25–50bb and 50–100bb.** That's every possibility. Names like "small pot" or "stacks" were too abstract.
 
-**The drill only asks how much money a group is worth** *(Noam and Uri, 2026-11-02)*. Bluffing, protection and draws are not part of the question. A draw adds nothing to a hand's worth here.
+*Older rules below may use the old names. Read them like this:*
+- Zero, Tiny pot, potential bluff, showdown value → **0–5bb**
+- Small pot, 5% → **5–15bb**
+- Medium pot, 20% → **15–25bb**
+- Big pot, 50% → **25–50bb**
+- Stacks, 100%, all-in → **50–100bb**
 
-| Box | Means |
-|---|---|
-| **Zero** (bottom-left corner) | Wants exactly zero money in the pot: it can't win by checking. *(Noam and Uri, 2026-11-02; was "Potential bluffs")* |
-| **Tiny pot** (bottom-right corner) | Worth about 1bb. It sometimes wins at showdown, and the pot is already as big as it wants. *(Noam and Uri, 2026-11-02; was "Showdown value")* |
-| **Small pot · Medium pot · Big pot · Stacks** (left side, top corners, right side) | How big a pot the group wants to play by the river *(Noam, 2026-10-31: pot sizes, not percentages)*. Two small bets can still be a small pot: it is about where the pot ends up, not how many bets. *(Noam: no exact bb numbers like +5/+15/+40, because we don't aim for that accuracy.)* |
+**The drill only asks how much money a group is worth** *(Noam and Uri, 2026-11-02)*. Bluffing, protection and draws are not part of the question. A draw adds nothing to a hand's worth here. The box is about where the money ends up by the river, not how many bets go in.
 
-Layout *(Noam, 2026-10-30)*: six neon paddles in one design (Arkanoid-style), different colors, evenly spaced around the drop area, clockwise from small to big: Zero (bottom-left corner), 5% (left side), 20% (top-left corner), 50% (top-right corner), 100% (right side), Tiny pot (bottom-right corner). Labels are only the number. The paddle the piece is near lights up; it flashes when the piece lands.
+Layout *(Noam, 2026-11-05)*: five neon paddles in one design (Arkanoid-style), different colors, in an arc over the drop area like a gauge, small to big from left to right:
+- 0–5bb on the left side;
+- 5–15bb in the top-left corner;
+- 15–25bb in the top middle;
+- 25–50bb in the top-right corner;
+- 50–100bb on the right side.
+
+The paddle the piece is near lights up, and it flashes when the piece lands.
 
 ## 2b. Bet sizes between streets *(Noam, 2026-10-30)*
 
@@ -196,3 +203,4 @@ Their answers are not written one by one: they come from a **value plan**, the r
 - **2026-11-02**: From Noam and Uri, applied to every board: the drill only asks what a group is worth. "Potential bluffs" became Zero and "Showdown value" became Tiny pot. A-high (K-high on an ace board) is a tiny pot on the flop and zero on every turn.
 - **2026-11-02**: From Noam, from Uri: flops with at most one broadway card or paired: small pairs and ace-high with two overcards are worth a small bet. Flops with two or more broadway cards: 99–JJ and second pair or better are a small pot; ace-high and third pair or lower are a tiny pot; 88 and lower are Zero and stay Zero on the turn and river unless they improve.
 - **2026-11-02**: Paired flops are in the rulebook, and an 11th board was added: 8♠8♦6♣ (6 runouts, answers computed from the rules, all drafts).
+- **2026-11-05**: From Noam: the six named boxes became five big-blind ranges: 0–5, 5–15, 15–25, 25–50 and 50–100bb. Zero and Tiny pot merged into 0–5bb, and every other box moved one to one. The paddles now form an arc over the drop area, small to big from left to right. Noam is re-answering every board group by group.

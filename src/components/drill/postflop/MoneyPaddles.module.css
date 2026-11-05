@@ -1,4 +1,4 @@
-/* The six neon paddles around the drop area (Arkanoid-style): one design,
+/* The five neon paddles around the drop area (Arkanoid-style): one design,
  * different colors. Each paddle sets --c (its color). */
 
 .paddle {

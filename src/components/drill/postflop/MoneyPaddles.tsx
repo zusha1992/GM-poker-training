@@ -4,25 +4,27 @@ import type { CSSProperties } from "react";
 import { BUCKET_COLOR, type Bucket } from "@/lib/drill/postflop/price-hands";
 import styles from "./MoneyPaddles.module.css";
 
-/** Where each paddle sits, clockwise from small money to big: zero in the
- * bottom-left corner, 5% on the left side, 20% and 50% in the top corners,
- * 100% on the right side, tiny pot in the bottom-right corner. */
-type Spot = "bl" | "left" | "tl" | "tr" | "right" | "br";
-const SPOT: Record<Bucket, Spot> = { zero: "bl", little: "left", "20": "tl", "50": "tr", all: "right", tiny: "br" };
-/** How big a pot each paddle stands for (Noam 2026-10-31: pot sizes, not percentages). */
-const LABEL: Record<Bucket, string> = { zero: "Zero", tiny: "Tiny\npot", little: "Small\npot", "20": "Medium\npot", "50": "Big\npot", all: "Stacks" };
+/** Where each paddle sits: an arc over the drop area like a gauge, small
+ * money to big from left to right (Noam 2026-11-05: five bb boxes). 0–5 on
+ * the left side, 5–15 and 25–50 in the top corners, 15–25 top middle,
+ * 50–100 on the right side. The bottom stays free for the piece count. */
+type Spot = "left" | "tl" | "top" | "tr" | "right";
+const SPOT: Record<Bucket, Spot> = { b0: "left", b5: "tl", b15: "top", b25: "tr", b50: "right" };
+const LABEL: Record<Bucket, string> = { b0: "0–5\nbb", b5: "5–15\nbb", b15: "15–25bb", b25: "25–50\nbb", b50: "50–100\nbb" };
 
 const INSET = 6;
 const STROKE = 12;
 /** A side paddle's touch area is wider than the paddle itself. */
 const SIDE_HIT = 58;
 
-/** One length for every paddle (a corner's two arms add up to it, a side
- * paddle is it), as big as the area allows with room between them. */
+/** One length for every paddle (a corner's two arms add up to it, a side or
+ * top paddle is it), as big as the area allows with room between them: a
+ * side paddle stays below the top corners, and the top row is two corner
+ * arms plus the top paddle. */
 export function paddleLength(w: number, h: number): number {
-  const fromHeight = (h - 2 * INSET - 2 * 18) / 2;
-  const fromWidth = w - 2 * INSET - 70;
-  return Math.max(80, Math.min(fromHeight, fromWidth, 240));
+  const fromHeight = (h - 2 * INSET - 18) / 1.5;
+  const fromWidth = (w - 2 * INSET - 2 * 18) / 2;
+  return Math.max(80, Math.min(fromHeight, fromWidth, 200));
 }
 
 type Props = {
@@ -38,8 +40,8 @@ type Props = {
   hitRef: (b: Bucket, el: HTMLDivElement | null) => void;
 };
 
-/** The six drop targets as neon paddles: same design, different colors,
- * evenly placed around the frame of the drop area. */
+/** The five drop targets as neon paddles: same design, different colors,
+ * in an arc around the top of the drop area. */
 export function MoneyPaddles({ w, h, armed, holding, flash, hitRef }: Props) {
   const L = paddleLength(w, h);
   const a = Math.round(L / 2);
@@ -51,14 +53,34 @@ export function MoneyPaddles({ w, h, armed, holding, flash, hitRef }: Props) {
         const cls = [styles.paddle, holding ? styles.holding : "", armed === b ? styles.armed : "", flash[b] ? styles.flash : ""].join(" ");
         const style = { "--c": BUCKET_COLOR[b] } as CSSProperties;
         const key = `${b}-${flash[b] ?? 0}`;
-        if (spot === "left" || spot === "right") {
-          const side = spot;
+        if (spot === "top") {
           return (
             <div
               key={key}
               ref={(el) => hitRef(b, el)}
               className={cls}
-              style={{ ...style, [side]: INSET, top: "50%", width: SIDE_HIT, height: L, transform: "translateY(-50%)" }}
+              style={{ ...style, top: INSET, left: "50%", width: L, height: SIDE_HIT, transform: "translateX(-50%)" }}
+              data-testid={`bucket-${b}`}
+            >
+              <span className={styles.stroke} style={{ top: 0, left: 0, right: 0, height: STROKE, borderRadius: STROKE / 2, background: "var(--c)" }} />
+              <span className={styles.inner} style={{ top: 5, left: 7, right: 7, height: 2, borderRadius: 1, background: "#fff" }} />
+              <span className={styles.label} style={{ top: STROKE + 8, left: 0, right: 0, fontSize: 15, textAlign: "center", transformOrigin: "center top" }}>
+                {LABEL[b]}
+              </span>
+            </div>
+          );
+        }
+        if (spot === "left" || spot === "right") {
+          const side = spot;
+          // Centered in the height left below the top corners.
+          const below = INSET + a + 18;
+          const top = below + Math.max(0, (h - INSET - below - L) / 2);
+          return (
+            <div
+              key={key}
+              ref={(el) => hitRef(b, el)}
+              className={cls}
+              style={{ ...style, [side]: INSET, top, width: SIDE_HIT, height: L }}
               data-testid={`bucket-${b}`}
             >
               <span
