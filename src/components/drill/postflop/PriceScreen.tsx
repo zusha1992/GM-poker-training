@@ -29,8 +29,9 @@ import { MoneyPaddles } from "./MoneyPaddles";
 import { SortPiece } from "./SortPiece";
 import { BoardCard, IconButton, InspectPanel, PrimaryButton, Row, Shell, StreetTrack } from "./drill-ui";
 
-/** Matrix color of a group nobody has answered yet on this street. */
-const UNSEEN = "#46525C";
+/** The matrix shows the range only, every hand in one quiet color (Noam
+ * 2026-11-05: no colors for answers, no emphasis on what goes for stacks). */
+const RANGE = "#46525C";
 
 /** "deal" = a card just came: its story shows and the obvious groups place
  * themselves. "advancing" = every group placed: BTN bets, BB calls, next card. */
@@ -95,10 +96,8 @@ export function PriceScreen() {
   const [inspecting, setInspecting] = useState(false);
   const [shake, setShake] = useState(0);
   const [flying, setFlying] = useState<{ key: PGroup; bucket: Bucket; rect: DOMRect | null } | null>(null);
-  const [pulse, setPulse] = useState<{ groups: PGroup[]; seq: number; color?: string } | null>(null);
   const [seq, setSeq] = useState(0);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
-  const pulseSeq = useRef(0);
   const busy = useRef(false);
   const generation = useRef(0);
   const boxes = useRef<Partial<Record<Bucket, HTMLDivElement | null>>>({});
@@ -137,15 +136,7 @@ export function PriceScreen() {
   const done = queue.filter((p) => placed[p.key]).length;
   const prevSnap = streetIdx > 0 ? runout.streets[streetIdx - 1].snap : undefined;
 
-  // Unanswered groups grey, the current one in its own color, answered ones in their money color.
-  const palette: MatrixPalette = {
-    order: PGROUP_ORDER,
-    fill: (g) => {
-      if (phase === "decide" && current?.key === g) return PGROUP_INFO[g as PGroup].color;
-      const b = placed[g as PGroup];
-      return b ? BUCKET_COLOR[b] : UNSEEN;
-    },
-  };
+  const palette: MatrixPalette = { order: PGROUP_ORDER, fill: () => RANGE };
 
   // What a feedback note written right now is about: the spot, and the group on screen.
   const focusPiece = phase === "decide" ? current : null;
@@ -165,11 +156,6 @@ export function PriceScreen() {
     }, ms);
   }
 
-  function pop(groups: PGroup[], color?: string) {
-    pulseSeq.current += 1;
-    setPulse({ groups, seq: pulseSeq.current, color });
-  }
-
   /** A new card: show its story, then the obvious groups drop into their boxes. */
   function enterStreet(i: number, r: Runout = runout) {
     busy.current = true;
@@ -180,7 +166,6 @@ export function PriceScreen() {
     setQueue(shuffled(s.pieces));
     setFlying(null);
     setInspecting(false);
-    setPulse(null);
     setSeq((n) => n + 1);
     setPhase("deal");
     later(() => {
@@ -188,7 +173,6 @@ export function PriceScreen() {
       for (const g of s.auto) auto[g] = s.answers[g]!.bucket;
       setPlaced(auto);
       flashPaddles([...new Set(s.auto.map((g) => s.answers[g]!.bucket))]);
-      pop(s.auto);
       tone(523, 0.08);
       setTimeout(() => tone(659, 0.12), 80);
     }, 900);
@@ -232,7 +216,6 @@ export function PriceScreen() {
     goodSound();
     buzz(15);
     setFlying({ key: p.key, bucket: b, rect: boxes.current[b]?.getBoundingClientRect() ?? null });
-    pop([p.key], BUCKET_COLOR[b]);
     flashPaddles([b]);
     const next = { ...placed, [p.key]: b };
     // Let the piece land before the next one appears.
@@ -363,9 +346,8 @@ export function PriceScreen() {
           <div className="flex flex-shrink-0 flex-col gap-1 rounded-xl p-1.5" style={{ background: "var(--panel)", border: "1px solid var(--line)" }}>
             {/* Shrinks on short phones so the boxes always fit below it. */}
             <div className="mx-auto w-full" style={{ maxWidth: "max(220px, calc(100dvh - 476px))" }}>
-              <LineMatrix snap={st.snap} prev={prevSnap} seq={seq} palette={palette} pulse={pulse} />
+              <LineMatrix snap={st.snap} prev={prevSnap} seq={seq} palette={palette} />
             </div>
-            <MoneyLegend />
           </div>
 
           {/* The drop area: neon paddles around the frame, the piece floating in the middle. */}
@@ -475,24 +457,6 @@ function BetLine({ street, turnBet }: { street: string; turnBet: TurnBet }) {
       <span className="min-w-0 truncate text-[11px]" style={{ color: "var(--muted)" }}>
         {note}
       </span>
-    </div>
-  );
-}
-
-/** The matrix shows money, not groups: one swatch per box, plus "not asked yet". */
-function MoneyLegend() {
-  return (
-    <div className="flex flex-wrap justify-center gap-x-2 gap-y-0.5 text-[10px]" style={{ color: "var(--muted)" }} data-testid="price-legend">
-      <span className="flex items-center gap-1">
-        <i className="inline-block h-[8px] w-[8px] rounded-[2px]" style={{ background: UNSEEN, outline: "1px solid var(--line)" }} />
-        Not yet
-      </span>
-      {BUCKETS.map((b) => (
-        <span key={b} className="flex items-center gap-1">
-          <i className="inline-block h-[8px] w-[8px] rounded-[2px]" style={{ background: BUCKET_COLOR[b] }} />
-          {bucketTiny(b)}
-        </span>
-      ))}
     </div>
   );
 }
