@@ -40,13 +40,14 @@ export type PGroup =
   | "bp"
   | "aho"
   | "pfl"
+  | "sdraw"
   | "imp"
   | "khnd"
   | "sd"
   | "air";
 /** imp/khnd/air: the no-pair hands split by whether they can improve (see
  * noPairGroupOf). "sd" is no longer used: kept for old feedback notes. */
-export const PGROUP_ORDER: PGroup[] = ["boat", "flush", "straight", "trips", "twopair", "op", "tpgk", "tpmk", "tpwk", "pp1", "pp2", "pp3", "spp", "mp", "bp", "pfl", "aho", "imp", "khnd", "sd", "air"];
+export const PGROUP_ORDER: PGroup[] = ["boat", "flush", "straight", "trips", "twopair", "op", "tpgk", "tpmk", "tpwk", "pp1", "pp2", "pp3", "spp", "mp", "bp", "pfl", "aho", "sdraw", "imp", "khnd", "sd", "air"];
 
 /** Same color and shape on every board and street. */
 export const PGROUP_INFO: Record<PGroup, { color: string; shape: string }> = {
@@ -67,6 +68,7 @@ export const PGROUP_INFO: Record<PGroup, { color: string; shape: string }> = {
   bp: { color: "#7F97A8", shape: "dot2" },
   aho: { color: "#D4E86B", shape: "P" },
   pfl: { color: "#4FC1A6", shape: "U" },
+  sdraw: { color: "#3FD0F0", shape: "I3" },
   imp: { color: "#5FD3E8", shape: "F" },
   khnd: { color: "#E8C76B", shape: "N" },
   sd: { color: "#9BE07A", shape: "plus" },
@@ -116,6 +118,8 @@ type StreetSpec = {
   midKicker: number;
   /** No-pair hands with a card this high or higher have showdown value (13 = K-high). */
   sdCutoff: number;
+  /** Noam 2026-11-05 (A72 turns first): flush and combo draws apart from the other draws, by equity. */
+  strongDraws?: boolean;
   answers: Partial<Record<PGroup, Answer>>;
 };
 
@@ -182,6 +186,7 @@ const A72_TURNS: TurnSpec[] = [
     bet: "overbet",
     story: "Q♥ · Brick. Nothing changes for BB: BTN overbets, polar.",
     ...CUT,
+    strongDraws: true,
     // Noam 2026-11-05: KJ, KT, JT (broadway gutshots) and 54s, 43s (wheel gutshots) are the draws.
     // Polar line (Noam 2026-10-30): only the top of the range and the bluffs
     // keep putting money in; everything else checks back the turn.
@@ -243,6 +248,7 @@ const A72_TURNS: TurnSpec[] = [
     bet: "twoThirds",
     story: "6♦ · Dynamic. A diamond flush draw and straight draws like 98, 85 and 54: BTN bets 66%.",
     ...CUT,
+    strongDraws: true,
     // Noam 2026-11-05: groups checked by Noam (draws, K-high no draw, trash); boxes as they were.
     answers: {
       twopair: autoAll("Still way ahead: charge every new draw."),
@@ -254,7 +260,9 @@ const A72_TURNS: TurnSpec[] = [
       mp: a("b5", "Keep the pot small.", true),
       bp: a("b0", "6x and 2x: check and show down.", true),
       sd: SD(),
-      imp: a("b0", "Diamond flush draws and straight draws (T9, T8, 98, 54, 43): no pair yet, worth 0–5bb.", true),
+      // Equity vs BB's range (calculated 2026-11-05): flush and combo draws 33–43%, straight draws 20–26%.
+      sdraw: a("b5", "Diamond flush draws and combo draws: about 35–45% equity against BB's range, so they want to build the pot: 5–15bb."),
+      imp: a("b0", "Straight draws without a flush draw (T9, T8, 98, 54, 43): about 20–26% equity, worth 0–5bb.", true),
       khnd: SD("King-high with no draw: no pair, but it sometimes wins at showdown."),
       air: a("b0", "Queen-high or lower with no draw: no showdown value, worth zero.", true),
     },
@@ -302,6 +310,7 @@ const A72_TURNS: TurnSpec[] = [
     bet: "twoThirds",
     story: "5♣ · Wet. 43 makes the wheel, and a club flush draw and more straight draws arrive: BTN bets 66%.",
     ...CUT,
+    strongDraws: true,
     // Noam 2026-11-05: every answer on this turn checked by Noam.
     answers: {
       twopair: a("b15", "A wet turn: the wheel is possible and a flush draw arrived, so sets and two pair go down to 15–25bb.", true),
@@ -314,7 +323,9 @@ const A72_TURNS: TurnSpec[] = [
       mp: a("b0", "7x: check and show down.", true),
       bp: a("b0", "5x and 2x: check and show down.", true),
       // The drill asks about the size of the pot, and every draw is worth 0–5bb: one group (Noam).
-      imp: a("b0", "Flush draws, straight draws, gutshots and combo draws: no pair yet, worth 0–5bb.", true),
+      // Equity vs BB's range (calculated 2026-11-05): flush and combo draws 34–42%, straight draws 23–25%.
+      sdraw: a("b5", "Club flush draws and combo draws: about 35–42% equity against BB's range, so they want to build the pot: 5–15bb."),
+      imp: a("b0", "Straight draws and gutshots without a flush draw: about 23–25% equity, worth 0–5bb.", true),
       khnd: SD("King-high with no draw: no pair, but it sometimes wins at showdown."),
       air: a("b0", "Queen-high or lower with no draw: it can't win by checking, so it's worth zero.", true),
     },
@@ -874,22 +885,28 @@ function flopTexture(board: Card[]): "low" | "high" | null {
  *   since every draw is worth 0–5bb).
  * - khnd: king-high (the showdown cutoff) with no draw, e.g. K9o, K5 of hearts.
  * - air: trash, queen-high or lower with no draw. */
-function noPairGroupOf(hole: [Card, Card], board: Card[], sdCutoff: number): PGroup {
+function noPairGroupOf(hole: [Card, Card], board: Card[], sdCutoff: number, strongDraws = false): PGroup {
   const [x, y] = hole;
   const flop = board.length === 3;
   // On the river nothing is a draw any more: only the high card is left.
   if (board.length === 5) return Math.max(x.r, y.r) >= sdCutoff ? "khnd" : "air";
   const low = (r: number) => (r === 14 ? [1, 14] : [r]);
   const have = new Set([...hole, ...board].flatMap((c) => low(c.r)));
+  let straightDraw = false;
   for (let lo = 1; lo <= 10; lo++) {
     const inWin = (r: number) => r >= lo && r < lo + 5;
     let n = 0;
     for (let r = lo; r < lo + 5; r++) if (have.has(r)) n++;
     const holeIn = [x, y].filter((c) => low(c.r).some(inWin)).length;
-    if ((n >= 4 && holeIn >= 1) || (flop && n === 3 && holeIn === 2)) return "imp";
+    if ((n >= 4 && holeIn >= 1) || (flop && n === 3 && holeIn === 2)) straightDraw = true;
   }
   const suitOnBoard = x.s === y.s ? board.filter((c) => c.s === x.s).length : 0;
-  if (suitOnBoard >= (flop ? 1 : 2)) return "imp";
+  // A real flush draw: four cards of a suit with at least one in the hand.
+  const flushDraw = !flop && SUITS.some((s) => (x.s === s || y.s === s) && [...hole, ...board].filter((c) => c.s === s).length === 4);
+  // Noam 2026-11-05: strong draws have equity and a reason to build the pot. On the A72
+  // turns flush and combo draws have about 35–45% against BB's range, straight draws alone 20–30%.
+  if (strongDraws && flushDraw) return "sdraw";
+  if (straightDraw || (strongDraws && flushDraw) || suitOnBoard >= (flop ? 1 : 2)) return "imp";
   return Math.max(x.r, y.r) >= sdCutoff ? "khnd" : "air";
 }
 
@@ -899,7 +916,7 @@ function flushSuitOnTurn(board: Card[]): string | null {
   return SUITS.find((s) => board.filter((c) => c.s === s).length === 3) ?? null;
 }
 
-export function priceGroupOf(hole: [Card, Card], board: Card[], cut: Pick<StreetSpec, "goodKicker" | "midKicker" | "sdCutoff">): PGroup {
+export function priceGroupOf(hole: [Card, Card], board: Card[], cut: Pick<StreetSpec, "goodKicker" | "midKicker" | "sdCutoff" | "strongDraws">): PGroup {
   const all = [...hole, ...board];
   const [x, y] = hole;
   const pocket = x.r === y.r;
@@ -946,7 +963,7 @@ export function priceGroupOf(hole: [Card, Card], board: Card[], cut: Pick<Street
   }
   if (boardCount(x.r) > 0 || boardCount(y.r) > 0) return x.r === ranks[1] || y.r === ranks[1] ? "mp" : "bp";
   if (texture === "low" && Math.max(x.r, y.r) === 14 && Math.min(x.r, y.r) > top) return "aho";
-  return noPairGroupOf(hole, board, cut.sdCutoff);
+  return noPairGroupOf(hole, board, cut.sdCutoff, cut.strongDraws);
 }
 
 // ---------- names (neutral: what the hands ARE, never what to do) ----------
@@ -976,7 +993,7 @@ function runs(vals: number[], fmt: (v: number) => string): string {
 const RV: Record<string, number> = { A: 14, K: 13, Q: 12, J: 11, T: 10 };
 const rv = (c: string) => RV[c] ?? Number(c);
 
-function namesOf(g: PGroup, board: Card[], hands: string[], cut: Pick<StreetSpec, "sdCutoff">): { label: string; name: string } {
+function namesOf(g: PGroup, board: Card[], hands: string[], cut: Pick<StreetSpec, "sdCutoff" | "strongDraws">): { label: string; name: string } {
   const ranks = boardRanks(board);
   const top = ch(ranks[0]);
   switch (g) {
@@ -1027,7 +1044,10 @@ function namesOf(g: PGroup, board: Card[], hands: string[], cut: Pick<StreetSpec
     }
     // No-pair names use only ranks that are NOT on the board (Noam: "K-high" makes
     // no sense on a board with a king), e.g. "A-high" and "J-high & below" on K♦Q♦4♠.
+    case "sdraw":
+      return { label: "Strong draws", name: "Flush draws and combo draws: no pair, but a lot of equity" };
     case "imp":
+      if (cut.strongDraws) return { label: "Straight draws", name: "No pair, a straight draw (no flush draw)" };
       return board.length === 3
         ? { label: "Can improve", name: "No pair, but a draw: gutshots, backdoor straights, backdoor flushes" }
         : { label: "Draws", name: "No pair, but a draw: flush draws, straight draws, gutshots, combo draws" };

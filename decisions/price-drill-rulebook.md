@@ -85,6 +85,28 @@ Every hand goes into exactly one group, checked from the top down. Groups are re
   - **Every other pair**: it can't make a flush, so it doesn't bet any more: **0–5bb**.
 - **Every street sorts the hands again.** A hand that improves (to a flush on the river, for example) goes straight to its stronger group and wants a bigger pot, and a hand that gets worse goes down. *(Noam)*
 
+### Strong draws by equity *(Noam, 2026-11-05; on A♣7♦2♠ only for now, to see how it behaves)*
+- **Noam:** "In reality you have very strong draws that have incentive to build the pot," especially combo draws and bluffs with equity.
+- **Equity** is calculated against BB's range, with BTN's hands sorted into the drill's groups:
+  - **BB's preflop range** is Noam's solver chart for BB defending against a BTN open (`decisions/ranges/defend/BB-vs-BTN.txt`, pixel-measured). Only the calls count, since the 3-bets leave the single-raised pot.
+  - **After each bet, BB's range is an estimate:**
+    - after the flop bet: pairs, real draws and half of the backdoor draws, A-high and K-high;
+    - after the turn bet: the top two pairs, half the weaker pairs, real draws and half of the A-high.
+- **A72 equities:**
+
+  | Draw | Flop | Q♥ turn | 6♦ turn | 5♣ turn |
+  |---|---|---|---|---|
+  | Backdoor straight | 41% | | | |
+  | Backdoor flush | 37% | | | |
+  | Combo draw | | | 33–43% | 38–41% |
+  | Flush draw, K-high or better | | | 40% | 42% |
+  | Flush draw, lower | | | 36% | 34% |
+  | Open-ended straight draw | | | 26% | 25% |
+  | Gutshot | 32% | 31% | 20% | 23% |
+
+- **Rule, as a draft:** on the turn, **flush draws and combo draws** are their own group, **"Strong draws"**, worth **5–15bb**. Straight draws without a flush draw stay at **0–5bb**. On the flop, every draw is still "Can improve" at 0–5bb: all are under about 40%, and BTN bets small with the whole range.
+- The other boards are unchanged until Noam has looked at A72.
+
 ### No pair: draws, high card with no draw, trash *(Noam, 2026-11-05, from A♣7♦2♠; on every board and street)*
 - **There's no "Q-high and below" group any more**, on any street. The hands with no pair are split into three groups:
 
