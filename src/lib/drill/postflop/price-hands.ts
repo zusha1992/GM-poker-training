@@ -36,16 +36,13 @@ export type PGroup =
   | "mp"
   | "bp"
   | "aho"
-  | "khg"
-  | "khw"
-  | "draw"
-  | "bdsd"
-  | "bdfd"
+  | "imp"
+  | "khnd"
   | "sd"
   | "air";
-/** khg/khw/draw/bdsd/bdfd: the no-pair hands split by what they can become,
+/** imp/khnd: the no-pair hands split by whether they can improve,
  * on streets with `splitNoPair` (see noPairGroupOf). */
-export const PGROUP_ORDER: PGroup[] = ["monster", "twopair", "op", "tpgk", "tpmk", "tpwk", "pp1", "pp2", "pp3", "spp", "mp", "bp", "aho", "khg", "khw", "draw", "bdsd", "bdfd", "sd", "air"];
+export const PGROUP_ORDER: PGroup[] = ["monster", "twopair", "op", "tpgk", "tpmk", "tpwk", "pp1", "pp2", "pp3", "spp", "mp", "bp", "aho", "imp", "khnd", "sd", "air"];
 
 /** Same color and shape on every board and street. */
 export const PGROUP_INFO: Record<PGroup, { color: string; shape: string }> = {
@@ -62,11 +59,8 @@ export const PGROUP_INFO: Record<PGroup, { color: string; shape: string }> = {
   mp: { color: "#9DB4C4", shape: "I3" },
   bp: { color: "#7F97A8", shape: "dot2" },
   aho: { color: "#D4E86B", shape: "P" },
-  khg: { color: "#E8C76B", shape: "N" },
-  khw: { color: "#B89B5A", shape: "Y" },
-  draw: { color: "#5FD3E8", shape: "F" },
-  bdsd: { color: "#7FB2E0", shape: "L5" },
-  bdfd: { color: "#8FA0E8", shape: "T5" },
+  imp: { color: "#5FD3E8", shape: "F" },
+  khnd: { color: "#E8C76B", shape: "N" },
   sd: { color: "#9BE07A", shape: "plus" },
   air: { color: "#56626C", shape: "U" },
 };
@@ -156,13 +150,11 @@ const A72_FLOP: StreetSpec = {
     mp: a("b5", "Middle pair: one small bet at most."),
     bp: a("b0", "Bottom pair: check and show down."),
     sd: SD(),
-    // Noam 2026-11-05: the no-pair hands in finer groups. Answers wait for Noam (both old groups were 0–5bb).
-    khg: SD("KQ, KJ, KT: no pair, but the best king-high, with a backdoor straight draw."),
-    khw: SD("K9 and below: no pair, a weak king-high."),
-    draw: a("b0", "A gutshot to the wheel: no pair yet."),
-    bdsd: a("b0", "No pair, but two more cards can make a straight."),
-    bdfd: a("b0", "No pair, queen-high or lower: only two more cards of its suit make a flush."),
-    air: a("b0", "No pair and no draw: it can't win by checking, so it's worth zero."),
+    // Noam 2026-11-05: BTN bets small with everything here, so the no-pair hands
+    // are three big groups. Answers wait for Noam (the old groups were 0–5bb).
+    imp: a("b0", "No pair yet, but it can improve: a gutshot, a backdoor straight or a backdoor flush draw."),
+    khnd: SD("King-high with no draw: no pair, but it sometimes wins at showdown."),
+    air: a("b0", "Queen-high or lower with no draw: it can't win by checking, so it's worth zero."),
   },
 };
 
@@ -834,34 +826,27 @@ function flopTexture(board: Card[]): "low" | "high" | null {
   return broadway <= 1 || new Set(board.map((c) => c.r)).size < 3 ? "low" : "high";
 }
 
-/** Noam 2026-11-05 (A72 flop): "Q-high and below" as one big group says too
- * little. A no-pair hand goes, top-down, to:
- * - khg / khw: K-high (the showdown cutoff) with a T or better kicker (KQ–KT),
- *   or a lower one (K9 and below): different quality;
- * - draw: a real draw (gutshot or better, or four to a flush);
- * - bdsd: a backdoor straight draw, both hole cards inside a five-rank window
- *   that already holds three ranks (QJ, JT, 98 on A72);
- * - bdfd: only a backdoor flush draw (suited, one board card of that suit);
- * - air: everything else. */
+/** Noam 2026-11-05 (A72 flop, small-bet strategy): the no-pair hands as
+ * three big groups, not "Q-high and below":
+ * - imp: can improve. A gutshot or better, four to a flush, a backdoor
+ *   straight draw (both hole cards inside a five-rank window that already
+ *   holds three ranks: QJ, JT, 98 on A72) or a backdoor flush draw (suited,
+ *   one board card of that suit). KQ–KT are here too.
+ * - khnd: king-high (the showdown cutoff) with no draw, e.g. K9o, K5 of hearts.
+ * - air: trash, queen-high or lower with no draw. */
 function noPairGroupOf(hole: [Card, Card], board: Card[], sdCutoff: number): PGroup {
   const [x, y] = hole;
-  const hi = Math.max(x.r, y.r);
-  if (hi >= sdCutoff) return Math.min(x.r, y.r) >= 10 ? "khg" : "khw";
   const low = (r: number) => (r === 14 ? [1, 14] : [r]);
   const have = new Set([...hole, ...board].flatMap((c) => low(c.r)));
-  let bdsd = false;
   for (let lo = 1; lo <= 10; lo++) {
     const inWin = (r: number) => r >= lo && r < lo + 5;
     let n = 0;
     for (let r = lo; r < lo + 5; r++) if (have.has(r)) n++;
     const holeIn = [x, y].filter((c) => low(c.r).some(inWin)).length;
-    if (n >= 4 && holeIn >= 1) return "draw";
-    if (n === 3 && holeIn === 2) bdsd = true;
+    if ((n >= 4 && holeIn >= 1) || (n === 3 && holeIn === 2)) return "imp";
   }
-  const suited = x.s === y.s ? board.filter((c) => c.s === x.s).length : 0;
-  if (suited >= 2) return "draw";
-  if (bdsd) return "bdsd";
-  return suited === 1 ? "bdfd" : "air";
+  if (x.s === y.s && board.some((c) => c.s === x.s)) return "imp";
+  return Math.max(x.r, y.r) >= sdCutoff ? "khnd" : "air";
 }
 
 export function priceGroupOf(hole: [Card, Card], board: Card[], cut: Pick<StreetSpec, "goodKicker" | "midKicker" | "sdCutoff" | "splitNoPair">): PGroup {
@@ -970,24 +955,16 @@ function namesOf(g: PGroup, board: Card[], hands: string[], cut: Pick<StreetSpec
     }
     // No-pair names use only ranks that are NOT on the board (Noam: "K-high" makes
     // no sense on a board with a king), e.g. "A-high" and "J-high & below" on K♦Q♦4♠.
-    case "khg":
-    case "khw": {
-      const kickers = hands.map((h) => rv(h[1]));
-      const label = runs(kickers, (k) => `${ch(cut.sdCutoff)}${ch(k)}`);
-      return { label, name: `No pair, ${ch(cut.sdCutoff)}-high, ${g === "khg" ? "good" : "weak"} kicker` };
-    }
-    case "draw":
-      return { label: "Straight draws", name: "No pair, a gutshot or better (or a flush draw)" };
-    case "bdsd":
-      return { label: "Backdoor straights", name: "No pair, a backdoor straight draw" };
-    case "bdfd":
-      return { label: "Backdoor flushes", name: "No pair, only a backdoor flush draw" };
+    case "imp":
+      return { label: "Can improve", name: "No pair, but a draw: gutshots, backdoor straights, backdoor flushes" };
+    case "khnd":
+      return { label: `${ch(cut.sdCutoff)}-high, no draw`, name: `No pair, ${ch(cut.sdCutoff)}-high, no draw` };
     case "sd": {
       const hi = missingAtOrBelow(ranks, cut.sdCutoff);
       return { label: `${ch(hi)}-high`, name: `No pair, ${ch(hi)}-high (draws included)` };
     }
     default: {
-      if (g === "air" && cut.splitNoPair) return { label: "No draw", name: "No pair, no draw" };
+      if (g === "air" && cut.splitNoPair) return { label: "Trash", name: "No pair, queen-high or lower, no draw" };
       const lo = missingAtOrBelow(ranks, cut.sdCutoff - 1);
       return { label: `${ch(lo)}-high & below`, name: `No pair, ${ch(lo)}-high or lower (draws included)` };
     }
