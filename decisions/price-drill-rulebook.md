@@ -209,4 +209,18 @@ Their answers are not written one by one: they come from a **value plan**, the r
   - **K-high, no draw** (6%): K9o, K8o, K6o, plus K9s–K3s in hearts (no heart on the board).
   - **Trash**: queen-high or lower, no draw.
 
-  All are 0–5bb until Noam gives the answers. *Rule (Noam): discuss new groups with him before building them.*
+  *Rule (Noam): discuss new groups with him before building them.*
+- **2026-11-05**: Noam checked every group on the **A♣7♦2♠ flop**:
+
+  | Group | Box |
+  |---|---|
+  | AK, AQ | 50–100bb |
+  | AJ–A8, A6–A3 | 15–25bb |
+  | KK–88, 7x | 5–15bb |
+  | 66–33, 2x | 0–5bb |
+  | Can improve, K-high no draw, Trash | 0–5bb |
+
+  - **AK, AQ:** on this dry board, if nothing changes by the river, they want to get the stacks in.
+  - **66–33:** they put a little money in, about 3–5bb, and that's inside the 0–5bb box.
+  - **The flop pair rule** ("every pair wants some money, at least 5%") no longer pushes a pair up to 5–15bb on boards Noam has checked: "some money" is now inside 0–5bb. Boards not yet checked keep the old rule until he does.
+  - **Next:** the A72 turn. AK still says 25–50bb on a brick turn and river, so it needs to match.

@@ -108,8 +108,11 @@ type StreetSpec = {
   midKicker: number;
   /** No-pair hands with a card this high or higher have showdown value (13 = K-high). */
   sdCutoff: number;
-  /** Split the no-pair hands by kicker and draws instead of high card only (noPairGroupOf). */
+  /** Split the no-pair hands by whether they can improve, not by high card only (noPairGroupOf). */
   splitNoPair?: boolean;
+  /** Noam went through every answer on this street (2026-11-05 on): the old rules that only
+   * patched draft answers stay out. */
+  reviewed?: boolean;
   answers: Partial<Record<PGroup, Answer>>;
 };
 
@@ -140,21 +143,22 @@ const A72_FLOP: StreetSpec = {
   story: "A dry ace-high flop. BTN has far more strong aces than BB.",
   ...CUT,
   splitNoPair: true,
+  reviewed: true,
+  // Noam 2026-11-05: every answer on this flop checked by Noam.
   answers: {
     twopair: autoAll("Sets and two pair want every chip in on a dry board."),
-    tpgk: a("b25", "AK and AQ beat all of BB's weaker aces: three streets of value."),
-    tpmk: a("b15", "AJ–A8 get called by better aces too often: two thin streets."),
-    tpwk: a("b15", "Any ace is worth two small bets: even A6–A3 bet small now and small again."),
-    pp1: a("b5", "KK–88 beat every 7x and 2x: one small bet, then showdown."),
-    pp2: a("b0", "66–33 lose to every 7x: check and show down."),
-    mp: a("b5", "Middle pair: one small bet at most."),
-    bp: a("b0", "Bottom pair: check and show down."),
+    tpgk: a("b50", "AK and AQ on a dry board: if nothing changes by the river, they want to get the stacks in.", true),
+    tpmk: a("b15", "AJ–A8 get called by better aces too often: two thin streets.", true),
+    tpwk: a("b15", "Any ace is worth two small bets: even A6–A3 bet small now and small again.", true),
+    pp1: a("b5", "KK–88 beat every 7x and 2x: one small bet, then showdown.", true),
+    pp2: a("b0", "66–33 lose to every 7x: a little money, about 3 to 5bb.", true),
+    mp: a("b5", "Middle pair: one small bet at most.", true),
+    bp: a("b0", "Bottom pair: a little money at most.", true),
     sd: SD(),
-    // Noam 2026-11-05: BTN bets small with everything here, so the no-pair hands
-    // are three big groups. Answers wait for Noam (the old groups were 0–5bb).
-    imp: a("b0", "No pair yet, but it can improve: a gutshot, a backdoor straight or a backdoor flush draw."),
+    // BTN bets small with everything here, so the no-pair hands are three big groups.
+    imp: a("b0", "No pair yet, but it can improve: a gutshot, a backdoor straight or a backdoor flush draw.", true),
     khnd: SD("King-high with no draw: no pair, but it sometimes wins at showdown."),
-    air: a("b0", "Queen-high or lower with no draw: it can't win by checking, so it's worth zero."),
+    air: a("b0", "Queen-high or lower with no draw: it can't win by checking, so it's worth zero.", true),
   },
 };
 
@@ -1020,10 +1024,13 @@ const STREET_NAMES: Street[] = ["flop", "turn", "river"];
  * (fourth pair or worse) is worth zero, not a tiny pot. When such pairs keep
  * showdown value (draws missing vs arriving) is still open for Uri. */
 /** Noam 2026-10-31: in a single-raised pot the ranges are wide, so every pair
- * on the flop wants some money, even the worst one: never showdown value yet. */
+ * on the flop wants some money, even the worst one. Noam 2026-11-05: with the
+ * bb boxes "some money" (about 3–5bb) is inside 0–5bb, so on a street Noam
+ * has reviewed it no longer forces a pair up to 5–15bb. Boards he hasn't
+ * reviewed yet keep the old floor until he does. */
 const PAIR_GROUPS = new Set<PGroup>(["op", "tpgk", "tpmk", "tpwk", "pp1", "pp2", "pp3", "mp", "bp"]);
-function everyBoardRule(g: PGroup, street: Street, ans: Answer | undefined): Answer | undefined {
-  if (ans && street === "flop" && PAIR_GROUPS.has(g) && BUCKET_RANK[ans.bucket] < BUCKET_RANK.b5) {
+function everyBoardRule(g: PGroup, street: Street, ans: Answer | undefined, reviewed = false): Answer | undefined {
+  if (!reviewed && ans && street === "flop" && PAIR_GROUPS.has(g) && BUCKET_RANK[ans.bucket] < BUCKET_RANK.b5) {
     return a("b5", "Any pair on the flop of a single-raised pot wants some money: both ranges are wide.");
   }
   // Noam/Uri 2026-11-02: ace-high (king-high on an ace board) has showdown value
@@ -1095,7 +1102,7 @@ export function buildRunout(index: number): Runout {
     const pieces: PricePiece[] = [];
     for (const g of PGROUP_ORDER) {
       if (snap.byGroup[g] <= 0) continue;
-      const ans = flopRule(g, board) ?? veryWetRule(g, street, board, everyBoardRule(g, street, riverRule(g, street) ?? st.answers[g] ?? AUTO[g]));
+      const ans = flopRule(g, board) ?? veryWetRule(g, street, board, everyBoardRule(g, street, riverRule(g, street) ?? st.answers[g] ?? AUTO[g], st.reviewed));
       if (!ans) throw new Error(`price-hands: no answer for ${g} on ${spec.id} (${street})`);
       answers[g] = ans;
       const entries: { hand: string; part: number }[] = [];
