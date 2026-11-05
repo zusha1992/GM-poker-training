@@ -133,6 +133,14 @@ Every hand goes into exactly one group, checked from the top down. Groups are re
   - **sets and two pair → 50–100bb** (90–100% equity); everything else stayed;
   - **hands missing from the solver's range are placed by strength** *(Noam)*: KK with the sets, QQ–TT with 99 and 88, 43s with the straights;
   - **equity alone is enough on the river.** On the flop and turn it misses the nut draws and the betting behaviour, so those streets need the strategy or EV screenshots.
+- **The other A72 runouts, from the solver's equity per hand** (`decisions/ranges/equity-buckets/A72-other-runouts-equity.md`):
+  - **The Q♥ and 6♦ turns:** equity is in the same order as Noam's boxes, so no change.
+  - **The rivers use the river cut-offs:** 90%+ is 50–100bb, about 80%+ is 15–25bb, 64–80% is 5–15bb, and under about 60% is 0–5bb. That gives:
+    - **Q♥ · 9♣:** AK 25–50 → **5–15bb** (73%), and AJ, AT, A8 0–5 → **5–15bb** (62–71%);
+    - **6♦ · K♠:** AQ 25–50 → **5–15bb** (78%; the K makes AK two pair).
+  - **The other rivers** (Q♥ K♦, 6♦ 8♦, 5♣ 6♣) match.
+  - **Flushes:** a cell's equity averages the combos with and without the suit, so a suit-filtered screenshot is needed before splitting big and small flushes (on hold).
+  - **After a turn that goes check, check** (a line the drill doesn't have yet), top pair has 83–92% on the river (Q♥ · 9♣).
 - **The solver also shows that EV isn't the whole story.** On the 5♣ turn KK–88 have EV 4.3–4.75bb but check 99%, so they put almost nothing in. The box is set from EV and the strategy together.
 
 ### No pair: draws, high card with no draw, trash *(Noam, 2026-11-05, from A♣7♦2♠; on every board and street)*

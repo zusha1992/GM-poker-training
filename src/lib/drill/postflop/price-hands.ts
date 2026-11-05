@@ -221,8 +221,9 @@ const A72_TURNS: TurnSpec[] = [
         ...CUT,
         answers: {
           twopair: autoAll("After the overbet the rest is less than two pots: all-in."),
-          tpgk: a("b25", "AK: a third healthy bet on a blank river: 25–50bb."),
-          tpmk: CHECKS("AJ–A8 bet the flop and the turn: that was their last bet. Show down."),
+          // Checked against the solver's equity per hand (decisions/ranges/equity-buckets/A72-other-runouts-equity.md).
+          tpgk: a("b5", "AK has about 73% against BB's range after BB calls the overbet (solver): one thin value bet, 5–15bb."),
+          tpmk: a("b5", "AJ and AT have 62–71% against BB's range after the overbet (solver), about as much as AK: one thin value bet, 5–15bb."),
           tpwk: CHECKS("A6–A3 bet the flop and the turn: show down."),
           pp1: CHECKS(),
           pp2: CHECKS(),
@@ -282,7 +283,8 @@ const A72_TURNS: TurnSpec[] = [
         ...CUT,
         answers: {
           twopair: autoAll("The draws missed: get the rest in."),
-          tpgk: a("b25", "AK and AQ: a third healthy bet against BB's weaker aces: 25–50bb."),
+          // Checked against the solver's equity per hand (decisions/ranges/equity-buckets/A72-other-runouts-equity.md).
+          tpgk: a("b5", "The K♠ makes AK two pair: AQ has about 78% against BB's range (solver), like AJ, so one thin value bet: 5–15bb."),
           tpmk: a("b5", "One small value bet at most."),
           tpwk: a("b0", "Check and show down."),
           pp2: a("b0", "Check and show down."),
