@@ -29,8 +29,8 @@ import { MoneyPaddles } from "./MoneyPaddles";
 import { SortPiece } from "./SortPiece";
 import { BoardCard, IconButton, InspectPanel, PrimaryButton, Row, Shell, StreetTrack } from "./drill-ui";
 
-/** The matrix shows the range only, every hand in one quiet color (Noam
- * 2026-11-05: no colors for answers, no emphasis on what goes for stacks). */
+/** The matrix shows the range in one quiet color (Noam 2026-11-05: no
+ * emphasis on what goes for stacks); only groups the player placed get color. */
 const RANGE = "#46525C";
 
 /** "deal" = a card just came: its story shows and the obvious groups place
@@ -136,7 +136,15 @@ export function PriceScreen() {
   const done = queue.filter((p) => placed[p.key]).length;
   const prevSnap = streetIdx > 0 ? runout.streets[streetIdx - 1].snap : undefined;
 
-  const palette: MatrixPalette = { order: PGROUP_ORDER, fill: () => RANGE };
+  // Noam 2026-11-05: a group the player put in the right box takes that box's
+  // color. Groups that place themselves (sets and better) stay quiet.
+  const palette: MatrixPalette = {
+    order: PGROUP_ORDER,
+    fill: (g) => {
+      const b = placed[g as PGroup];
+      return b && !st.auto.includes(g as PGroup) ? BUCKET_COLOR[b] : RANGE;
+    },
+  };
 
   // What a feedback note written right now is about: the spot, and the group on screen.
   const focusPiece = phase === "decide" ? current : null;
