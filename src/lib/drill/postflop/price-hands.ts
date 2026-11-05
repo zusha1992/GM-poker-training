@@ -14,6 +14,7 @@
  */
 import { btnRangeCombos, card, hasStraight, rankChar, type Card, type Combo, type Street } from "./line-demo";
 import type { MatrixSnap } from "@/components/drill/postflop/LineMatrix";
+import { SOLVER_ANSWERS } from "./solver-answers";
 
 /** Strongest first; a hand is in exactly one group, checked top-down.
  *  pp1/pp2/pp3 = pocket pairs below the top card, by how many board ranks
@@ -1279,7 +1280,7 @@ export function buildRunout(index: number): Runout {
     const pieces: PricePiece[] = [];
     for (const g of PGROUP_ORDER) {
       if (snap.byGroup[g] <= 0) continue;
-      const found = flushTurnRule(g, board) ?? flopRule(g, board) ?? veryWetRule(g, street, board, everyBoardRule(g, street, riverRule(g, street) ?? st.answers[g] ?? noPairFallback(g, st) ?? madeHandAnswer(g, board)));
+      const found = SOLVER_ANSWERS[spec.id]?.[street]?.[g] ?? flushTurnRule(g, board) ?? flopRule(g, board) ?? veryWetRule(g, street, board, everyBoardRule(g, street, riverRule(g, street) ?? st.answers[g] ?? noPairFallback(g, st) ?? madeHandAnswer(g, board)));
       if (!found) throw new Error(`price-hands: no answer for ${g} on ${spec.id} (${street})`);
       // Noam 2026-11-05: trips, like straights and flushes, are always the player's call.
       const ans = g === "trips" && found.auto ? { ...found, auto: false, sure: false } : found;
