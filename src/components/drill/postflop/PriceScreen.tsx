@@ -39,11 +39,18 @@ type Phase = "intro" | "deal" | "decide" | "advancing" | "final";
 
 /** A random runout of the chosen board (any board when null), never the
  * same one twice in a row. `?runout=N` forces one (feedback links, testing). */
-function pickRunout(current: number, board: string | null): number {
+/** A spot picked on the intro screen (Noam 2026-11-05, for reviewing): a turn
+ * and a river of the chosen board, or null for any. */
+type SpotPick = { turn: string | null; river: string | null };
+
+function pickRunout(current: number, board: string | null, spot: SpotPick = { turn: null, river: null }): number {
   const q = new URLSearchParams(window.location.search).get("runout");
   const forced = Number(q);
   if (q !== null && Number.isInteger(forced) && forced >= 0 && forced < RUNOUTS.length) return forced;
-  const pool = RUNOUTS.map((r, i) => ({ r, i })).filter(({ r }) => !board || r.board === board).map(({ i }) => i);
+  const pool = RUNOUTS.map((r, i) => ({ r, i }))
+    .filter(({ r }) => (!board || r.board === board) && (!spot.turn || r.streets[1].card === spot.turn) && (!spot.river || r.streets[2].card === spot.river))
+    .map(({ i }) => i);
+  if (spot.turn && spot.river && pool.length) return pool[0];
   if (pool.length < 2) return pool[0] ?? 0;
   let i = current;
   while (i === current) i = pool[Math.floor(Math.random() * pool.length)];
@@ -84,6 +91,9 @@ export function PriceScreen() {
   const [phase, setPhase] = useState<Phase>("intro");
   /** The board picked on the start screen (null = mix every board). */
   const [board, setBoard] = useState<string | null>(null);
+  const [spot, setSpot] = useState<SpotPick>({ turn: null, river: null });
+  /** The street the picked spot starts on (0 flop, 1 turn, 2 river). */
+  const [startStreet, setStartStreet] = useState(0);
   const [streetIdx, setStreetIdx] = useState(0);
   const [placed, setPlaced] = useState<Partial<Record<PGroup, Bucket>>>({});
   /** This street's pieces in the order they're asked. */
@@ -190,12 +200,14 @@ export function PriceScreen() {
     }, 2000);
   }
 
-  function start(which: "new" | "same") {
+  /** "spot" = the Start button: the turn, river and street picked on the intro screen. */
+  function start(which: "new" | "same" | "spot") {
     generation.current += 1;
-    const r = which === "new" ? buildRunout(pickRunout(runout.index, board)) : runout;
+    const r = which === "same" ? runout : buildRunout(pickRunout(runout.index, board, which === "spot" ? spot : undefined));
     setRunout(r);
     setMissed(new Set());
-    enterStreet(which === "new" ? linkedStreet() : 0, r);
+    const linked = which === "same" ? 0 : linkedStreet();
+    enterStreet(which === "spot" ? Math.max(linked, startStreet) : linked, r);
   }
 
   function zoneAt(x: number, y: number): Bucket | null {
@@ -282,7 +294,11 @@ export function PriceScreen() {
                   aria-checked={on}
                   className={`flex cursor-pointer flex-col items-start gap-0.5 rounded-xl border px-2.5 py-2 text-left transition-transform active:scale-[0.98] ${o.key ? "" : "col-span-2"}`}
                   style={{ borderColor: on ? "var(--mix)" : "var(--line)", background: on ? "var(--panel-2)" : "var(--panel)" }}
-                  onClick={() => setBoard(o.key)}
+                  onClick={() => {
+                    setBoard(o.key);
+                    setSpot({ turn: null, river: null });
+                    setStartStreet(0);
+                  }}
                   data-testid={`board-${o.key ?? "mix"}`}
                 >
                   <b className="font-[family-name:var(--font-display)] text-[15px]" style={{ color: on ? "var(--mix)" : "var(--foreground)" }}>
@@ -295,7 +311,8 @@ export function PriceScreen() {
               );
             })}
           </div>
-          <button type="button" className="h-[52px] cursor-pointer rounded-2xl border-0 text-[16px] font-bold active:scale-[0.98]" style={{ background: "var(--mix)", color: "#2B1C02" }} onClick={() => start("new")}>
+          {board && <SpotPicker board={board} spot={spot} setSpot={setSpot} startStreet={startStreet} setStartStreet={setStartStreet} />}
+          <button type="button" className="h-[52px] cursor-pointer rounded-2xl border-0 text-[16px] font-bold active:scale-[0.98]" style={{ background: "var(--mix)", color: "#2B1C02" }} onClick={() => start("spot")}>
             Start
           </button>
           <button type="button" className="h-[44px] cursor-pointer rounded-xl border text-[14px] font-semibold" style={{ borderColor: "var(--line)" }} onClick={() => router.push("/")}>
@@ -436,6 +453,70 @@ export function PriceScreen() {
         pageUrl={`/drills/postflop/price?runout=${runout.index}&street=${st.street}`}
       />
     </Shell>
+  );
+}
+
+/** Pick an exact turn, river and starting street of one board (Noam
+ * 2026-11-05: to go straight to the spot under review). */
+function SpotPicker({
+  board,
+  spot,
+  setSpot,
+  startStreet,
+  setStartStreet,
+}: {
+  board: string;
+  spot: SpotPick;
+  setSpot: (s: SpotPick) => void;
+  startStreet: number;
+  setStartStreet: (n: number) => void;
+}) {
+  const runouts = RUNOUTS.filter((r) => r.board === board);
+  const turns = [...new Map(runouts.map((r) => [r.streets[1].card, r.streets[1].kind])).entries()];
+  const rivers = spot.turn ? runouts.filter((r) => r.streets[1].card === spot.turn).map((r) => [r.streets[2].card, r.streets[2].kind] as const) : [];
+  const chip = (on: boolean, label: string, sub: string | null, onClick: () => void, id: string) => (
+    <button
+      key={id}
+      type="button"
+      className="flex min-w-[64px] cursor-pointer flex-col items-center rounded-xl border px-2.5 py-1.5 active:scale-[0.98]"
+      style={{ borderColor: on ? "var(--mix)" : "var(--line)", background: on ? "var(--panel-2)" : "var(--panel)" }}
+      onClick={onClick}
+      data-testid={id}
+    >
+      <b className="font-[family-name:var(--font-display)] text-[14px]" style={{ color: on ? "var(--mix)" : "var(--foreground)" }}>
+        {label}
+      </b>
+      {sub && (
+        <span className="text-[10.5px]" style={{ color: "var(--muted)" }}>
+          {sub}
+        </span>
+      )}
+    </button>
+  );
+  const row = (title: string, chips: React.ReactNode[]) => (
+    <div className="flex flex-col gap-1">
+      <b className="font-[family-name:var(--font-display)] text-[12px] tracking-[0.06em] uppercase" style={{ color: "var(--muted)" }}>
+        {title}
+      </b>
+      <div className="flex flex-wrap gap-1.5">{chips}</div>
+    </div>
+  );
+  return (
+    <div className="flex flex-col gap-2 rounded-2xl p-3" style={{ background: "var(--panel)", border: "1px solid var(--line)" }} data-testid="spot-picker">
+      {row("Turn", [
+        chip(!spot.turn, "Any", null, () => setSpot({ turn: null, river: null }), "turn-any"),
+        ...turns.map(([c, kind]) => chip(spot.turn === c, c, kind, () => setSpot({ turn: c, river: null }), `turn-${c}`)),
+      ])}
+      {spot.turn &&
+        row("River", [
+          chip(!spot.river, "Any", null, () => setSpot({ ...spot, river: null }), "river-any"),
+          ...rivers.map(([c, kind]) => chip(spot.river === c, c, kind, () => setSpot({ ...spot, river: c }), `river-${c}`)),
+        ])}
+      {row(
+        "Start on",
+        ["Flop", "Turn", "River"].map((n, i) => chip(startStreet === i, n, null, () => setStartStreet(i), `start-${n.toLowerCase()}`)),
+      )}
+    </div>
   );
 }
 

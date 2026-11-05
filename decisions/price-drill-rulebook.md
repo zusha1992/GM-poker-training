@@ -69,8 +69,22 @@ Every hand goes into exactly one group, checked from the top down. Groups are re
 | 12 | No pair, showdown | Highest card ≥ the board's **showdown cutoff** *(Uri/Noam: K-high on A72)* |
 | 13 | No pair, the rest | Everything else |
 
+### No pair: draws, high card with no draw, trash *(Noam, 2026-11-05, from A♣7♦2♠; on every board and street)*
+- **There's no "Q-high and below" group any more**, on any street. The hands with no pair are split into three groups:
+
+  | Group | Flop | Turn | River |
+  |---|---|---|---|
+  | **Draws** ("Can improve" on the flop) | Any draw, including backdoor straights and backdoor flushes | Real draws only: flush draws, straight draws, gutshots, combo draws | No draws are left |
+  | **K-high, no draw** (A-high when no ace is on the board) | The highest missing card, with no draw | same | Just "K-high" (or "A-high") |
+  | **Trash** | Everything lower, with no draw | same | same |
+
+- **Every draw is worth 0–5bb, so all draws are one group.** The drill is about the size of the pot, not about which hands bluff. *(Noam)*
+- **A backdoor straight draw** means both hole cards sit inside a five-rank window that already holds three ranks (QJ, JT, 98 on A72).
+- **A backdoor flush draw** means a suited hand with one board card of its suit. **A suited hand whose suit isn't on the board** (K5 of hearts on A♣7♦2♠) is in "K-high, no draw" or "Trash".
+- The ace-high group with two overcards on low flops stays as it is.
+
 ### Draws *(Noam, 2026-10-29)*
-- Draws don't get their own group. **Every flush draw and straight draw with no pair and no showdown value is worth zero.** Which ones actually bet belongs to the later bluff drill.
+- *Replaced on 2026-11-05 by the section above: draws now have their own group.* **Every flush draw and straight draw with no pair is still worth 0–5bb.** Which ones actually bet belongs to the later bluff drill.
 - **A hand's strongest feature decides its group** *(draft, proposed and accepted)*: a pair plus a draw stays in its pair group, and an A-high or K-high draw counts as that high card.
 
 ### Small pairs and ace-high on the flop: count the broadway cards *(Noam, from Uri, 2026-11-02)*
@@ -91,7 +105,14 @@ Broadway cards are A, K, Q, J and T.
 - **The river completes the draws** (flush comes in, more straights): K-high loses its showdown value and is **zero**, because the ranges are polar.
 - **The draws brick** (for example the turn brought two flush draws and straight draws, and the river misses them all): BB has many missed draws, so **K-high can go back to a tiny pot**.
 
+### Box rules from the A72 review *(Noam, 2026-11-05; applied as drafts to every other board)*
+1. **A weak pair putting in a little money (about 3–5bb) is 0–5bb.** That's pocket pairs below the second board card and bottom pair (A72: 66–33 and 2x). Pairs between the top two cards and second pair stay 5–15bb (A72: KK–88, 7x).
+2. **On a dry flop, three streets of value means stacks: 50–100bb.** That's strong top pair, and overpairs too (A72: AK, AQ). "If nothing changes by the river, they want to go for stacks."
+3. **A wet turn takes sets and two pair down to 15–25bb** (A72 · 5♣).
+4. **Second pair on a turn that isn't wet is 5–15bb:** it still beats the lower pairs, the draws and the pocket pairs below it (A72 · Q♥: Qx).
+
 ### Every pair wants money on the flop *(Noam, 2026-10-31)*
+- *Updated 2026-11-05: "some money" is now inside 0–5bb (box rule 1 above), so this no longer pushes a pair up to 5–15bb.*
 - In a single-raised pot (BTN raises, BB calls) both ranges are wide, so **any pair on the flop wants to put some money in**, even the worst pair: at least 5%. No pair is showdown value on the flop yet. *Exception (2026-11-02): on a flop with two or more broadway cards, 88 and lower want no money and third pair or lower only a tiny pot (see "Small pairs and ace-high on the flop").*
 
 ### Weak pairs on the river *(Noam, 2026-10-31, from his note on K♦Q♦4♠ · 8♠ · 3♥)*
@@ -224,3 +245,12 @@ Their answers are not written one by one: they come from a **value plan**, the r
   - **66–33:** they put a little money in, about 3–5bb, and that's inside the 0–5bb box.
   - **The flop pair rule** ("every pair wants some money, at least 5%") no longer pushes a pair up to 5–15bb on boards Noam has checked: "some money" is now inside 0–5bb. Boards not yet checked keep the old rule until he does.
   - **Next:** the A72 turn. AK still says 25–50bb on a brick turn and river, so it needs to match.
+- **2026-11-05**: Noam checked the three **A72 turns**:
+  - **5♣:** sets and two pair go to 15–25bb. Draws, K-high with no draw and trash are separate groups, and all draws are one group.
+  - **Q♥:** Qx goes to 5–15bb. The draws are KJ, KT and JT (broadway gutshots) plus 54s and 43s (wheel gutshots).
+  - **6♦:** the same three no-pair groups; the boxes stay as they were.
+- **2026-11-05**: The A72 principles applied to **every board** while Noam is away. All of these are drafts with a gold dot.
+  - The no-pair hands are split into draws, K-high or A-high with no draw, and trash on every flop, turn and river.
+  - The four box rules changed 43 groups: weak flop pairs to 0–5bb, dry-flop overpairs and strong top pair to 50–100bb, sets and two pair on wet turns to 15–25bb, second pair on calm turns to 5–15bb.
+  - The A72 streets Noam checked didn't change.
+- **2026-11-05**: The start screen can pick a board's exact turn, river and starting street, to get to a spot under review.

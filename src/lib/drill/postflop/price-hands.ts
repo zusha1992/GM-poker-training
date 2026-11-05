@@ -40,8 +40,8 @@ export type PGroup =
   | "khnd"
   | "sd"
   | "air";
-/** imp/khnd: the no-pair hands split by whether they can improve,
- * on streets with `splitNoPair` (see noPairGroupOf). */
+/** imp/khnd/air: the no-pair hands split by whether they can improve (see
+ * noPairGroupOf). "sd" is no longer used: kept for old feedback notes. */
 export const PGROUP_ORDER: PGroup[] = ["monster", "twopair", "op", "tpgk", "tpmk", "tpwk", "pp1", "pp2", "pp3", "spp", "mp", "bp", "aho", "imp", "khnd", "sd", "air"];
 
 /** Same color and shape on every board and street. */
@@ -108,11 +108,6 @@ type StreetSpec = {
   midKicker: number;
   /** No-pair hands with a card this high or higher have showdown value (13 = K-high). */
   sdCutoff: number;
-  /** Split the no-pair hands by whether they can improve, not by high card only (noPairGroupOf). */
-  splitNoPair?: boolean;
-  /** Noam went through every answer on this street (2026-11-05 on): the old rules that only
-   * patched draft answers stay out. */
-  reviewed?: boolean;
   answers: Partial<Record<PGroup, Answer>>;
 };
 
@@ -142,8 +137,6 @@ const A72_FLOP: StreetSpec = {
   kind: "flop",
   story: "A dry ace-high flop. BTN has far more strong aces than BB.",
   ...CUT,
-  splitNoPair: true,
-  reviewed: true,
   // Noam 2026-11-05: every answer on this flop checked by Noam.
   answers: {
     twopair: autoAll("Sets and two pair want every chip in on a dry board."),
@@ -175,7 +168,6 @@ const A72_TURNS: TurnSpec[] = [
     story: "Q♥ · Brick. Nothing changes for BB: BTN overbets, polar.",
     ...CUT,
     // Noam 2026-11-05: KJ, KT, JT (broadway gutshots) and 54s, 43s (wheel gutshots) are the draws.
-    splitNoPair: true,
     // Polar line (Noam 2026-10-30): only the top of the range and the bluffs
     // keep putting money in; everything else checks back the turn.
     answers: {
@@ -236,17 +228,20 @@ const A72_TURNS: TurnSpec[] = [
     bet: "twoThirds",
     story: "6♦ · Dynamic. A diamond flush draw and straight draws like 98, 85 and 54: BTN bets 66%.",
     ...CUT,
+    // Noam 2026-11-05: groups checked by Noam (draws, K-high no draw, trash); boxes as they were.
     answers: {
       twopair: autoAll("Still way ahead: charge every new draw."),
-      tpgk: a("b25", "Still well ahead: keep charging the new draws."),
-      tpmk: a("b5", "BB's range improved: the medium kickers slow down."),
-      tpwk: a("b5", "One small bet, then showdown."),
-      pp1: a("b0", "KK–88 under an ace: one small bet on the flop, then check down unless they improve."),
-      pp3: a("b0", "55–33 are under three cards: check and show down."),
-      mp: a("b5", "Keep the pot small."),
-      bp: a("b0", "6x and 2x: check and show down."),
+      tpgk: a("b25", "Still well ahead: keep charging the new draws.", true),
+      tpmk: a("b5", "BB's range improved: the medium kickers slow down.", true),
+      tpwk: a("b5", "One small bet, then showdown.", true),
+      pp1: a("b0", "KK–88 under an ace: one small bet on the flop, then check down unless they improve.", true),
+      pp3: a("b0", "55–33 are under three cards: check and show down.", true),
+      mp: a("b5", "Keep the pot small.", true),
+      bp: a("b0", "6x and 2x: check and show down.", true),
       sd: SD(),
-      air: a("b0", "No showdown value: every flush and straight draw is worth zero here.", true),
+      imp: a("b0", "Diamond flush draws and straight draws (T9, T8, 98, 54, 43): no pair yet, worth 0–5bb.", true),
+      khnd: SD("King-high with no draw: no pair, but it sometimes wins at showdown."),
+      air: a("b0", "Queen-high or lower with no draw: no showdown value, worth zero.", true),
     },
     rivers: [
       {
@@ -293,8 +288,6 @@ const A72_TURNS: TurnSpec[] = [
     story: "5♣ · Wet. 43 makes the wheel, and a club flush draw and more straight draws arrive: BTN bets 66%.",
     ...CUT,
     // Noam 2026-11-05: every answer on this turn checked by Noam.
-    splitNoPair: true,
-    reviewed: true,
     answers: {
       twopair: a("b15", "A wet turn: the wheel is possible and a flush draw arrived, so sets and two pair go down to 15–25bb.", true),
       tpgk: a("b15", "BB's range got stronger: one step down.", true),
@@ -399,10 +392,10 @@ const JT3_TURNS: TurnSpec[] = [
       pp1: CHECKS(),
       pp2: CHECKS(),
       pp3: CHECKS(),
-      mp: CHECKS(),
+      mp: a("b5", "Second pair (Tx) still beats the lower pairs and the draws: more than 0–5bb."),
       bp: CHECKS(),
       sd: A_HIGH_SD(),
-      air: a("b0", "Flush draws, straight draws and air: no showdown value, so worth zero.", true),
+      air: a("b0", "No pair and no draw: no showdown value, so worth zero.", true),
     },
     rivers: [
       {
@@ -462,7 +455,7 @@ const JT3_TURNS: TurnSpec[] = [
       pp1: SHOW(),
       pp2: SHOW(),
       pp3: SHOW(),
-      mp: SHOW("Tx: check and show down."),
+      mp: a("b5", "Second pair (Tx) still beats the lower pairs and the draws: more than 0–5bb."),
       bp: SHOW(),
       sd: A_HIGH_SD(),
       air: JT3_AIR,
@@ -517,7 +510,7 @@ const JT3_TURNS: TurnSpec[] = [
     story: "9♠ · Wet. The spade flush and the KQ, Q8 and 87 straights arrive: BTN bets 66%.",
     ...JT3_CUT,
     answers: {
-      twopair: a("b25", "Strong, but every flush and straight beats it now: big, not all-in."),
+      twopair: a("b15", "A wet turn: every flush and straight beats it now, so sets and two pair go down to 15–25bb."),
       op: a("b5", "QQ–AA without a spade: one small bet at most."),
       tpgk: a("b5", "AJ and KJ: one small bet at most."),
       tpmk: SHOW(),
@@ -602,17 +595,23 @@ type RunoutKinds = { wetFlop: boolean; turn?: StreetKind; river?: StreetKind };
 function ruleAnswer(g: PGroup, street: Street, k: RunoutKinds): Answer {
   if (g === "monster") return autoAll("Straights and better want every chip in.");
   if (g === "air") return a("b0", "No pair and no showdown value: it can't win by checking, so it's worth zero.", true);
-  if (g === "sd") {
+  if (g === "imp") return a("b0", "No pair yet, but a draw: worth 0–5bb, like every draw.", true);
+  if (g === "sd" || g === "khnd") {
     if (street === "river" && k.river === "wet") return a("b0", "The draws arrived and the ranges are polar: this high card can't win at showdown any more.");
     return a("b0", "No pair, but the highest cards sometimes win at showdown. Draws included.", true);
   }
   if (g === "twopair") {
     if (street === "flop" || (street === "turn" && k.turn !== "wet")) return autoAll("Sets and two pair want every chip in.");
-    if (street === "turn") return a("b25", "The turn completed draws: still big, not all-in.");
+    // Noam 2026-11-05 (A72, 5♣ turn): a wet turn takes sets and two pair down to 15–25bb.
+    if (street === "turn") return a("b15", "A wet turn: straights and flush draws are out there, so sets and two pair go down to 15–25bb.");
     if (k.river === "wet") return a("b15", "Behind every new flush and straight: one value bet at most.");
     return k.turn === "wet" ? a("b25", "The draws missed, but the turn already brought them: big, not all-in.") : autoAll("Nothing got there: get the rest in.");
   }
   const n = valueStreets(g, k.wetFlop);
+  // Noam 2026-11-05 (A72): on a dry flop, three streets of value means the stacks go in by the river.
+  if (street === "flop" && n === 3 && !k.wetFlop) return a("b50", "A dry flop: if nothing changes by the river, it wants to get the stacks in.");
+  // Noam 2026-11-05 (A72, Q♥ turn): second pair on a turn that isn't wet still beats the lower pairs and the draws.
+  if (street === "turn" && g === "mp" && k.turn !== "wet") return a("b5", "Second pair still beats the lower pairs and the draws: more than 0–5bb.");
   if (street === "flop") {
     const b = FLOP_BUCKET[n];
     const why =
@@ -853,6 +852,8 @@ function flopTexture(board: Card[]): "low" | "high" | null {
 function noPairGroupOf(hole: [Card, Card], board: Card[], sdCutoff: number): PGroup {
   const [x, y] = hole;
   const flop = board.length === 3;
+  // On the river nothing is a draw any more: only the high card is left.
+  if (board.length === 5) return Math.max(x.r, y.r) >= sdCutoff ? "khnd" : "air";
   const low = (r: number) => (r === 14 ? [1, 14] : [r]);
   const have = new Set([...hole, ...board].flatMap((c) => low(c.r)));
   for (let lo = 1; lo <= 10; lo++) {
@@ -867,7 +868,7 @@ function noPairGroupOf(hole: [Card, Card], board: Card[], sdCutoff: number): PGr
   return Math.max(x.r, y.r) >= sdCutoff ? "khnd" : "air";
 }
 
-export function priceGroupOf(hole: [Card, Card], board: Card[], cut: Pick<StreetSpec, "goodKicker" | "midKicker" | "sdCutoff" | "splitNoPair">): PGroup {
+export function priceGroupOf(hole: [Card, Card], board: Card[], cut: Pick<StreetSpec, "goodKicker" | "midKicker" | "sdCutoff">): PGroup {
   const all = [...hole, ...board];
   const [x, y] = hole;
   const pocket = x.r === y.r;
@@ -903,8 +904,7 @@ export function priceGroupOf(hole: [Card, Card], board: Card[], cut: Pick<Street
   }
   if (boardCount(x.r) > 0 || boardCount(y.r) > 0) return x.r === ranks[1] || y.r === ranks[1] ? "mp" : "bp";
   if (texture === "low" && Math.max(x.r, y.r) === 14 && Math.min(x.r, y.r) > top) return "aho";
-  if (cut.splitNoPair) return noPairGroupOf(hole, board, cut.sdCutoff);
-  return Math.max(x.r, y.r) >= cut.sdCutoff ? "sd" : "air";
+  return noPairGroupOf(hole, board, cut.sdCutoff);
 }
 
 // ---------- names (neutral: what the hands ARE, never what to do) ----------
@@ -934,7 +934,7 @@ function runs(vals: number[], fmt: (v: number) => string): string {
 const RV: Record<string, number> = { A: 14, K: 13, Q: 12, J: 11, T: 10 };
 const rv = (c: string) => RV[c] ?? Number(c);
 
-function namesOf(g: PGroup, board: Card[], hands: string[], cut: Pick<StreetSpec, "sdCutoff" | "splitNoPair">): { label: string; name: string } {
+function namesOf(g: PGroup, board: Card[], hands: string[], cut: Pick<StreetSpec, "sdCutoff">): { label: string; name: string } {
   const ranks = boardRanks(board);
   const top = ch(ranks[0]);
   switch (g) {
@@ -977,14 +977,19 @@ function namesOf(g: PGroup, board: Card[], hands: string[], cut: Pick<StreetSpec
       return board.length === 3
         ? { label: "Can improve", name: "No pair, but a draw: gutshots, backdoor straights, backdoor flushes" }
         : { label: "Draws", name: "No pair, but a draw: flush draws, straight draws, gutshots, combo draws" };
-    case "khnd":
-      return { label: `${ch(cut.sdCutoff)}-high, no draw`, name: `No pair, ${ch(cut.sdCutoff)}-high, no draw` };
+    case "khnd": {
+      const hi = ch(missingAtOrBelow(ranks, cut.sdCutoff));
+      return board.length === 5 ? { label: `${hi}-high`, name: `No pair, ${hi}-high` } : { label: `${hi}-high, no draw`, name: `No pair, ${hi}-high, no draw` };
+    }
     case "sd": {
       const hi = missingAtOrBelow(ranks, cut.sdCutoff);
       return { label: `${ch(hi)}-high`, name: `No pair, ${ch(hi)}-high (draws included)` };
     }
     default: {
-      if (g === "air" && cut.splitNoPair) return { label: "Trash", name: "No pair, queen-high or lower, no draw" };
+      if (g === "air") {
+        const lo = ch(missingAtOrBelow(ranks, cut.sdCutoff - 1));
+        return { label: "Trash", name: board.length === 5 ? `No pair, ${lo}-high or lower` : `No pair, ${lo}-high or lower, no draw` };
+      }
       const lo = missingAtOrBelow(ranks, cut.sdCutoff - 1);
       return { label: `${ch(lo)}-high & below`, name: `No pair, ${ch(lo)}-high or lower (draws included)` };
     }
@@ -1041,14 +1046,10 @@ const STREET_NAMES: Street[] = ["flop", "turn", "river"];
  * showdown value (draws missing vs arriving) is still open for Uri. */
 /** Noam 2026-10-31: in a single-raised pot the ranges are wide, so every pair
  * on the flop wants some money, even the worst one. Noam 2026-11-05: with the
- * bb boxes "some money" (about 3–5bb) is inside 0–5bb, so on a street Noam
- * has reviewed it no longer forces a pair up to 5–15bb. Boards he hasn't
- * reviewed yet keep the old floor until he does. */
+ * bb boxes "some money" (about 3–5bb) is inside 0–5bb, so a pair is no
+ * longer forced up to 5–15bb (on A72 66–33 and 2x went to 0–5bb). */
 const PAIR_GROUPS = new Set<PGroup>(["op", "tpgk", "tpmk", "tpwk", "pp1", "pp2", "pp3", "mp", "bp"]);
-function everyBoardRule(g: PGroup, street: Street, ans: Answer | undefined, reviewed = false): Answer | undefined {
-  if (!reviewed && ans && street === "flop" && PAIR_GROUPS.has(g) && BUCKET_RANK[ans.bucket] < BUCKET_RANK.b5) {
-    return a("b5", "Any pair on the flop of a single-raised pot wants some money: both ranges are wide.");
-  }
+function everyBoardRule(g: PGroup, street: Street, ans: Answer | undefined): Answer | undefined {
   // Noam/Uri 2026-11-02: ace-high (king-high on an ace board) has showdown value
   // on the flop, almost never on the turn. Zero on every turn until feedback adds exceptions.
   if (street === "turn" && g === "sd") return a("b0", "No pair on the turn: this high card has lost its showdown value, so it's worth zero.");
@@ -1099,6 +1100,16 @@ function veryWetRule(g: PGroup, street: Street, board: Card[], ans: Answer | und
   if (BUCKET_RANK[ans.bucket] <= BUCKET_RANK.b0) return ans;
   return a("b0", g === "twopair" ? "One card makes a straight or a flush is in: sets and two pair only get called by better. Check and show down." : "A very wet board: one pair only gets called by better. Check and show down.");
 }
+/** Streets written before the no-pair split (Noam 2026-11-05) answer "sd"
+ * (the high card that sometimes wins at showdown) and "air". Their K-high (or
+ * A-high) with no draw takes the "sd" answer, and draws are worth 0–5bb
+ * (Noam, A72: the drill is about the size of the pot, and a draw is 0–5bb). */
+function noPairFallback(g: PGroup, st: StreetSpec): Answer | undefined {
+  if (g === "khnd") return st.answers.sd;
+  if (g === "imp") return a("b0", "No pair yet, but a draw: worth 0–5bb, like every draw.");
+  return undefined;
+}
+
 const RUNOUT_CACHE = new Map<number, Runout>();
 
 /** Everything the screen shows for one runout, worked out once. */
@@ -1118,7 +1129,7 @@ export function buildRunout(index: number): Runout {
     const pieces: PricePiece[] = [];
     for (const g of PGROUP_ORDER) {
       if (snap.byGroup[g] <= 0) continue;
-      const ans = flopRule(g, board) ?? veryWetRule(g, street, board, everyBoardRule(g, street, riverRule(g, street) ?? st.answers[g] ?? AUTO[g], st.reviewed));
+      const ans = flopRule(g, board) ?? veryWetRule(g, street, board, everyBoardRule(g, street, riverRule(g, street) ?? st.answers[g] ?? noPairFallback(g, st) ?? AUTO[g]));
       if (!ans) throw new Error(`price-hands: no answer for ${g} on ${spec.id} (${street})`);
       answers[g] = ans;
       const entries: { hand: string; part: number }[] = [];
