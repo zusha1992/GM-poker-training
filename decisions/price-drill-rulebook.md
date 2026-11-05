@@ -108,6 +108,11 @@ Broadway cards are A, K, Q, J and T.
 ### Box rules from the A72 review *(Noam, 2026-11-05; applied as drafts to every other board)*
 1. **A weak pair putting in a little money (about 3–5bb) is 0–5bb.** That's pocket pairs below the second board card and bottom pair (A72: 66–33 and 2x). Pairs between the top two cards and second pair stay 5–15bb (A72: KK–88, 7x).
 2. **On a dry flop, three streets of value means stacks: 50–100bb.** That's strong top pair, and overpairs too (A72: AK, AQ). "If nothing changes by the river, they want to go for stacks."
+   - **Not on a connected flop** *(Noam, K♠5♥4♣)*: AK and KQ there are "not good enough to go for stacks because of the connectedness of the board", so they're 25–50bb.
+   - Connected means two flop cards next to each other or one apart, with the ace counting high: K54, QT7, KQ4 and 886 are connected; A72 and 962 aren't.
+   - This also matches Noam's 31 October note on QT7 ("a big pot, not stacks").
+5. **Pocket pairs between the top two cards on a turn that isn't wet are 5–15bb**: they're still worth one more bet. *(Noam, A72 · Q♥: KK gets value from 7x, Qx, 2x and pocket pairs; A72 · 6♦: KK–88.)*
+6. **When the flush comes in without four to a straight, sets and two pair are 5–15bb**: still more than showdown. *(Noam, A72 · 6♦ · 8♦.)* With four to a straight they still check down (T87 · 9♥).
 3. **A wet turn takes sets and two pair down to 15–25bb** (A72 · 5♣).
 4. **Second pair on a turn that isn't wet is 5–15bb:** it still beats the lower pairs, the draws and the pocket pairs below it (A72 · Q♥: Qx).
 
@@ -254,3 +259,4 @@ Their answers are not written one by one: they come from a **value plan**, the r
   - The four box rules changed 43 groups: weak flop pairs to 0–5bb, dry-flop overpairs and strong top pair to 50–100bb, sets and two pair on wet turns to 15–25bb, second pair on calm turns to 5–15bb.
   - The A72 streets Noam checked didn't change.
 - **2026-11-05**: The start screen can pick a board's exact turn, river and starting street, to get to a spot under review.
+- **2026-11-05**: From Noam's comments on the site (K54 flop; A72 Q♥ turn, 6♦ turn, 6♦ 8♦ river) came box rules 2 (connected flops), 5 and 6. Applied to every board, they changed 41 groups; the ones not on A72 are drafts.

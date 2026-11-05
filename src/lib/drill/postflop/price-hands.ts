@@ -175,7 +175,7 @@ const A72_TURNS: TurnSpec[] = [
       tpgk: a("b25", "AK keeps going for three streets of value: another big bet on a blank."),
       tpmk: a("b15", "Top pair on a brick turn: another 20%. That's its last bet."),
       tpwk: a("b15", "Top pair on a brick turn: another 20%. That's its last bet."),
-      pp1: CHECKS(),
+      pp1: a("b5", "KK still gets value from 7x, Qx, 2x and the pocket pairs: a little more than 5bb.", true),
       pp2: CHECKS(),
       pp3: CHECKS(),
       mp: a("b5", "Second pair (Qx) still beats every 7x and 2x, the draws and the pocket pairs below it: more than 0–5bb.", true),
@@ -234,7 +234,7 @@ const A72_TURNS: TurnSpec[] = [
       tpgk: a("b25", "Still well ahead: keep charging the new draws.", true),
       tpmk: a("b5", "BB's range improved: the medium kickers slow down.", true),
       tpwk: a("b5", "One small bet, then showdown.", true),
-      pp1: a("b0", "KK–88 under an ace: one small bet on the flop, then check down unless they improve.", true),
+      pp1: a("b5", "KK–88 are still worth one more bet: 5–15bb.", true),
       pp3: a("b0", "55–33 are under three cards: check and show down.", true),
       mp: a("b5", "Keep the pot small.", true),
       bp: a("b0", "6x and 2x: check and show down.", true),
@@ -267,7 +267,7 @@ const A72_TURNS: TurnSpec[] = [
         story: "8♦ · Wet. The diamond flush and the 95, T9 and 54 straights all complete.",
         ...CUT,
         answers: {
-          twopair: a("b15", "Behind every flush and straight: one value bet at most."),
+          twopair: a("b5", "The flush came in, but sets and two pair are still worth more than showdown: 5–15bb.", true),
           tpgk: a("b5", "Top pair is a bluff-catcher now."),
           tpmk: a("b0", "Check and show down."),
           tpwk: a("b0", "Check and show down."),
@@ -589,7 +589,14 @@ function valueStreets(g: PGroup, wetFlop: boolean): number {
 
 const FLOP_BUCKET: Record<number, Bucket> = { 3: "b25", 2: "b15", 1: "b5", 0: "b0" };
 
-type RunoutKinds = { wetFlop: boolean; turn?: StreetKind; river?: StreetKind };
+/** connected: two flop cards next to each other or one apart (K54, QT7, 886;
+ * the ace counts high here, so A72 is not). */
+type RunoutKinds = { wetFlop: boolean; connected?: boolean; turn?: StreetKind; river?: StreetKind };
+
+function connectedFlop(flop: Card[]): boolean {
+  const r = [...new Set(flop.map((c) => c.r))].sort((p, q) => p - q);
+  return r.some((x, i) => i > 0 && x - r[i - 1] <= 2);
+}
 
 /** What one group wants on one street of a generated board. */
 function ruleAnswer(g: PGroup, street: Street, k: RunoutKinds): Answer {
@@ -609,7 +616,11 @@ function ruleAnswer(g: PGroup, street: Street, k: RunoutKinds): Answer {
   }
   const n = valueStreets(g, k.wetFlop);
   // Noam 2026-11-05 (A72): on a dry flop, three streets of value means the stacks go in by the river.
-  if (street === "flop" && n === 3 && !k.wetFlop) return a("b50", "A dry flop: if nothing changes by the river, it wants to get the stacks in.");
+  // Not on a connected one (K54: "not good enough to go for stacks because of the connectedness").
+  if (street === "flop" && n === 3 && !k.wetFlop && !k.connected) return a("b50", "A dry flop: if nothing changes by the river, it wants to get the stacks in.");
+  if (street === "flop" && n === 3 && !k.wetFlop) return a("b25", "A connected flop: not good enough to go for stacks, but a big pot.");
+  // Noam 2026-11-05 (A72 · Q♥ and 6♦): pocket pairs between the top two cards are still worth one more bet on a turn that isn't wet.
+  if (street === "turn" && g === "pp1" && k.turn !== "wet") return a("b5", "Still worth one more bet: it gets value from the lower pairs.");
   // Noam 2026-11-05 (A72, Q♥ turn): second pair on a turn that isn't wet still beats the lower pairs and the draws.
   if (street === "turn" && g === "mp" && k.turn !== "wet") return a("b5", "Second pair still beats the lower pairs and the draws: more than 0–5bb.");
   if (street === "flop") {
@@ -652,7 +663,7 @@ type RuleBoard = { name: string; flop: [string, string, string]; blurb: string; 
  * Turn size (information only): overbet on a brick, 66% otherwise. */
 function ruleBoard(b: RuleBoard): BoardSpec {
   const flopCards = b.flop.map(card);
-  const flopSpec: StreetSpec = { card: "", kind: "flop", story: b.story, ...rulesCut(flopCards), answers: ruleAnswers("flop", flopCards, { wetFlop: b.wetFlop }) };
+  const flopSpec: StreetSpec = { card: "", kind: "flop", story: b.story, ...rulesCut(flopCards), answers: ruleAnswers("flop", flopCards, { wetFlop: b.wetFlop, connected: connectedFlop(flopCards) }) };
   const turns = b.turns.map((t): TurnSpec => {
     const turnBoard = [...flopCards, card(t.card)];
     const rivers = t.rivers.map((rv, i): StreetSpec => {
@@ -1098,6 +1109,9 @@ function veryWetRule(g: PGroup, street: Street, board: Card[], ans: Answer | und
   if (!ans || street === "flop" || !veryWet(board)) return ans;
   if (g !== "twopair" && !PAIR_GROUPS.has(g)) return ans;
   if (BUCKET_RANK[ans.bucket] <= BUCKET_RANK.b0) return ans;
+  // Noam 2026-11-05 (A72 · 6♦ · 8♦): with the flush in but no four to a straight,
+  // sets and two pair are still worth more than showdown.
+  if (g === "twopair" && mostInStraightWindow(board) < 4) return a("b5", "The flush came in, but sets and two pair are still worth more than showdown: 5–15bb.");
   return a("b0", g === "twopair" ? "One card makes a straight or a flush is in: sets and two pair only get called by better. Check and show down." : "A very wet board: one pair only gets called by better. Check and show down.");
 }
 /** Streets written before the no-pair split (Noam 2026-11-05) answer "sd"
