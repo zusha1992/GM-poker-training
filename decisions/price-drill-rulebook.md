@@ -129,6 +129,10 @@ Every hand goes into exactly one group, checked from the top down. Groups are re
   - **Everything else stayed:**
     - AJ–A8 at 5–15bb is on the edge: AJ and AT bet, while A9 and A8 check 98%.
     - The strong draws stay at 5–15bb: their EV is lower, but they're the hands that bet big as semi-bluffs.
+- **A72 · 5♣ · K♥ river, from the solver's equity per hand** (`decisions/ranges/equity-buckets/A72-5c-Kh-equity.md`):
+  - **sets and two pair → 50–100bb** (90–100% equity); everything else stayed;
+  - **hands missing from the solver's range are placed by strength** *(Noam)*: KK with the sets, QQ–TT with 99 and 88, 43s with the straights;
+  - **equity alone is enough on the river.** On the flop and turn it misses the nut draws and the betting behaviour, so those streets need the strategy or EV screenshots.
 - **The solver also shows that EV isn't the whole story.** On the 5♣ turn KK–88 have EV 4.3–4.75bb but check 99%, so they put almost nothing in. The box is set from EV and the strategy together.
 
 ### No pair: draws, high card with no draw, trash *(Noam, 2026-11-05, from A♣7♦2♠; on every board and street)*

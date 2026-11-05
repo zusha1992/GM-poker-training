@@ -347,7 +347,8 @@ const A72_TURNS: TurnSpec[] = [
         story: "K♥ · Brick. The draws missed.",
         ...CUT,
         answers: {
-          twopair: a("b25", "The draws missed, but the wheel is still out there: big, not all-in."),
+          // Checked against the solver's equity per hand (decisions/ranges/equity-buckets/A72-5c-Kh-equity.md).
+          twopair: a("b50", "Sets and two pair have 90–100% equity against BB's river range (solver): they want every chip in."),
           tpgk: a("b15", "The draws missed: back to a value bet."),
           tpmk: a("b5", "One small value bet at most."),
           tpwk: a("b0", "Check and show down."),
