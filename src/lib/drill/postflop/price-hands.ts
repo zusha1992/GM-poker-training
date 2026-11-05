@@ -221,9 +221,10 @@ const A72_TURNS: TurnSpec[] = [
         ...CUT,
         answers: {
           twopair: autoAll("After the overbet the rest is less than two pots: all-in."),
-          // Checked against the solver's equity per hand (decisions/ranges/equity-buckets/A72-other-runouts-equity.md).
-          tpgk: a("b5", "AK has about 73% against BB's range after BB calls the overbet (solver): one thin value bet, 5–15bb."),
-          tpmk: a("b5", "AJ and AT have 62–71% against BB's range after the overbet (solver), about as much as AK: one thin value bet, 5–15bb."),
+          // TexasSolver, river solve in the drill's model (decisions/ranges/solver/A72-Qh-9c.md):
+          // BTN's whole range against BB's range after calling the flop and the overbet.
+          tpgk: a("b25", "TexasSolver: AK bets every time on this river, about 26bb on average: 25–50bb."),
+          tpmk: a("b15", "TexasSolver: AJ, AT and A8 bet 88% of the time, about 22bb on average: 15–25bb."),
           tpwk: CHECKS("A6–A3 bet the flop and the turn: show down."),
           pp1: CHECKS(),
           pp2: CHECKS(),

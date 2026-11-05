@@ -9,7 +9,7 @@ const RANKS = "AKQJT98765432";
 const rv = (c: string) => 14 - RANKS.indexOf(c);
 
 // ---- 7-card evaluator: returns a comparable number ----
-function score(cards: Card[]): number {
+export function score(cards: Card[]): number {
   const byRank = new Map<number, number>();
   const bySuit = new Map<string, number[]>();
   for (const c of cards) {
@@ -55,8 +55,8 @@ for (const line of readFileSync("decisions/ranges/defend/BB-vs-BTN.txt", "utf8")
   const [h, , call] = l.split(/\s+/);
   read.set(h, Number(call) / 100);
 }
-type Combo = { cards: [Card, Card]; w: number };
-function bbCombos(dead: Card[]): Combo[] {
+export type Combo = { cards: [Card, Card]; w: number };
+export function bbCombos(dead: Card[]): Combo[] {
   const out: Combo[] = [];
   const isDead = (c: Card) => dead.some((d) => d.r === c.r && d.s === c.s);
   for (const [h, w] of read) {
@@ -99,7 +99,7 @@ function hasDraw(hole: Card[], board: Card[], backdoor: boolean): "real" | "bd" 
   }
   return null;
 }
-function continueWeight(hole: Card[], board: Card[], street: "flop" | "turn"): number {
+export function continueWeight(hole: Card[], board: Card[], street: "flop" | "turn"): number {
   const all = [...hole, ...board];
   const sc = score(all), boardSc = score(board);
   const cat = Math.floor(sc / 15 ** 5);
@@ -146,38 +146,41 @@ function equity(hero: [Card, Card], board: Card[], range: Combo[], iters: number
   return win / n;
 }
 
-// ---- A72: flop, each turn, each river ----
-const spot = process.argv[2] ?? "A72";
-const runouts = RUNOUTS.filter((r) => r.board === spot);
-const seen = new Set<string>();
-const flop = runouts[0].flop.map(card);
-for (const r of runouts) {
-  const turn = card(r.streets[1].card), river = card(r.streets[2].card);
-  const boards: [string, Card[], any][] = [];
-  if (!seen.has("flop")) boards.push(["flop", flop, r.streets[0]]);
-  if (!seen.has(r.streets[1].card)) boards.push([`turn ${r.streets[1].card}`, [...flop, turn], r.streets[1]]);
-  boards.push([`river ${r.streets[1].card} ${r.streets[2].card}`, [...flop, turn, river], r.streets[2]]);
-  seen.add("flop"); seen.add(r.streets[1].card);
-  for (const [name, board, cut] of boards) {
-    // BB range reaching this street: preflop calls, then continuing on each earlier street.
-    let range = bbCombos(board);
-    if (board.length >= 4) range = range.map((c) => ({ ...c, w: c.w * continueWeight(c.cards, flop, "flop") })).filter((c) => c.w > 0);
-    if (board.length >= 5) range = range.map((c) => ({ ...c, w: c.w * continueWeight(c.cards, board.slice(0, 4), "turn") })).filter((c) => c.w > 0);
-    const { combos } = btnRangeCombos(board);
-    const groups = new Map<string, { eq: number; w: number }>();
-    for (const c of combos) {
-      if (range.some((b) => false)) continue;
-      let g: string = priceGroupOf(c.cards, board, cut);
-      if (process.env.DRAWS && g === "imp") g = drawKind(c.cards, board);
-      if (process.env.DRAWS && g !== "imp" && !g.startsWith("d:")) continue;
-      const e = equity(c.cards, board, range, board.length === 5 ? 120 : 160);
-      const cur = groups.get(g) ?? { eq: 0, w: 0 };
-      groups.set(g, { eq: cur.eq + e * c.weight, w: cur.w + c.weight });
+// ---- one board: flop, each turn, each river (when run directly) ----
+function main() {
+  const spot = process.argv[2] ?? "A72";
+  const runouts = RUNOUTS.filter((r) => r.board === spot);
+  const seen = new Set<string>();
+  const flop = runouts[0].flop.map(card);
+  for (const r of runouts) {
+    const turn = card(r.streets[1].card), river = card(r.streets[2].card);
+    const boards: [string, Card[], (typeof r.streets)[number]][] = [];
+    if (!seen.has("flop")) boards.push(["flop", flop, r.streets[0]]);
+    if (!seen.has(r.streets[1].card)) boards.push([`turn ${r.streets[1].card}`, [...flop, turn], r.streets[1]]);
+    boards.push([`river ${r.streets[1].card} ${r.streets[2].card}`, [...flop, turn, river], r.streets[2]]);
+    seen.add("flop"); seen.add(r.streets[1].card);
+    for (const [name, board, cut] of boards) {
+      // BB range reaching this street: preflop calls, then continuing on each earlier street.
+      let range = bbCombos(board);
+      if (board.length >= 4) range = range.map((c) => ({ ...c, w: c.w * continueWeight(c.cards, flop, "flop") })).filter((c) => c.w > 0);
+      if (board.length >= 5) range = range.map((c) => ({ ...c, w: c.w * continueWeight(c.cards, board.slice(0, 4), "turn") })).filter((c) => c.w > 0);
+      const { combos } = btnRangeCombos(board);
+      const groups = new Map<string, { eq: number; w: number }>();
+      for (const c of combos) {
+        let g: string = priceGroupOf(c.cards, board, cut);
+        if (process.env.DRAWS && g === "imp") g = drawKind(c.cards, board);
+        if (process.env.DRAWS && g !== "imp" && !g.startsWith("d:")) continue;
+        const e = equity(c.cards, board, range, board.length === 5 ? 120 : 160);
+        const cur = groups.get(g) ?? { eq: 0, w: 0 };
+        groups.set(g, { eq: cur.eq + e * c.weight, w: cur.w + c.weight });
+      }
+      console.log(`== ${name}  (BB range: ${Math.round(range.reduce((s, c) => s + c.w, 0))} combos)`);
+      for (const [g, v] of [...groups].sort((a, b) => b[1].eq / b[1].w - a[1].eq / a[1].w)) console.log(`   ${g.padEnd(9)} ${Math.round((v.eq / v.w) * 100)}%`);
     }
-    console.log(`== ${name}  (BB range: ${Math.round(range.reduce((s, c) => s + c.w, 0))} combos)`);
-    for (const [g, v] of [...groups].sort((a, b) => b[1].eq / b[1].w - a[1].eq / a[1].w)) console.log(`   ${g.padEnd(9)} ${Math.round((v.eq / v.w) * 100)}%`);
   }
+
 }
+if (process.argv[1]?.includes("price-equity")) main();
 
 function drawKind(hole: [Card, Card], board: Card[]): string {
   const all = [...hole, ...board];

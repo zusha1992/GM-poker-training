@@ -141,6 +141,10 @@ Every hand goes into exactly one group, checked from the top down. Groups are re
   - **The other rivers** (Q♥ K♦, 6♦ 8♦, 5♣ 6♣) match.
   - **Flushes:** a cell's equity averages the combos with and without the suit, so a suit-filtered screenshot is needed before splitting big and small flushes (on hold).
   - **After a turn that goes check, check** (a line the drill doesn't have yet), top pair has 83–92% on the river (Q♥ · 9♣).
+- **Our own solver (TexasSolver), first spot: A72 · Q♥ · 9♣ river** (`decisions/ranges/solver/A72-Qh-9c.md`). It's solved in the drill's model: BTN's whole range reaches the river.
+  - **The box is the money BTN bets on that street** (frequency × size) once BB checks.
+  - **AK bets 100%, 26bb on average: 25–50bb.** AJ, AT and A8 bet 88%, 22bb: **15–25bb.** These replace the equity-based 5–15bb from GTO Wizard's narrower line.
+  - **Bluffs** bet too, but stay at 0–5bb, because the drill asks what a group is worth.
 - **The solver also shows that EV isn't the whole story.** On the 5♣ turn KK–88 have EV 4.3–4.75bb but check 99%, so they put almost nothing in. The box is set from EV and the strategy together.
 
 ### No pair: draws, high card with no draw, trash *(Noam, 2026-11-05, from A♣7♦2♠; on every board and street)*
