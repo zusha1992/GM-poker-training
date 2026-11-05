@@ -174,6 +174,8 @@ const A72_TURNS: TurnSpec[] = [
     bet: "overbet",
     story: "Q♥ · Brick. Nothing changes for BB: BTN overbets, polar.",
     ...CUT,
+    // Noam 2026-11-05: KJ, KT, JT (broadway gutshots) and 54s, 43s (wheel gutshots) are the draws.
+    splitNoPair: true,
     // Polar line (Noam 2026-10-30): only the top of the range and the bluffs
     // keep putting money in; everything else checks back the turn.
     answers: {
@@ -184,10 +186,12 @@ const A72_TURNS: TurnSpec[] = [
       pp1: CHECKS(),
       pp2: CHECKS(),
       pp3: CHECKS(),
-      mp: CHECKS("Second pair (Qx): check and show down."),
+      mp: a("b5", "Second pair (Qx) still beats every 7x and 2x, the draws and the pocket pairs below it: more than 0–5bb.", true),
       bp: CHECKS(),
       sd: SD(),
-      air: a("b0", "No showdown value: worth zero.", true),
+      imp: a("b0", "Gutshots: KJ, KT and JT to the broadway straight, 54 and 43 to the wheel. No pair yet."),
+      khnd: SD("King-high with no draw: no pair, but it sometimes wins at showdown."),
+      air: a("b0", "Jack-high or lower with no draw: no showdown value, worth zero.", true),
     },
     rivers: [
       {
