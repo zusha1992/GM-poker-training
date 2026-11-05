@@ -288,18 +288,23 @@ const A72_TURNS: TurnSpec[] = [
     bet: "twoThirds",
     story: "5♣ · Wet. 43 makes the wheel, and a club flush draw and more straight draws arrive: BTN bets 66%.",
     ...CUT,
+    // Noam 2026-11-05: every answer on this turn checked by Noam.
+    splitNoPair: true,
+    reviewed: true,
     answers: {
-      twopair: a("b25", "The wheel is possible now: still big, but not all-in."),
-      tpgk: a("b15", "BB's range got stronger: one step down."),
-      tpmk: a("b5", "One small bet, then showdown."),
-      tpwk: a("b5", "A4 and A3 picked up a wheel draw: one small bet."),
-      pp1: a("b0", "KK–88 under an ace: one small bet on the flop, then check down unless they improve."),
-      pp2: a("b0", "66 is between the 7 and the 5: check and show down."),
-      pp3: a("b0", "Check and show down."),
-      mp: a("b0", "7x: check and show down."),
-      bp: a("b0", "5x and 2x: check and show down."),
-      sd: SD(),
-      air: a("b0", "No showdown value: every flush and straight draw is worth zero here.", true),
+      twopair: a("b15", "A wet turn: the wheel is possible and a flush draw arrived, so sets and two pair go down to 15–25bb.", true),
+      tpgk: a("b15", "BB's range got stronger: one step down.", true),
+      tpmk: a("b5", "One small bet, then showdown.", true),
+      tpwk: a("b5", "A4 and A3 picked up a wheel draw: one small bet.", true),
+      pp1: a("b0", "KK–88 under an ace: one small bet on the flop, then check down unless they improve.", true),
+      pp2: a("b0", "66 is between the 7 and the 5: check and show down.", true),
+      pp3: a("b0", "Check and show down.", true),
+      mp: a("b0", "7x: check and show down.", true),
+      bp: a("b0", "5x and 2x: check and show down.", true),
+      // The drill asks about the size of the pot, and every draw is worth 0–5bb: one group (Noam).
+      imp: a("b0", "Flush draws, straight draws, gutshots and combo draws: no pair yet, worth 0–5bb.", true),
+      khnd: SD("King-high with no draw: no pair, but it sometimes wins at showdown."),
+      air: a("b0", "Queen-high or lower with no draw: it can't win by checking, so it's worth zero.", true),
     },
     rivers: [
       {
@@ -836,10 +841,14 @@ function flopTexture(board: Card[]): "low" | "high" | null {
  *   straight draw (both hole cards inside a five-rank window that already
  *   holds three ranks: QJ, JT, 98 on A72) or a backdoor flush draw (suited,
  *   one board card of that suit). KQ–KT are here too.
+ *   Backdoor draws count on the flop only: on the turn just real draws
+ *   (Noam 2026-11-05, 5♣ turn: flush, straight and combo draws are one group,
+ *   since every draw is worth 0–5bb).
  * - khnd: king-high (the showdown cutoff) with no draw, e.g. K9o, K5 of hearts.
  * - air: trash, queen-high or lower with no draw. */
 function noPairGroupOf(hole: [Card, Card], board: Card[], sdCutoff: number): PGroup {
   const [x, y] = hole;
+  const flop = board.length === 3;
   const low = (r: number) => (r === 14 ? [1, 14] : [r]);
   const have = new Set([...hole, ...board].flatMap((c) => low(c.r)));
   for (let lo = 1; lo <= 10; lo++) {
@@ -847,9 +856,10 @@ function noPairGroupOf(hole: [Card, Card], board: Card[], sdCutoff: number): PGr
     let n = 0;
     for (let r = lo; r < lo + 5; r++) if (have.has(r)) n++;
     const holeIn = [x, y].filter((c) => low(c.r).some(inWin)).length;
-    if ((n >= 4 && holeIn >= 1) || (n === 3 && holeIn === 2)) return "imp";
+    if ((n >= 4 && holeIn >= 1) || (flop && n === 3 && holeIn === 2)) return "imp";
   }
-  if (x.s === y.s && board.some((c) => c.s === x.s)) return "imp";
+  const suitOnBoard = x.s === y.s ? board.filter((c) => c.s === x.s).length : 0;
+  if (suitOnBoard >= (flop ? 1 : 2)) return "imp";
   return Math.max(x.r, y.r) >= sdCutoff ? "khnd" : "air";
 }
 
@@ -960,7 +970,9 @@ function namesOf(g: PGroup, board: Card[], hands: string[], cut: Pick<StreetSpec
     // No-pair names use only ranks that are NOT on the board (Noam: "K-high" makes
     // no sense on a board with a king), e.g. "A-high" and "J-high & below" on K♦Q♦4♠.
     case "imp":
-      return { label: "Can improve", name: "No pair, but a draw: gutshots, backdoor straights, backdoor flushes" };
+      return board.length === 3
+        ? { label: "Can improve", name: "No pair, but a draw: gutshots, backdoor straights, backdoor flushes" }
+        : { label: "Draws", name: "No pair, but a draw: flush draws, straight draws, gutshots, combo draws" };
     case "khnd":
       return { label: `${ch(cut.sdCutoff)}-high, no draw`, name: `No pair, ${ch(cut.sdCutoff)}-high, no draw` };
     case "sd": {
