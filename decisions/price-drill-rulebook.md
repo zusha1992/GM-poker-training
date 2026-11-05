@@ -204,3 +204,12 @@ Their answers are not written one by one: they come from a **value plan**, the r
 - **2026-11-02**: From Noam, from Uri: flops with at most one broadway card or paired: small pairs and ace-high with two overcards are worth a small bet. Flops with two or more broadway cards: 99–JJ and second pair or better are a small pot; ace-high and third pair or lower are a tiny pot; 88 and lower are Zero and stay Zero on the turn and river unless they improve.
 - **2026-11-02**: Paired flops are in the rulebook, and an 11th board was added: 8♠8♦6♣ (6 runouts, answers computed from the rules, all drafts).
 - **2026-11-05**: From Noam: the six named boxes became five big-blind ranges: 0–5, 5–15, 15–25, 25–50 and 50–100bb. Zero and Tiny pot merged into 0–5bb, and every other box moved one to one. The paddles now form an arc over the drop area, small to big from left to right. Noam is re-answering every board group by group.
+- **2026-11-05**: From Noam, **A♣7♦2♠ flop only** (turn and river later, step by step): "Q-high and below" was too big a group. The no-pair hands now split into:
+  - KQ–KT: king-high, good kicker;
+  - K9 and below: king-high, weak kicker;
+  - straight draws: 54, 43, the wheel gutshots;
+  - backdoor straight draws: QJ, QT, JT, T9, 98, 65 and others;
+  - backdoor flush draws only: Q9s and below, suited, with one board card of their suit;
+  - no draw.
+
+  All are 0–5bb until Noam gives the answers.

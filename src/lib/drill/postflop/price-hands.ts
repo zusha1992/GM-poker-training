@@ -22,8 +22,30 @@ import type { MatrixSnap } from "@/components/drill/postflop/LineMatrix";
  *  broadway cards, on every street until they improve. aho = ace-high with two overcards on a flop with at most
  *  one broadway card, or a paired one. sd = no pair, high card at or above the
  *  board's showdown cutoff (draws included); air = every other no-pair hand. */
-export type PGroup = "monster" | "twopair" | "op" | "tpgk" | "tpmk" | "tpwk" | "pp1" | "pp2" | "pp3" | "spp" | "mp" | "bp" | "aho" | "sd" | "air";
-export const PGROUP_ORDER: PGroup[] = ["monster", "twopair", "op", "tpgk", "tpmk", "tpwk", "pp1", "pp2", "pp3", "spp", "mp", "bp", "aho", "sd", "air"];
+export type PGroup =
+  | "monster"
+  | "twopair"
+  | "op"
+  | "tpgk"
+  | "tpmk"
+  | "tpwk"
+  | "pp1"
+  | "pp2"
+  | "pp3"
+  | "spp"
+  | "mp"
+  | "bp"
+  | "aho"
+  | "khg"
+  | "khw"
+  | "draw"
+  | "bdsd"
+  | "bdfd"
+  | "sd"
+  | "air";
+/** khg/khw/draw/bdsd/bdfd: the no-pair hands split by what they can become,
+ * on streets with `splitNoPair` (see noPairGroupOf). */
+export const PGROUP_ORDER: PGroup[] = ["monster", "twopair", "op", "tpgk", "tpmk", "tpwk", "pp1", "pp2", "pp3", "spp", "mp", "bp", "aho", "khg", "khw", "draw", "bdsd", "bdfd", "sd", "air"];
 
 /** Same color and shape on every board and street. */
 export const PGROUP_INFO: Record<PGroup, { color: string; shape: string }> = {
@@ -40,6 +62,11 @@ export const PGROUP_INFO: Record<PGroup, { color: string; shape: string }> = {
   mp: { color: "#9DB4C4", shape: "I3" },
   bp: { color: "#7F97A8", shape: "dot2" },
   aho: { color: "#D4E86B", shape: "P" },
+  khg: { color: "#E8C76B", shape: "N" },
+  khw: { color: "#B89B5A", shape: "Y" },
+  draw: { color: "#5FD3E8", shape: "F" },
+  bdsd: { color: "#7FB2E0", shape: "L5" },
+  bdfd: { color: "#8FA0E8", shape: "T5" },
   sd: { color: "#9BE07A", shape: "plus" },
   air: { color: "#56626C", shape: "U" },
 };
@@ -87,6 +114,8 @@ type StreetSpec = {
   midKicker: number;
   /** No-pair hands with a card this high or higher have showdown value (13 = K-high). */
   sdCutoff: number;
+  /** Split the no-pair hands by kicker and draws instead of high card only (noPairGroupOf). */
+  splitNoPair?: boolean;
   answers: Partial<Record<PGroup, Answer>>;
 };
 
@@ -116,6 +145,7 @@ const A72_FLOP: StreetSpec = {
   kind: "flop",
   story: "A dry ace-high flop. BTN has far more strong aces than BB.",
   ...CUT,
+  splitNoPair: true,
   answers: {
     twopair: autoAll("Sets and two pair want every chip in on a dry board."),
     tpgk: a("b25", "AK and AQ beat all of BB's weaker aces: three streets of value."),
@@ -126,7 +156,13 @@ const A72_FLOP: StreetSpec = {
     mp: a("b5", "Middle pair: one small bet at most."),
     bp: a("b0", "Bottom pair: check and show down."),
     sd: SD(),
-    air: AIR,
+    // Noam 2026-11-05: the no-pair hands in finer groups. Answers wait for Noam (both old groups were 0–5bb).
+    khg: SD("KQ, KJ, KT: no pair, but the best king-high, with a backdoor straight draw."),
+    khw: SD("K9 and below: no pair, a weak king-high."),
+    draw: a("b0", "A gutshot to the wheel: no pair yet."),
+    bdsd: a("b0", "No pair, but two more cards can make a straight."),
+    bdfd: a("b0", "No pair, queen-high or lower: only two more cards of its suit make a flush."),
+    air: a("b0", "No pair and no draw: it can't win by checking, so it's worth zero."),
   },
 };
 
@@ -798,7 +834,37 @@ function flopTexture(board: Card[]): "low" | "high" | null {
   return broadway <= 1 || new Set(board.map((c) => c.r)).size < 3 ? "low" : "high";
 }
 
-export function priceGroupOf(hole: [Card, Card], board: Card[], cut: Pick<StreetSpec, "goodKicker" | "midKicker" | "sdCutoff">): PGroup {
+/** Noam 2026-11-05 (A72 flop): "Q-high and below" as one big group says too
+ * little. A no-pair hand goes, top-down, to:
+ * - khg / khw: K-high (the showdown cutoff) with a T or better kicker (KQ–KT),
+ *   or a lower one (K9 and below): different quality;
+ * - draw: a real draw (gutshot or better, or four to a flush);
+ * - bdsd: a backdoor straight draw, both hole cards inside a five-rank window
+ *   that already holds three ranks (QJ, JT, 98 on A72);
+ * - bdfd: only a backdoor flush draw (suited, one board card of that suit);
+ * - air: everything else. */
+function noPairGroupOf(hole: [Card, Card], board: Card[], sdCutoff: number): PGroup {
+  const [x, y] = hole;
+  const hi = Math.max(x.r, y.r);
+  if (hi >= sdCutoff) return Math.min(x.r, y.r) >= 10 ? "khg" : "khw";
+  const low = (r: number) => (r === 14 ? [1, 14] : [r]);
+  const have = new Set([...hole, ...board].flatMap((c) => low(c.r)));
+  let bdsd = false;
+  for (let lo = 1; lo <= 10; lo++) {
+    const inWin = (r: number) => r >= lo && r < lo + 5;
+    let n = 0;
+    for (let r = lo; r < lo + 5; r++) if (have.has(r)) n++;
+    const holeIn = [x, y].filter((c) => low(c.r).some(inWin)).length;
+    if (n >= 4 && holeIn >= 1) return "draw";
+    if (n === 3 && holeIn === 2) bdsd = true;
+  }
+  const suited = x.s === y.s ? board.filter((c) => c.s === x.s).length : 0;
+  if (suited >= 2) return "draw";
+  if (bdsd) return "bdsd";
+  return suited === 1 ? "bdfd" : "air";
+}
+
+export function priceGroupOf(hole: [Card, Card], board: Card[], cut: Pick<StreetSpec, "goodKicker" | "midKicker" | "sdCutoff" | "splitNoPair">): PGroup {
   const all = [...hole, ...board];
   const [x, y] = hole;
   const pocket = x.r === y.r;
@@ -834,6 +900,7 @@ export function priceGroupOf(hole: [Card, Card], board: Card[], cut: Pick<Street
   }
   if (boardCount(x.r) > 0 || boardCount(y.r) > 0) return x.r === ranks[1] || y.r === ranks[1] ? "mp" : "bp";
   if (texture === "low" && Math.max(x.r, y.r) === 14 && Math.min(x.r, y.r) > top) return "aho";
+  if (cut.splitNoPair) return noPairGroupOf(hole, board, cut.sdCutoff);
   return Math.max(x.r, y.r) >= cut.sdCutoff ? "sd" : "air";
 }
 
@@ -864,7 +931,7 @@ function runs(vals: number[], fmt: (v: number) => string): string {
 const RV: Record<string, number> = { A: 14, K: 13, Q: 12, J: 11, T: 10 };
 const rv = (c: string) => RV[c] ?? Number(c);
 
-function namesOf(g: PGroup, board: Card[], hands: string[], cut: Pick<StreetSpec, "sdCutoff">): { label: string; name: string } {
+function namesOf(g: PGroup, board: Card[], hands: string[], cut: Pick<StreetSpec, "sdCutoff" | "splitNoPair">): { label: string; name: string } {
   const ranks = boardRanks(board);
   const top = ch(ranks[0]);
   switch (g) {
@@ -903,11 +970,24 @@ function namesOf(g: PGroup, board: Card[], hands: string[], cut: Pick<StreetSpec
     }
     // No-pair names use only ranks that are NOT on the board (Noam: "K-high" makes
     // no sense on a board with a king), e.g. "A-high" and "J-high & below" on K♦Q♦4♠.
+    case "khg":
+    case "khw": {
+      const kickers = hands.map((h) => rv(h[1]));
+      const label = runs(kickers, (k) => `${ch(cut.sdCutoff)}${ch(k)}`);
+      return { label, name: `No pair, ${ch(cut.sdCutoff)}-high, ${g === "khg" ? "good" : "weak"} kicker` };
+    }
+    case "draw":
+      return { label: "Straight draws", name: "No pair, a gutshot or better (or a flush draw)" };
+    case "bdsd":
+      return { label: "Backdoor straights", name: "No pair, a backdoor straight draw" };
+    case "bdfd":
+      return { label: "Backdoor flushes", name: "No pair, only a backdoor flush draw" };
     case "sd": {
       const hi = missingAtOrBelow(ranks, cut.sdCutoff);
       return { label: `${ch(hi)}-high`, name: `No pair, ${ch(hi)}-high (draws included)` };
     }
     default: {
+      if (g === "air" && cut.splitNoPair) return { label: "No draw", name: "No pair, no draw" };
       const lo = missingAtOrBelow(ranks, cut.sdCutoff - 1);
       return { label: `${ch(lo)}-high & below`, name: `No pair, ${ch(lo)}-high or lower (draws included)` };
     }

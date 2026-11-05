@@ -148,6 +148,13 @@ const TETROMINO: Record<string, [number, number][]> = {
     [0, 3],
     [1, 3],
   ],
+  T5: [
+    [0, 0],
+    [1, 0],
+    [2, 0],
+    [1, 1],
+    [1, 2],
+  ],
 };
 
 const BLOCK = 19;
