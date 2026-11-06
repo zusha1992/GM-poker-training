@@ -1,0 +1,146 @@
+==== JT3 2026-11-06T06:26:52.729Z
+  (flop: 7 min, accuracy 0.95%)
+BTN bets BET 2.000000: BB continues with 88 hands (was 95)
+  (turn-2h: 0 min, accuracy 0.48%)
+
+== turn 2♥ (BTN overbets 150%)
+pot 9.1, actions: CHECK, BET 6.000000, BET 14.000000, BET 95.000000
+twopair  Sets & 2 pair          EV  18.5bb  bets 100%  avg 14.0bb   drill b50
+op       Overpairs              EV  13.3bb  bets 100%  avg 14.0bb   drill b25  → b50
+tpgk     AJ, KJ                 EV  11.3bb  bets  99%  avg 13.9bb   drill b15  → b50
+tpmk     QJ, J9–J7              EV   8.8bb  bets  47%  avg  6.6bb   drill b15
+mp       Tx                     EV   5.5bb  bets   0%  avg  0.0bb   drill b5  → b0
+imp      Draws                  EV   3.6bb  bets  65%  avg  9.1bb   drill b0
+pp2      99                     EV   3.3bb  bets   0%  avg  0.0bb   drill b0
+bp       3x · 2x                EV   3.1bb  bets  40%  avg  5.6bb   drill b0
+spp      88–44                  EV   2.7bb  bets   0%  avg  0.0bb   drill b0
+khnd     A-high, no draw        EV   1.1bb  bets   6%  avg  0.9bb   drill b0
+air      Trash                  EV   0.7bb  bets  17%  avg  2.4bb   drill b0
+BTN bets BET 14.000000: BB continues with 54 hands (was 88)
+  (river-2h-3d: 0 min, accuracy 0.24%)
+
+== river 2♥ 3♦
+pot 36.5, actions: CHECK, BET 24.000000, BET 82.000000
+boat     Full houses+           EV  62.7bb  bets 100%  avg 64.8bb   drill b50
+trips    Trips 3s               EV  59.4bb  bets 100%  avg 81.6bb   drill b50
+op       Overpairs              EV  53.7bb  bets 100%  avg 81.4bb   drill b25  → b50
+twopair  Sets & 2 pair          EV  51.2bb  bets 100%  avg 81.4bb   drill b50
+tpgk     AJ, KJ                 EV  43.1bb  bets 100%  avg 72.0bb   drill b0  → b50
+tpmk     QJ, J9–J7              EV  32.5bb  bets  50%  avg 12.5bb   drill b0  → b5
+mp       Tx                     EV  12.8bb  bets   0%  avg  0.0bb   drill b0
+spp      88–44                  EV   1.5bb  bets   1%  avg  1.1bb   drill b0
+pp2      99                     EV   1.5bb  bets   3%  avg  1.5bb   drill b0
+bp       2x                     EV   1.1bb  bets   9%  avg  7.1bb   drill b0
+khnd     A-high                 EV   0.3bb  bets  20%  avg 15.7bb   drill b0
+air      Trash                  EV   0.0bb  bets  17%  avg 10.9bb   drill b0
+  (river-2h-9s: 0 min, accuracy 0.25%)
+
+== river 2♥ 9♠
+pot 36.5, actions: CHECK, BET 24.000000, BET 82.000000
+flush    Flushes                EV  58.6bb  bets 100%  avg 68.3bb   drill b50
+straight Straights              EV  46.3bb  bets 100%  avg 76.2bb   drill b25  → b50
+twopair  Sets & 2 pair          EV  35.4bb  bets  97%  avg 53.9bb   drill b5  → b50
+op       Overpairs              EV  32.4bb  bets 100%  avg 24.2bb   drill b0  → b15
+tpgk     AJ, KJ                 EV  28.6bb  bets  25%  avg  6.1bb   drill b0
+tpmk     QJ, J8, J7             EV  23.8bb  bets   0%  avg  0.1bb   drill b0
+mp       Tx                     EV  10.6bb  bets   0%  avg  0.0bb   drill b0
+spp      88–44                  EV   2.5bb  bets   0%  avg  0.1bb   drill b0
+bp       9x · 3x · 2x           EV   2.2bb  bets   9%  avg  7.5bb   drill b0
+khnd     A-high                 EV   0.3bb  bets  24%  avg 14.9bb   drill b0
+air      Trash                  EV   0.3bb  bets  45%  avg 28.2bb   drill b0
+  (turn-6c: 0 min, accuracy 0.45%)
+
+== turn 6♣ (BTN bets 66%)
+pot 9.1, actions: CHECK, BET 6.000000, BET 14.000000, BET 95.000000
+twopair  Sets & 2 pair          EV  17.0bb  bets 100%  avg 13.9bb   drill b50
+op       Overpairs              EV  11.1bb  bets 100%  avg 14.0bb   drill b25  → b50
+tpgk     AJ, KJ                 EV  10.0bb  bets  81%  avg 11.1bb   drill b15
+tpmk     QJ, J9–J7              EV   8.3bb  bets  15%  avg  1.8bb   drill b5  → b15
+mp       Tx                     EV   5.5bb  bets   1%  avg  0.0bb   drill b5  → b0
+imp      Draws                  EV   3.9bb  bets  57%  avg  7.9bb   drill b0
+bp       6x · 3x                EV   3.5bb  bets  13%  avg  1.8bb   drill b0
+pp2      99                     EV   3.2bb  bets   0%  avg  0.0bb   drill b0
+spp      88, 77, 55, 44, 22     EV   2.4bb  bets   0%  avg  0.0bb   drill b0
+khnd     A-high, no draw        EV   0.9bb  bets  25%  avg  3.4bb   drill b0
+air      Trash                  EV   0.8bb  bets  21%  avg  2.9bb   drill b0
+BTN bets BET 6.000000: BB continues with 64 hands (was 88)
+  (river-6c-3d: 0 min, accuracy 0.30%)
+
+== river 6♣ 3♦
+pot 21.1, actions: CHECK, BET 14.000000, BET 26.000000, BET 89.000000
+boat     Full houses+           EV  37.4bb  bets 100%  avg 63.7bb   drill b50
+trips    Trips 3s               EV  33.2bb  bets 100%  avg 78.8bb   drill b50
+op       Overpairs              EV  28.1bb  bets 100%  avg 76.2bb   drill b25  → b50
+twopair  Sets & 2 pair          EV  26.0bb  bets 100%  avg 57.9bb   drill b50
+tpgk     AJ, KJ                 EV  25.4bb  bets 100%  avg 37.7bb   drill b5  → b25
+tpmk     QJ, J9–J7              EV  22.2bb  bets 100%  avg 20.7bb   drill b0  → b15
+mp       Tx                     EV  12.8bb  bets  14%  avg  1.9bb   drill b0
+pp2      99                     EV   4.8bb  bets   0%  avg  0.0bb   drill b0
+spp      88, 77, 55, 44, 22     EV   3.0bb  bets   0%  avg  0.0bb   drill b0
+bp       6x                     EV   2.7bb  bets   0%  avg  0.0bb   drill b0
+khnd     A-high                 EV   1.6bb  bets  14%  avg 11.6bb   drill b0
+air      Trash                  EV   0.1bb  bets  45%  avg 19.2bb   drill b0
+  (river-6c-Qs: 0 min, accuracy 0.27%)
+
+== river 6♣ Q♠
+pot 21.1, actions: CHECK, BET 14.000000, BET 26.000000, BET 89.000000
+flush    Flushes                EV  33.5bb  bets 100%  avg 61.2bb   drill b50
+straight Straights              EV  26.4bb  bets 100%  avg 56.0bb   drill b25  → b50
+twopair  Sets & 2 pair          EV  20.3bb  bets  89%  avg 17.6bb   drill b5  → b15
+tpgk     AQ, KQ                 EV  17.2bb  bets  57%  avg  8.3bb   drill b0  → b5
+op       Overpairs              EV  16.5bb  bets  43%  avg  9.1bb   drill b0  → b5
+tpmk     Q9–Q7, Q5              EV  16.1bb  bets   0%  avg  0.1bb   drill b0
+mp       Jx                     EV  13.5bb  bets   0%  avg  0.0bb   drill b0
+bp       Tx · 6x · 3x           EV   4.0bb  bets   5%  avg  4.4bb   drill b0
+pp3      99                     EV   3.3bb  bets   0%  avg  0.0bb   drill b0
+spp      88, 77, 55, 44, 22     EV   1.8bb  bets   5%  avg  1.4bb   drill b0
+air      Trash                  EV   0.4bb  bets  69%  avg 26.9bb   drill b0
+khnd     A-high                 EV   0.3bb  bets  31%  avg 15.1bb   drill b0
+  (turn-9s: 0 min, accuracy 0.47%)
+
+== turn 9♠ (BTN bets 66%)
+pot 9.1, actions: CHECK, BET 6.000000, BET 14.000000, BET 95.000000
+flush    Flushes                EV  17.3bb  bets  89%  avg  6.6bb   drill b50
+straight Straights              EV  10.2bb  bets  70%  avg  4.2bb   drill b25  → b15
+twopair  Sets & 2 pair          EV   8.2bb  bets  66%  avg  4.4bb   drill b5  → b15
+op       Overpairs              EV   6.5bb  bets  80%  avg  4.8bb   drill b0  → b5
+tpgk     AJ, KJ                 EV   5.9bb  bets  50%  avg  3.0bb   drill b0  → b5
+tpmk     QJ, J8, J7             EV   5.7bb  bets  35%  avg  2.1bb   drill b0  → b5
+pfl      Pair + a ♠             EV   5.5bb  bets  52%  avg  3.4bb   drill b5  → b0
+mp       Tx                     EV   4.0bb  bets  23%  avg  1.4bb   drill b0
+bp       9x · 3x                EV   2.4bb  bets   2%  avg  0.1bb   drill b0
+imp      Draws                  EV   2.3bb  bets  65%  avg  4.5bb   drill b0
+spp      88–44, 22              EV   1.3bb  bets  11%  avg  0.9bb   drill b0
+khnd     A-high, no draw        EV   1.3bb  bets  33%  avg  2.4bb   drill b0
+air      Trash                  EV   0.1bb  bets  18%  avg  1.1bb   drill b0
+BTN bets BET 6.000000: BB continues with 61 hands (was 88)
+  (river-9s-2d: 0 min, accuracy 0.27%)
+
+== river 9♠ 2♦
+pot 21.1, actions: CHECK, BET 14.000000, BET 26.000000, BET 89.000000
+flush    Flushes                EV  34.7bb  bets 100%  avg 62.2bb   drill b50
+straight Straights              EV  27.3bb  bets 100%  avg 34.7bb   drill b25
+twopair  Sets & 2 pair          EV  20.1bb  bets 100%  avg 19.3bb   drill b5  → b15
+op       Overpairs              EV  16.9bb  bets  80%  avg 12.2bb   drill b0  → b5
+tpgk     AJ, KJ                 EV  15.9bb  bets   7%  avg  1.1bb   drill b0
+tpmk     QJ, J8, J7             EV  13.8bb  bets   0%  avg  0.0bb   drill b0
+mp       Tx                     EV   9.0bb  bets   0%  avg  0.0bb   drill b0
+bp       9x · 3x · 2x           EV   3.0bb  bets   8%  avg  3.1bb   drill b0
+spp      88–44                  EV   2.0bb  bets   0%  avg  0.1bb   drill b0
+khnd     A-high                 EV   0.2bb  bets  22%  avg  9.9bb   drill b0
+air      Trash                  EV   0.2bb  bets  41%  avg 16.3bb   drill b0
+  (river-9s-8s: 0 min, accuracy 0.24%)
+
+== river 9♠ 8♠
+pot 21.1, actions: CHECK, BET 14.000000, BET 26.000000, BET 89.000000
+flush    Flushes                EV  22.2bb  bets  90%  avg 17.7bb   drill b50  → b15
+straight Straights              EV  13.0bb  bets   0%  avg  0.0bb   drill b25  → b0
+twopair  Sets & 2 pair          EV   8.8bb  bets   0%  avg  0.0bb   drill b0
+op       Overpairs              EV   5.1bb  bets   0%  avg  0.0bb   drill b0
+tpgk     AJ, KJ                 EV   5.0bb  bets   0%  avg  0.0bb   drill b0
+mp       Tx                     EV   2.6bb  bets   0%  avg  0.0bb   drill b0
+bp       9x · 8x · 3x           EV   1.1bb  bets  14%  avg  2.8bb   drill b0
+spp      66–44, 22              EV   0.5bb  bets  68%  avg 14.3bb   drill b0
+khnd     A-high                 EV   0.0bb  bets  59%  avg 12.4bb   drill b0
+air      Trash                  EV  -0.0bb  bets  67%  avg 13.8bb   drill b0
+==== JT3 done 2026-11-06T06:37:20.111Z

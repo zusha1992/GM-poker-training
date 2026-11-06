@@ -176,6 +176,8 @@ Every hand goes into exactly one group, checked from the top down. Groups are re
   | 5♣ 6♣ | flushes, straights | 25–50 | **50–100** (~69–88bb) |
 
   The river "before" column is from yesterday's solves, which used my estimate of BB's range; now BB's range comes from the solves before it.
+- **Other boards, solved the same way** (each board's numbers and every change are in `decisions/ranges/solver/<board>/report.txt`, lines with →):
+  - **JT3:** overpairs and AJ/KJ go for stacks after the 2♥ overbet; on the 9♠ 8♠ river (four spades) straights check, so 0–5bb, and flushes 15–25bb.
 
 ### No pair: draws, high card with no draw, trash *(Noam, 2026-11-05, from A♣7♦2♠; on every board and street)*
 - **There's no "Q-high and below" group any more**, on any street. The hands with no pair are split into three groups:
