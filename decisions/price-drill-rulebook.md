@@ -179,6 +179,7 @@ Every hand goes into exactly one group, checked from the top down. Groups are re
 - **Other boards, solved the same way** (each board's numbers and every change are in `decisions/ranges/solver/<board>/report.txt`, lines with →):
   - **JT3:** overpairs and AJ/KJ go for stacks after the 2♥ overbet; on the 9♠ 8♠ river (four spades) straights check, so 0–5bb, and flushes 15–25bb.
   - **K54:** after the Q♦ overbet, overpairs, AK and on a 4♦ river even KJ–K2 go for stacks. After a 66% turn the best hands bet 125% pot (about 25bb), so full houses, trips and flushes land at 15–25 or 25–50bb, not 50–100.
+  - **QT7:** overpairs and AQ/KQ go for stacks on calm runouts; on 5♦ 2♣ even QJ–Q6 and JJ bet about 20bb. On J♥ K♥ (straights and the flush) the solver bets small: flushes 15–25bb, straights 5–15bb.
 
 ### No pair: draws, high card with no draw, trash *(Noam, 2026-11-05, from A♣7♦2♠; on every board and street)*
 - **There's no "Q-high and below" group any more**, on any street. The hands with no pair are split into three groups:
