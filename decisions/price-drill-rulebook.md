@@ -183,6 +183,8 @@ Every hand goes into exactly one group, checked from the top down. Groups are re
   - **986:** on the K♣ river after the overbet, every king and QQ–TT go big. After the 7♠ (9-8-7-6 on board) straights are only 15–25bb on the turn and 5–25bb on the rivers: so many straights are possible that the solver bets them carefully.
   - **KQT:** a broadway board where BB has plenty: overpairs (AA) are only 15–25bb on the turns and check the 3♠ 4♦ river. Straights (AJ and 9x) are 15–25bb on the J♦ turn and 0–15bb on the rivers; flushes 25–50bb. On 3♠ J♠ the small pairs shove as bluffs and stay 0–5bb.
   - **A76:** AQ (K♠ turn) and AK (Q♣ turn) go for stacks on the turn and bet about 25bb on a brick river. On the 8♥ T♥ river (four hearts) straights check: 0–5bb.
+  - **KQ4:** overpairs and AK go for stacks on the 2♣ and 8♠ turns; KJ–K2 about 15–25bb on the brick rivers. On A♦ T♦ (four diamonds) straights check (0–5bb) and flushes are 15–25bb.
+- **A pattern across boards:** when the river puts four of a suit on the board, straights check and become 0–5bb, and flushes bet only 15–25bb.
 
 ### No pair: draws, high card with no draw, trash *(Noam, 2026-11-05, from A♣7♦2♠; on every board and street)*
 - **There's no "Q-high and below" group any more**, on any street. The hands with no pair are split into three groups:
