@@ -147,6 +147,36 @@ Every hand goes into exactly one group, checked from the top down. Groups are re
   - **Bluffs** bet too, but stay at 0–5bb, because the drill asks what a group is worth.
 - **The solver also shows that EV isn't the whole story.** On the 5♣ turn KK–88 have EV 4.3–4.75bb but check 99%, so they put almost nothing in. The box is set from EV and the strategy together.
 
+### Every board from our own solver, street by street *(Noam, 2026-11-06: "run solver board after board… push it")*
+- **How each board is solved** (`scripts/analysis/solve-board.ts`, data in `decisions/ranges/solver/`):
+  1. **Flop:** BTN's whole range against BB's preflop calls. It gives BB's range for the turn (what BB checks and calls against the 33% bet). Flop boxes stay as they are: a flop bet is 2–4bb, so it can't decide a box.
+  2. **Each turn:** BB's range from the flop solve; BTN's whole range. It gives BB's range for the river (check and call against the drill's 66% or 150% bet).
+  3. **Each river:** BB's range from its turn solve.
+- **Turn box:** the group's EV once BB checks, with the flop cut-offs (6.2 / 4.5 / 3.4bb at a 5.5bb pot) scaled to the 9.1bb pot: 50–100bb from 10.3bb, 15–25bb from 7.4bb, 5–15bb from 5.6bb.
+- **River box:** what the group bets on average once BB checks, if it bets at least 30% of the time *for value*. Value means an EV of at least a quarter of the pot: weak pairs that bet as bluffs (e.g. 9x · 7x · 2x on Q♥ 9♣, EV 1bb) stay 0–5bb.
+- **Pair-or-better groups only.** Draws and no-pair hands keep their rules.
+- **A72, what changed from the earlier answers** (some were Noam's own calls, so he can reverse any of them):
+
+  | Spot | Group | Before | Solver |
+  |---|---|---|---|
+  | Q♥ turn | AK | 25–50 | **50–100** (EV 12.4, bets 98%) |
+  | Q♥ turn | A6–A3 | 15–25 | **5–15** (EV 6.2, bets 18%) |
+  | Q♥ turn | Qx, KK | 5–15 | **0–5** (EV ~4.2, check) |
+  | 6♦ turn | AK, AQ | 25–50 | **15–25** (EV 9.3) |
+  | 6♦ turn | AJ–A8 | 5–15 | **15–25** (EV 7.9) |
+  | 6♦ turn | A5–A3, KK–88, 7x | 5–15 | **0–5** (EV 3.5–5.5, check) |
+  | 5♣ turn | A6, A4, A3 | 5–15 | **0–5** (EV 5.6, bets 10%) |
+  | Q♥ 9♣ | AJ, AT, A8 | 15–25 | **5–15** (bets 33%, ~11bb) |
+  | Q♥ K♦ | AJ–A8 | 5–15 | **0–5** (bets 26%) |
+  | 6♦ K♠ | sets & two pair | 15–25 | **25–50** (~45bb) |
+  | 6♦ 8♦ | sets & two pair | 15–25 | **5–15** (~15bb) |
+  | 5♣ K♥ | straights | 25–50 | **50–100** (~74bb) |
+  | 5♣ K♥ | sets & two pair | 15–25 | **25–50** (~47bb) |
+  | 5♣ K♥ | AQ | 5–15 | **15–25** (~18bb) |
+  | 5♣ 6♣ | flushes, straights | 25–50 | **50–100** (~69–88bb) |
+
+  The river "before" column is from yesterday's solves, which used my estimate of BB's range; now BB's range comes from the solves before it.
+
 ### No pair: draws, high card with no draw, trash *(Noam, 2026-11-05, from A♣7♦2♠; on every board and street)*
 - **There's no "Q-high and below" group any more**, on any street. The hands with no pair are split into three groups:
 
