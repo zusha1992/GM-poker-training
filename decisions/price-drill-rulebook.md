@@ -153,7 +153,7 @@ Every hand goes into exactly one group, checked from the top down. Groups are re
   2. **Each turn:** BB's range from the flop solve; BTN's whole range. It gives BB's range for the river (check and call against the drill's 66% or 150% bet).
   3. **Each river:** BB's range from its turn solve.
 - **Turn box:** the group's EV once BB checks, with the flop cut-offs (6.2 / 4.5 / 3.4bb at a 5.5bb pot) scaled to the 9.1bb pot: 50–100bb from 10.3bb, 15–25bb from 7.4bb, 5–15bb from 5.6bb.
-- **River box:** what the group bets on average once BB checks, if it bets at least 30% of the time *for value*. Value means an EV of at least a quarter of the pot: weak pairs that bet as bluffs (e.g. 9x · 7x · 2x on Q♥ 9♣, EV 1bb) stay 0–5bb.
+- **River box:** what the group bets on average once BB checks, if it bets at least 30% of the time *for value*. Value means an EV of at least half the pot: weak pairs that bet as bluffs (e.g. 9x · 7x · 2x on Q♥ 9♣, EV 1bb; 88–44 shoving on K-Q-T-3-J, EV 10bb in a 36.5bb pot) stay 0–5bb. Value bets come out at 70%+ of the pot, bluffs at 30% or less.
 - **Pair-or-better groups only.** Draws and no-pair hands keep their rules.
 - **A72, what changed from the earlier answers** (some were Noam's own calls, so he can reverse any of them):
 
@@ -181,6 +181,7 @@ Every hand goes into exactly one group, checked from the top down. Groups are re
   - **K54:** after the Q♦ overbet, overpairs, AK and on a 4♦ river even KJ–K2 go for stacks. After a 66% turn the best hands bet 125% pot (about 25bb), so full houses, trips and flushes land at 15–25 or 25–50bb, not 50–100.
   - **QT7:** overpairs and AQ/KQ go for stacks on calm runouts; on 5♦ 2♣ even QJ–Q6 and JJ bet about 20bb. On J♥ K♥ (straights and the flush) the solver bets small: flushes 15–25bb, straights 5–15bb.
   - **986:** on the K♣ river after the overbet, every king and QQ–TT go big. After the 7♠ (9-8-7-6 on board) straights are only 15–25bb on the turn and 5–25bb on the rivers: so many straights are possible that the solver bets them carefully.
+  - **KQT:** a broadway board where BB has plenty: overpairs (AA) are only 15–25bb on the turns and check the 3♠ 4♦ river. Straights (AJ and 9x) are 15–25bb on the J♦ turn and 0–15bb on the rivers; flushes 25–50bb. On 3♠ J♠ the small pairs shove as bluffs and stay 0–5bb.
 
 ### No pair: draws, high card with no draw, trash *(Noam, 2026-11-05, from A♣7♦2♠; on every board and street)*
 - **There's no "Q-high and below" group any more**, on any street. The hands with no pair are split into three groups:

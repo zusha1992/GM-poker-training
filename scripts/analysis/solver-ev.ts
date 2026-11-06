@@ -144,13 +144,14 @@ for (const [i, combo] of ip.entries()) {
 // The box the solver suggests, for groups with a pair or better (draws and
 // no-pair hands keep their rules: the drill asks what a group is worth).
 // River: what the group bets on average, if it bets at least 30% of the time
-// for value (EV at least a quarter of the pot: weak pairs that bet as bluffs stay 0–5bb).
+// for value (EV at least half the pot: value bets come out at 70%+ of the pot, bluffs
+// at 30% or less, e.g. 88–44 shoving on K-Q-T-3-J; they stay 0–5bb).
 // Turn: its EV, with the flop cut-offs from GTO Wizard (6.2 / 4.5 / 3.4bb at pot 5.5) scaled to the pot.
 const MADE = new Set(["boat", "flush", "straight", "trips", "twopair", "pdraw", "op", "tpgk", "tpmk", "tpwk", "pfl", "pp1", "pp2", "pp3", "spp", "mp", "bp"]);
 function suggest(g: string, ev: number, money: number, bet: number): string | null {
   if (!MADE.has(g)) return null;
   if (si === 2) {
-    if (bet < 0.3 || money < 5 || ev < pot0 / 4) return "b0";
+    if (bet < 0.3 || money < 5 || ev < pot0 / 2) return "b0";
     return money < 15 ? "b5" : money < 25 ? "b15" : money < 50 ? "b25" : "b50";
   }
   const k = pot0 / 5.5;
