@@ -64,7 +64,18 @@ What the 5 unpushed rivers change:
 | 5♣ 6♣ | flushes | 50–100bb | 25–50bb |
 | 5♣ 6♣ | sets and two pair | 5–15bb | 15–25bb |
 
-## Next steps
+## Update 2026-11-06: every board solved and live
+
+- Noam: "run solver board after board… every time you finish a board you push it."
+- **All 11 boards are solved and pushed:** flop, then 3 turns, then 6 rivers per board. Each street uses BB's range from the solve before it. `scripts/analysis/solve-board.ts <board>` runs one board in about 10 minutes on 4 threads.
+- **The method** is in the rulebook ("Every board from our own solver"). Each board's numbers are in `decisions/ranges/solver/<board>/report.txt`; lines with → are changes.
+- **Flop boxes are still the rules and Noam's calls.** A flop bet is only 2–4bb, and our solver gives no flop EV.
+- **Next:**
+  - Noam checks the boards on his phone and reverses anything that feels wrong;
+  - then Uri reviews;
+  - the open questions below still stand. One new one: the river box is capped by the bet sizes (66%, 125%, all-in), so strong hands that pick 66% or 125% land at 15–50bb.
+
+## Next steps (as of 2026-11-05)
 
 1. **Browser-test the 5 rivers,** show Noam the table above, and push once he's seen it.
 2. **Run the A72 flop solve again** (4 threads, about 1% accuracy), then the 3 turns.
