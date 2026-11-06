@@ -184,6 +184,7 @@ Every hand goes into exactly one group, checked from the top down. Groups are re
   - **KQT:** a broadway board where BB has plenty: overpairs (AA) are only 15–25bb on the turns and check the 3♠ 4♦ river. Straights (AJ and 9x) are 15–25bb on the J♦ turn and 0–15bb on the rivers; flushes 25–50bb. On 3♠ J♠ the small pairs shove as bluffs and stay 0–5bb.
   - **A76:** AQ (K♠ turn) and AK (Q♣ turn) go for stacks on the turn and bet about 25bb on a brick river. On the 8♥ T♥ river (four hearts) straights check: 0–5bb.
   - **KQ4:** overpairs and AK go for stacks on the 2♣ and 8♠ turns; KJ–K2 about 15–25bb on the brick rivers. On A♦ T♦ (four diamonds) straights check (0–5bb) and flushes are 15–25bb.
+  - **T87:** the wettest board. Overpairs are 15–25bb after the 2♦ overbet, then stacks on the 3♣ river. After the 9♥ (T-9-8-7 on board) straights are only 5–15bb, and on Q♥ (four hearts) they check.
 - **A pattern across boards:** when the river puts four of a suit on the board, straights check and become 0–5bb, and flushes bet only 15–25bb.
 
 ### No pair: draws, high card with no draw, trash *(Noam, 2026-11-05, from A♣7♦2♠; on every board and street)*
