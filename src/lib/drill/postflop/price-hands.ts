@@ -91,13 +91,17 @@ export const PGROUP_INFO: Record<PGroup, { color: string; shape: string }> = {
 /** How many big blinds a group is worth from here, by the river (Noam
  * 2026-11-05: plain bb ranges instead of "small pot / big pot / stacks",
  * which were too abstract). Five boxes: 0–5, 5–15, 15–25, 25–50, 50–100bb.
- * The old Zero and Tiny pot both became 0–5bb. */
-export type Bucket = "b0" | "b5" | "b15" | "b25" | "b50";
-export const BUCKETS: Bucket[] = ["b0", "b5", "b15", "b25", "b50"];
-export const BUCKET_RANK: Record<Bucket, number> = { b0: 0, b5: 1, b15: 2, b25: 3, b50: 4 };
+ * The old Zero and Tiny pot both became 0–5bb.
+ * Noam 2026-11-07: a sixth box under 0–5bb, "Pot is too big" ("big"): a made
+ * hand with almost no showdown value, so the pot is already bigger than it can
+ * handle (it could bluff). 0–5bb is a hand that checks and shows down. */
+export type Bucket = "big" | "b0" | "b5" | "b15" | "b25" | "b50";
+export const BUCKETS: Bucket[] = ["big", "b0", "b5", "b15", "b25", "b50"];
+export const BUCKET_RANK: Record<Bucket, number> = { big: -1, b0: 0, b5: 1, b15: 2, b25: 3, b50: 4 };
 
 /** The neon paddle colors (Noam 2026-10-30): warmer = more money. The matrix uses them too. */
 export const BUCKET_COLOR: Record<Bucket, string> = {
+  big: "#9AA6BC",
   b0: "#8B6CFF",
   b5: "#2EC4B6",
   b15: "#F2C14E",
@@ -105,7 +109,7 @@ export const BUCKET_COLOR: Record<Bucket, string> = {
   b50: "#FF3D6E",
 };
 
-const BB_RANGE: Record<Bucket, string> = { b0: "0–5bb", b5: "5–15bb", b15: "15–25bb", b25: "25–50bb", b50: "50–100bb" };
+const BB_RANGE: Record<Bucket, string> = { big: "Pot is too big", b0: "0–5bb", b5: "5–15bb", b15: "15–25bb", b25: "25–50bb", b50: "50–100bb" };
 
 /** Tiny text for the legend and summary chips. */
 export function bucketTiny(b: Bucket): string {
@@ -1245,6 +1249,8 @@ function everyBoardRule(g: PGroup, street: Street, ans: Answer | undefined): Ans
  * are a small pot, and lower pairs a tiny pot. */
 function flopRule(g: PGroup, board: Card[]): Answer | undefined {
   if (g === "spp") return a("b0", "The flop had two or more broadway cards: small pairs want no money in the pot unless they improve.", true);
+  // Noam 2026-11-07, 9♠8♦6♣ only: BB has the straights and two pair here, so ace-high is worth 0–5bb.
+  if (g === "aho" && spot(board, "9♠", "8♦", "6♣")) return a("b0", "On 9-8-6 the big blind has more of the straights and two pair: ace-high is only worth 0–5bb.", true);
   if (g === "aho") return a("b5", "At most one broadway card, or a paired flop: ace-high with two overcards is worth a small bet.", true);
   if (flopTexture(board) !== "high") return undefined;
   if (g === "pp1") return a("b5", "Two or more broadway cards on the flop: a pocket pair between the top two cards is still worth 5–15bb.", true);
@@ -1326,6 +1332,11 @@ function brickTurnStacks(board: string, g: PGroup): boolean {
 
 const RUNOUT_CACHE = new Map<number, Runout>();
 
+/** Noam & Uri 2026-11-07: this drill is about how much to play with made hands.
+ * Draws and hands with no pair are left out (a different drill, later): they
+ * are never asked and stay grey on the matrix. Pairs with a draw stay in. */
+export const NOT_IN_DRILL = new Set<PGroup>(["aho", "sdraw", "cdraw", "fdraw", "imp", "khnd", "sd", "air"]);
+
 /** Everything the screen shows for one runout, worked out once. */
 export function buildRunout(index: number): Runout {
   const cached = RUNOUT_CACHE.get(index);
@@ -1342,7 +1353,7 @@ export function buildRunout(index: number): Runout {
     const labels: Partial<Record<PGroup, string>> = {};
     const pieces: PricePiece[] = [];
     for (const g of PGROUP_ORDER) {
-      if (snap.byGroup[g] <= 0) continue;
+      if (snap.byGroup[g] <= 0 || NOT_IN_DRILL.has(g)) continue;
       // Noam 2026-11-07, J♠T♠3♣ overpairs only: worth stacks on the brick turn, so worth stacks from the flop.
       const stacksLater = i === 0 && spec.board === "JT3" && g === "op" && brickTurnStacks(spec.board, g) ? a("b50", "Worth stacks on the brick turn (solver), so worth stacks from the flop.") : undefined;
       const found = SOLVER_ANSWERS[spec.id]?.[street]?.[g] ?? stacksLater ?? flushTurnRule(g, board) ?? flopRule(g, board) ?? veryWetRule(g, street, board, everyBoardRule(g, street, riverRule(g, street) ?? st.answers[g] ?? noPairFallback(g, st) ?? madeHandAnswer(g, board)));

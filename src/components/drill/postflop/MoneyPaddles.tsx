@@ -7,10 +7,13 @@ import styles from "./MoneyPaddles.module.css";
 /** Where each paddle sits: an arc over the drop area like a gauge, small
  * money to big from left to right (Noam 2026-11-05: five bb boxes). 0–5 on
  * the left side, 5–15 and 25–50 in the top corners, 15–25 top middle,
- * 50–100 on the right side. The bottom stays free for the piece count. */
-type Spot = "left" | "tl" | "top" | "tr" | "right";
-const SPOT: Record<Bucket, Spot> = { b0: "left", b5: "tl", b15: "top", b25: "tr", b50: "right" };
-const LABEL: Record<Bucket, string> = { b0: "0–5\nbb", b5: "5–15\nbb", b15: "15–25bb", b25: "25–50\nbb", b50: "50–100\nbb" };
+ * 50–100 on the right side. The bottom stays free for the piece count.
+ * Noam 2026-11-07: six boxes, three on each side, around the drop area from
+ * the bottom-left corner to the bottom-right: Pot is too big, 0–5, 5–15 (top
+ * left), 15–25 (top right), 25–50, 50–100. */
+type Spot = "bl" | "left" | "tl" | "top" | "tr" | "right" | "br";
+const SPOT: Record<Bucket, Spot> = { big: "bl", b0: "left", b5: "tl", b15: "tr", b25: "right", b50: "br" };
+const LABEL: Record<Bucket, string> = { big: "Pot is\ntoo big", b0: "0–5\nbb", b5: "5–15\nbb", b15: "15–25\nbb", b25: "25–50\nbb", b50: "50–100\nbb" };
 
 const INSET = 6;
 const STROKE = 12;
@@ -19,10 +22,10 @@ const SIDE_HIT = 58;
 
 /** One length for every paddle (a corner's two arms add up to it, a side or
  * top paddle is it), as big as the area allows with room between them: a
- * side paddle stays below the top corners, and the top row is two corner
- * arms plus the top paddle. */
+ * side paddle sits between a top and a bottom corner, and the top row is two
+ * corner arms plus the top paddle. */
 export function paddleLength(w: number, h: number): number {
-  const fromHeight = (h - 2 * INSET - 18) / 1.5;
+  const fromHeight = (h - 2 * INSET - 36) / 2;
   const fromWidth = (w - 2 * INSET - 2 * 18) / 2;
   return Math.max(80, Math.min(fromHeight, fromWidth, 200));
 }
@@ -40,7 +43,7 @@ type Props = {
   hitRef: (b: Bucket, el: HTMLDivElement | null) => void;
 };
 
-/** The five drop targets as neon paddles: same design, different colors,
+/** The six drop targets as neon paddles: same design, different colors,
  * in an arc around the top of the drop area. */
 export function MoneyPaddles({ w, h, armed, holding, flash, hitRef }: Props) {
   const L = paddleLength(w, h);
@@ -72,9 +75,9 @@ export function MoneyPaddles({ w, h, armed, holding, flash, hitRef }: Props) {
         }
         if (spot === "left" || spot === "right") {
           const side = spot;
-          // Centered in the height left below the top corners.
+          // Centered between the top and bottom corners.
           const below = INSET + a + 18;
-          const top = below + Math.max(0, (h - INSET - below - L) / 2);
+          const top = below + Math.max(0, (h - INSET - a - 18 - below - L) / 2);
           return (
             <div
               key={key}
@@ -111,7 +114,7 @@ export function MoneyPaddles({ w, h, armed, holding, flash, hitRef }: Props) {
             <span className={styles.inner} style={{ ...innerRadius, [v]: 5, [hz]: 5, width: a - 5, height: a - 5, borderStyle: "solid", ...edges(v, hz, 2) }} />
             <span
               className={styles.label}
-              style={{ [v]: STROKE + 9, [hz]: STROKE + 10, fontSize: 15, textAlign: hz, whiteSpace: "pre-line", transformOrigin: `${hz} ${v}` }}
+              style={{ [v]: STROKE + 9, [hz]: STROKE + 10, fontSize: 15, textAlign: hz, whiteSpace: "pre", transformOrigin: `${hz} ${v}` }}
             >
               {LABEL[b]}
             </span>

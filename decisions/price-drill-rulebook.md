@@ -33,6 +33,12 @@ Layout *(Noam, 2026-11-05)*: five neon paddles in one design (Arkanoid-style), d
 - 25–50bb in the top-right corner;
 - 50–100bb on the right side.
 
+**Sixth box: "Pot is too big"** *(Noam, 2026-11-07)*, under 0–5bb, on every street from the flop. With six boxes the layout is symmetric, three on each side *(Noam, 2026-11-07)*. Going around from the bottom-left: Pot is too big (bottom-left corner), 0–5bb (left side), 5–15bb (top-left), 15–25bb (top-right), 25–50bb (right side), 50–100bb (bottom-right).
+- **0–5bb** is showdown: the hand wants a small pot and checks it down.
+- **Pot is too big** is a made hand with almost no showdown value. The pot is already bigger than it can handle, so it's a hand that could bluff. Whether the solver bets it doesn't matter: the drill only says the pot is too big.
+- **From the solver, turn and river:** a made hand that wins back under **15% of the pot** (solver EV). Applied on **9♠8♦6♣ only** so far. Other boards get it as we go through them.
+- **On the flop** almost nothing goes there, because any small pair still has equity with two cards to come. Example: 22 on 9-8-6 · 7 · J.
+
 The paddle the piece is near lights up, and it flashes when the piece lands.
 
 ## 2b. Bet sizes between streets *(Noam, 2026-10-30)*
@@ -269,6 +275,7 @@ Broadway cards are A, K, Q, J and T.
 - **J♠T♠3♣ · 9♠ turn:** "Pair + a ♠" splits into **strong** (overpair or top pair, solver EV 7.8–8.7bb), **middle** (second pair, 6.3–6.7bb) and **weak** (the rest, 2–5.5bb).
 - **J♠T♠3♣ · 6♣ turn:** draws split into **combo draws** (EV 6–7.7bb), **flush draws** (4–5bb) and **straight draws** (2–4.4bb).
 - The boxes for these new groups come from the solver.
+- **9♠8♦6♣ flop:** ace-high is 0–5bb (BB has more of the straights and two pair here).
 - *Open (Noam, 986):* the turn box from the solver's EV can overstate one-pair hands (A9/K9 at stacks on 9♠8♦6♣ 2♥, though they only put in about 15–25bb by the river). To look at board by board.
 
 ### Cutoffs to set for every new board
@@ -277,6 +284,8 @@ Broadway cards are A, K, Q, J and T.
 3. Showdown cutoff (A72: K-high)
 
 ## 4. How the drill presents the groups *(Uri/Noam)*
+
+- **Made hands only** *(Noam & Uri, 2026-11-07)*: the drill is about how much to play with an actual hand. Draws and hands with no pair (ace-high, K-high, air) are left out, never asked, and stay grey on the matrix. They get their own drill later: draws are more complicated to play. Pairs that also have a draw stay in.
 
 - **One group at a time, in mixed order** (not strongest to weakest, so the player can't just walk down the ladder).
 - The current group is **lit in its own color** on the matrix. Groups not answered yet are **grey**, and answered groups take **their box's money color**. By the end of a street the matrix is a money map.

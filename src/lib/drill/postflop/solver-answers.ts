@@ -608,7 +608,7 @@ export const SOLVER_ANSWERS: Record<string, Partial<Record<"flop" | "turn" | "ri
       op: s("b25", "bets 100% of the time, about 26bb on average."),
       mp: s("b5", "bets 34% of the time, about 15bb on average."),
       bp: s("b0", "checks."),
-      pp3: s("b0", "checks."),
+      pp3: s("big", "wins back only 13% of the 36.5bb pot (EV 4.8bb): almost no showdown value, so the pot is too big for it."),
     },
     turn: {
       straight: s("b50", "EV about 24.2bb once BB checks (pot 9.1bb); bets 100% of the time, about 14bb on average."),
@@ -630,8 +630,8 @@ export const SOLVER_ANSWERS: Record<string, Partial<Record<"flop" | "turn" | "ri
       tpgk: s("b0", "checks."),
       tpmk: s("b0", "checks."),
       mp: s("b0", "checks."),
-      bp: s("b0", "bets 11% of the time, about 5bb on average."),
-      pp3: s("b0", "bets 44% of the time, about 25bb on average, but as a bluff (EV only -0bb): what it's worth is 0–5bb."),
+      bp: s("big", "wins back only 6% of the 36.5bb pot (EV 2.2bb): almost no showdown value, so the pot is too big for it."),
+      pp3: s("big", "wins back only 0% of the 36.5bb pot (EV -0.0bb): almost no showdown value, so the pot is too big for it."),
     },
     turn: {
       straight: s("b50", "EV about 24.2bb once BB checks (pot 9.1bb); bets 100% of the time, about 14bb on average."),
@@ -680,7 +680,7 @@ export const SOLVER_ANSWERS: Record<string, Partial<Record<"flop" | "turn" | "ri
       mp: s("b0", "checks."),
       pp1: s("b0", "checks."),
       bp: s("b0", "bets 5% of the time, about 4bb on average."),
-      pp3: s("b0", "bets 67% of the time, about 20bb on average, but as a bluff (EV only 0bb): what it's worth is 0–5bb."),
+      pp3: s("big", "wins back only 1% of the 21.1bb pot (EV 0.3bb): almost no showdown value, so the pot is too big for it."),
     },
     turn: {
       straight: s("b50", "EV about 20.4bb once BB checks (pot 9.1bb); bets 100% of the time, about 8bb on average."),
@@ -701,9 +701,9 @@ export const SOLVER_ANSWERS: Record<string, Partial<Record<"flop" | "turn" | "ri
       op: s("b0", "checks."),
       tpgk: s("b0", "checks."),
       tpmk: s("b0", "checks."),
-      mp: s("b0", "checks."),
-      pp3: s("b0", "bets 26% of the time, about 7bb on average."),
-      bp: s("b0", "bets 11% of the time, about 3bb on average."),
+      mp: s("big", "wins back only 6% of the 21.1bb pot (EV 1.4bb): almost no showdown value, so the pot is too big for it."),
+      pp3: s("big", "wins back only 0% of the 21.1bb pot (EV -0.0bb): almost no showdown value, so the pot is too big for it."),
+      bp: s("big", "wins back only 0% of the 21.1bb pot (EV -0.0bb): almost no showdown value, so the pot is too big for it."),
     },
     turn: {
       straight: s("b15", "EV about 9.2bb once BB checks (pot 9.1bb); bets 43% of the time, about 3bb on average."),
@@ -713,7 +713,7 @@ export const SOLVER_ANSWERS: Record<string, Partial<Record<"flop" | "turn" | "ri
       tpmk: s("b0", "EV about 3.2bb once BB checks (pot 9.1bb); checks."),
       mp: s("b0", "EV about 2.7bb once BB checks (pot 9.1bb); bets 3% of the time, about 0bb on average."),
       bp: s("b0", "EV about 1.6bb once BB checks (pot 9.1bb); bets 15% of the time, about 1bb on average."),
-      pp3: s("b0", "EV about 0.8bb once BB checks (pot 9.1bb); bets 59% of the time, about 4bb on average."),
+      pp3: s("big", "wins back only 9% of the 9.1bb pot (EV 0.8bb): almost no showdown value, so the pot is too big for it."),
     },
   },
   "986 · 7♠ · J♠": {
@@ -724,9 +724,9 @@ export const SOLVER_ANSWERS: Record<string, Partial<Record<"flop" | "turn" | "ri
       tpgk: s("b0", "checks."),
       tpmk: s("b0", "checks."),
       op: s("b0", "checks."),
-      mp: s("b0", "checks."),
-      bp: s("b0", "bets 13% of the time, about 8bb on average."),
-      pp3: s("b0", "bets 39% of the time, about 6bb on average, but as a bluff (EV only 0bb): what it's worth is 0–5bb."),
+      mp: s("big", "wins back only 15% of the 21.1bb pot (EV 3.1bb): almost no showdown value, so the pot is too big for it."),
+      bp: s("big", "wins back only 1% of the 21.1bb pot (EV 0.2bb): almost no showdown value, so the pot is too big for it."),
+      pp3: s("big", "wins back only 0% of the 21.1bb pot (EV 0.1bb): almost no showdown value, so the pot is too big for it."),
     },
     turn: {
       straight: s("b15", "EV about 9.2bb once BB checks (pot 9.1bb); bets 43% of the time, about 3bb on average."),
@@ -736,7 +736,7 @@ export const SOLVER_ANSWERS: Record<string, Partial<Record<"flop" | "turn" | "ri
       tpmk: s("b0", "EV about 3.2bb once BB checks (pot 9.1bb); checks."),
       mp: s("b0", "EV about 2.7bb once BB checks (pot 9.1bb); bets 3% of the time, about 0bb on average."),
       bp: s("b0", "EV about 1.6bb once BB checks (pot 9.1bb); bets 15% of the time, about 1bb on average."),
-      pp3: s("b0", "EV about 0.8bb once BB checks (pot 9.1bb); bets 59% of the time, about 4bb on average."),
+      pp3: s("big", "wins back only 9% of the 9.1bb pot (EV 0.8bb): almost no showdown value, so the pot is too big for it."),
     },
   },
   "KQT · 3♠ · 4♦": {

@@ -24,6 +24,13 @@ for (const board of readdirSync(RUNS)) {
     const ids = r.street === "turn" ? RUNOUTS.filter((x) => x.board === spec.board && x.streets[1].card === spec.streets[1].card).map((x) => x.id) : [r.id];
     for (const row of r.rows) {
       if (!row.solver) continue;
+      // Noam 2026-11-07, 9♠8♦6♣ only for now: a made hand that wins back under 15% of the pot has almost no
+      // showdown value, so the pot is too big for it (whether the solver bets it doesn't matter).
+      if (spec.board === "986" && row.ev < 0.15 * r.pot) {
+        const why = `wins back only ${pct(row.ev / r.pot)}% of the ${r.pot}bb pot (EV ${row.ev.toFixed(1)}bb): almost no showdown value, so the pot is too big for it.`;
+        for (const id of ids) add(id, r.street, `      ${row.g}: s("big", "${why}"),`);
+        continue;
+      }
       const bets = row.bet < 0.02 ? "checks" : `bets ${pct(row.bet)}% of the time, about ${row.money.toFixed(0)}bb on average`;
       const bluff = r.street === "river" && row.solver === "b0" && row.bet >= 0.3;
       const why = bluff
