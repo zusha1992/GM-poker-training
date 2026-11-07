@@ -33,7 +33,7 @@ Layout *(Noam, 2026-11-05)*: five neon paddles in one design (Arkanoid-style), d
 - 25–50bb in the top-right corner;
 - 50–100bb on the right side.
 
-**Sixth box: "Pot is too big"** *(Noam, 2026-11-07)*, under 0–5bb, on every street from the flop. With six boxes the layout is symmetric, three on each side *(Noam, 2026-11-07)*. Going around from the bottom-left: Pot is too big (bottom-left corner), 0–5bb (left side), 5–15bb (top-left), 15–25bb (top-right), 25–50bb (right side), 50–100bb (bottom-right).
+**Sixth box: "Pot is too big"** *(Noam, 2026-11-07)*, under 0–5bb, on every street from the flop. With six boxes the layout is symmetric, three on each side *(Noam, 2026-11-07)*. The two ends sit on the sides, Pot is too big on the left and 50–100bb on the right. The rest go in the corners: 0–5bb top-left, 5–15bb bottom-left, 15–25bb top-right, 25–50bb bottom-right.
 - **0–5bb** is showdown: the hand wants a small pot and checks it down.
 - **Pot is too big** is a made hand with almost no showdown value. The pot is already bigger than it can handle, so it's a hand that could bluff. Whether the solver bets it doesn't matter: the drill only says the pot is too big.
 - **From the solver, turn and river:** a made hand that wins back under **15% of the pot** (solver EV). Applied on **9♠8♦6♣ only** so far. Other boards get it as we go through them.

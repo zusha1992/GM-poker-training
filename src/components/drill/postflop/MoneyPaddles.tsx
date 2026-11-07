@@ -8,11 +8,11 @@ import styles from "./MoneyPaddles.module.css";
  * money to big from left to right (Noam 2026-11-05: five bb boxes). 0–5 on
  * the left side, 5–15 and 25–50 in the top corners, 15–25 top middle,
  * 50–100 on the right side. The bottom stays free for the piece count.
- * Noam 2026-11-07: six boxes, three on each side, around the drop area from
- * the bottom-left corner to the bottom-right: Pot is too big, 0–5, 5–15 (top
- * left), 15–25 (top right), 25–50, 50–100. */
+ * Noam 2026-11-07: six boxes, the two ends on the sides (Pot is too big on
+ * the left, 50–100 on the right) and the rest in the corners: 0–5 top left,
+ * 5–15 bottom left, 15–25 top right, 25–50 bottom right. */
 type Spot = "bl" | "left" | "tl" | "top" | "tr" | "right" | "br";
-const SPOT: Record<Bucket, Spot> = { big: "bl", b0: "left", b5: "tl", b15: "tr", b25: "right", b50: "br" };
+const SPOT: Record<Bucket, Spot> = { big: "left", b0: "tl", b5: "bl", b15: "tr", b25: "br", b50: "right" };
 const LABEL: Record<Bucket, string> = { big: "Pot is\ntoo big", b0: "0–5\nbb", b5: "5–15\nbb", b15: "15–25\nbb", b25: "25–50\nbb", b50: "50–100\nbb" };
 
 const INSET = 6;
@@ -94,7 +94,7 @@ export function MoneyPaddles({ w, h, armed, holding, flash, hitRef }: Props) {
                 className={styles.inner}
                 style={{ [side]: 5, top: 7, bottom: 7, width: 2, borderRadius: 1, background: "#fff" }}
               />
-              <span className={styles.label} style={{ [side]: STROKE + 9, top: "50%", transform: "translateY(-50%)", fontSize: 15, whiteSpace: "pre-line", textAlign: side }}>
+              <span className={styles.label} style={{ [side]: STROKE + 9, top: "50%", transform: "translateY(-50%)", fontSize: 15, whiteSpace: "pre", textAlign: side }}>
                 {LABEL[b]}
               </span>
             </div>
