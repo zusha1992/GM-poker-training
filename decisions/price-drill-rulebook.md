@@ -257,14 +257,19 @@ Broadway cards are A, K, Q, J and T.
 - **The strong top pair on a dry or medium flop wants a big pot** (not stacks): Q♥T♦7♠ counts as dry for this, since no straight is possible yet and there's no flush draw.
 - **On a blank runout, a hand that bet the flop and the turn and still has value bets a healthy third time on the river: big pot**, not medium. Applies to overpairs and strong top pairs on every board (A72 AK/AQ, J♠T♠3♣ overpairs too).
 
-### From Noam's phone review of the solver boards *(Noam, 2026-11-07)*
-- **Top pair with a good kicker on a wet flop is 25–50bb** (A♥7♥6♣: AK, AQ; J♠T♠3♣: AJ, KJ). It stays its own group, above the medium kickers. Applied to every wet flop: JT3, 986, KQT, A76, T87.
-- **If a hand is worth stacks on the brick turn, it's worth stacks from the flop.** Applied to overpairs: when the solver says 50–100bb on the brick turn, the flop is 50–100bb too. That moved JT3, K54, QT7, 986 and KQ4 overpairs to 50–100bb on the flop (K54 was 25–50bb by the connected-flop rule).
-- **An overpair on a turn with no flush and no straight possible still goes for stacks** (K♠5♥4♣ · Q♦: 50–100bb, as the solver says).
-- **Splits to come, from the solver's numbers per hand:**
-  - **Flushes on a four-flush river:** high flushes go for a big pot; low flushes get less (A♥7♥6♣ · 8♥ · T♥). Straights and flushes don't get the same box there.
-  - **A pair plus a draw on the turn:** split by equity, not one group (J♠T♠3♣ · 9♠, "Pair + a ♠").
-  - **Draws on the turn:** draws with a lot of equity (combo draws, strong flush draws) want more money than 0–5bb; weak draws stay 0–5bb (J♠T♠3♣ · 6♣).
+### Board by board from now on *(Noam, 2026-11-07)*
+- **A note changes only the board and street it was written on.** "I don't want you to apply something I said on one board to other boards." What a hand is worth depends on that board, above all on who holds the strongest hands there. On 9♠8♦6♣, T♥8♥7♠ and 8♠8♦6♣ BB has more of them, so a rule from A76 or JT3 is wrong there (it put A9 at stacks on the 986 flop).
+- Older rules in this rulebook that were spread to every board stay as they are until Noam goes over each board.
+
+### From Noam's phone review, each on its own board only *(Noam, 2026-11-07)*
+- **A♥7♥6♣ flop:** AK and AQ are 25–50bb.
+- **J♠T♠3♣ flop:** AJ and KJ are 25–50bb, their own group. Small pocket pairs go up to 99. Overpairs are 50–100bb: they're worth stacks on the brick turn, so they're worth stacks from the flop.
+- **K♠5♥4♣ · Q♦ turn:** overpairs stay 50–100bb (no flush or straight possible), as the app already said.
+- **A♥7♥6♣ · 8♥ · T♥ river:** flushes split into **high flushes** (K♥, Q♥, J♥: the solver bets them nearly all-in) and **low flushes** (9♥ and lower: 3–26bb). Straights get less again.
+- **J♠T♠3♣ · 9♠ turn:** "Pair + a ♠" splits into **strong** (overpair or top pair, solver EV 7.8–8.7bb), **middle** (second pair, 6.3–6.7bb) and **weak** (the rest, 2–5.5bb).
+- **J♠T♠3♣ · 6♣ turn:** draws split into **combo draws** (EV 6–7.7bb), **flush draws** (4–5bb) and **straight draws** (2–4.4bb).
+- The boxes for these new groups come from the solver.
+- *Open (Noam, 986):* the turn box from the solver's EV can overstate one-pair hands (A9/K9 at stacks on 9♠8♦6♣ 2♥, though they only put in about 15–25bb by the river). To look at board by board.
 
 ### Cutoffs to set for every new board
 1. Good kicker (A72: Q or better, so AK and AQ: in a single-raised pot AQ is very strong on this board *(Noam)*)
@@ -391,4 +396,4 @@ Their answers are not written one by one: they come from a **value plan**, the r
   - The A72 streets Noam checked didn't change.
 - **2026-11-05**: The start screen can pick a board's exact turn, river and starting street, to get to a spot under review.
 - **2026-11-05**: From Noam's comments on the site (K54 flop; A72 Q♥ turn, 6♦ turn, 6♦ 8♦ river) came box rules 2 (connected flops), 5 and 6. Applied to every board, they changed 41 groups; the ones not on A72 are drafts.
-- **2026-11-07**: From Noam's phone review of the solver boards: good-kicker top pair 25–50bb on wet flops; overpairs worth stacks on the brick turn are stacks from the flop; small pocket pairs go up to 99. Flush, pair-plus-draw and draw splits come next, from the solver per hand.
+- **2026-11-07**: From Noam's phone review, each change only on the board it was written on (A76 flop, JT3 flop and its 9♠ and 6♣ turns, A76 8♥ T♥ river). A first version spread them to every board; Noam stopped that ("board by board"), and the other boards went back to how they were.

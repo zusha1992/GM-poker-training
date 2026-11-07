@@ -147,7 +147,8 @@ for (const [i, combo] of ip.entries()) {
 // for value (EV at least half the pot: value bets come out at 70%+ of the pot, bluffs
 // at 30% or less, e.g. 88–44 shoving on K-Q-T-3-J; they stay 0–5bb).
 // Turn: its EV, with the flop cut-offs from GTO Wizard (6.2 / 4.5 / 3.4bb at pot 5.5) scaled to the pot.
-const MADE = new Set(["boat", "flush", "straight", "trips", "twopair", "pdraw", "op", "tpgk", "tpmk", "tpwk", "pfl", "pp1", "pp2", "pp3", "spp", "mp", "bp"]);
+// Noam 2026-11-07: combo and flush draws on the turn get solver boxes too.
+const MADE = new Set(["cdraw", "fdraw", "pflm", "pflw", "boat", "flush", "flushlo", "straight", "trips", "twopair", "pdraw", "op", "tpgk", "tpmk", "tpwk", "pfl", "pp1", "pp2", "pp3", "spp", "mp", "bp"]);
 function suggest(g: string, ev: number, money: number, bet: number): string | null {
   if (!MADE.has(g)) return null;
   if (si === 2) {
@@ -165,5 +166,18 @@ console.log(`pot ${pot0}, actions: ${ipNode.strategy!.actions.join(", ")}`);
 for (const r of rows) {
   const flag = r.solver && r.solver !== r.drill ? `  → ${r.solver}` : "";
   console.log(`${r.g.padEnd(9)}${r.label.padEnd(22)} EV ${r.ev.toFixed(1).padStart(5)}bb  bets ${String(Math.round(r.bet * 100)).padStart(3)}%  avg ${r.money.toFixed(1).padStart(4)}bb   drill ${r.drill}${flag}`);
+}
+// SHOW=pfl,imp prints every combo of those groups, to find where a group splits.
+const show = new Set((process.env.SHOW ?? "").split(",").filter(Boolean));
+if (show.size) {
+  const out: { combo: string; g: string; ev: number; bet: number; money: number }[] = [];
+  for (const [i, combo] of ip.entries()) {
+    if (!ipW.get(classOf(combo))) continue;
+    const g = priceGroupOf([toDrill(combo.slice(0, 2)), toDrill(combo.slice(2, 4))], st.board, RUNOUTS[idx].streets[si]);
+    if (!show.has(g)) continue;
+    const probs = ipNode.strategy!.strategy[combo];
+    out.push({ combo, g, ev: ev[i], bet: probs.reduce((s, p, k) => s + (sizes[k] ? p : 0), 0), money: probs.reduce((s, p, k) => s + p * sizes[k], 0) });
+  }
+  for (const o of out.sort((a, b) => b.ev - a.ev)) console.log(`  ${o.g.padEnd(7)}${o.combo}  EV ${o.ev.toFixed(1).padStart(5)}bb  bets ${String(Math.round(o.bet * 100)).padStart(3)}%  avg ${o.money.toFixed(1).padStart(4)}bb`);
 }
 if (process.argv[4]) writeFileSync(process.argv[4], JSON.stringify({ id: RUNOUTS[idx].id, street: ["flop", "turn", "river"][si], pot: pot0, rows }, null, 1));

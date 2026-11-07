@@ -26,6 +26,7 @@ import { SOLVER_ANSWERS } from "./solver-answers";
 export type PGroup =
   | "boat"
   | "flush"
+  | "flushlo"
   | "straight"
   | "trips"
   | "twopair"
@@ -41,20 +42,25 @@ export type PGroup =
   | "bp"
   | "aho"
   | "pfl"
+  | "pflm"
+  | "pflw"
   | "pdraw"
   | "sdraw"
+  | "cdraw"
+  | "fdraw"
   | "imp"
   | "khnd"
   | "sd"
   | "air";
 /** imp/khnd/air: the no-pair hands split by whether they can improve (see
  * noPairGroupOf). "sd" is no longer used: kept for old feedback notes. */
-export const PGROUP_ORDER: PGroup[] = ["boat", "flush", "straight", "trips", "twopair", "op", "tpgk", "tpmk", "tpwk", "pp1", "pp2", "pp3", "spp", "mp", "bp", "pfl", "pdraw", "aho", "sdraw", "imp", "khnd", "sd", "air"];
+export const PGROUP_ORDER: PGroup[] = ["boat", "flush", "flushlo", "straight", "trips", "twopair", "op", "tpgk", "tpmk", "tpwk", "pp1", "pp2", "pp3", "spp", "mp", "bp", "pfl", "pflm", "pflw", "pdraw", "aho", "sdraw", "cdraw", "fdraw", "imp", "khnd", "sd", "air"];
 
 /** Same color and shape on every board and street. */
 export const PGROUP_INFO: Record<PGroup, { color: string; shape: string }> = {
   boat: { color: "#E0413A", shape: "block6" },
   flush: { color: "#F25C9A", shape: "Y" },
+  flushlo: { color: "#F58FBB", shape: "J" },
   straight: { color: "#F2A03D", shape: "L5" },
   trips: { color: "#E86A4A", shape: "W" },
   twopair: { color: "#F2853D", shape: "O" },
@@ -70,8 +76,12 @@ export const PGROUP_INFO: Record<PGroup, { color: string; shape: string }> = {
   bp: { color: "#7F97A8", shape: "dot2" },
   aho: { color: "#D4E86B", shape: "P" },
   pfl: { color: "#4FC1A6", shape: "U" },
+  pflm: { color: "#6FCFB8", shape: "L5" },
+  pflw: { color: "#8FD9C8", shape: "dot2" },
   pdraw: { color: "#7FD6B0", shape: "V" },
   sdraw: { color: "#3FD0F0", shape: "I3" },
+  cdraw: { color: "#2FB8E8", shape: "value" },
+  fdraw: { color: "#4FC6EC", shape: "I3" },
   imp: { color: "#5FD3E8", shape: "F" },
   khnd: { color: "#E8C76B", shape: "N" },
   sd: { color: "#9BE07A", shape: "plus" },
@@ -139,6 +149,7 @@ const autoAll = (why: string): Answer => ({ bucket: "b50", why, sure: true, auto
 function madeHandAnswer(g: PGroup, board: Card[]): Answer | undefined {
   if (g === "boat") return a("b50", "A full house or quads: it wants every chip in.");
   if (g === "flush") return a("b50", "A flush: it wants every chip in.");
+  if (g === "flushlo") return a("b15", "A low flush with four of the suit on the board: a higher flush beats it, so less than stacks.");
   if (g !== "straight") return undefined;
   const flushOut = Object.values(board.reduce<Record<string, number>>((m, c) => ({ ...m, [c.s]: (m[c.s] ?? 0) + 1 }), {})).some((n) => n >= 3);
   return flushOut ? a("b25", "A straight, but three cards of a suit are on the board: every flush beats it, so a big pot, not stacks.") : a("b50", "A straight: it wants every chip in.");
@@ -644,6 +655,8 @@ function connectedFlop(flop: Card[]): boolean {
 function ruleAnswer(g: PGroup, street: Street, k: RunoutKinds): Answer {
   if (g === "air") return a("b0", "No pair and no showdown value: it can't win by checking, so it's worth zero.", true);
   if (g === "imp") return a("b0", "No pair yet, but a draw: worth 0–5bb, like every draw.", true);
+  const draw = drawAnswer(g);
+  if (draw) return draw;
   if (g === "sd" || g === "khnd") {
     if (street === "river" && k.river === "wet") return a("b0", "The draws arrived and the ranges are polar: this high card can't win at showdown any more.");
     return a("b0", "No pair, but the highest cards sometimes win at showdown. Draws included.", true);
@@ -660,8 +673,6 @@ function ruleAnswer(g: PGroup, street: Street, k: RunoutKinds): Answer {
   // Not on a connected one (K54: "not good enough to go for stacks because of the connectedness").
   if (street === "flop" && n === 3 && !k.wetFlop && !k.connected) return a("b50", "A dry flop: if nothing changes by the river, it wants to get the stacks in.");
   if (street === "flop" && n === 3 && !k.wetFlop) return a("b25", "A connected flop: not good enough to go for stacks, but a big pot.");
-  // Noam 2026-11-07 (A76 AK/AQ, JT3 AJ/KJ): top pair with a good kicker wants a big pot on a wet flop too.
-  if (street === "flop" && g === "tpgk" && k.wetFlop) return a("b25", "Top pair with a good kicker: even on a wet flop it wants a big pot, 25–50bb.");
   // Noam 2026-11-05 (A72 · Q♥ and 6♦): pocket pairs between the top two cards are still worth one more bet on a turn that isn't wet.
   if (street === "turn" && g === "pp1" && k.turn !== "wet") return a("b5", "Still worth one more bet: it gets value from the lower pairs.");
   // Noam 2026-11-05 (A72, Q♥ turn): second pair on a turn that isn't wet still beats the lower pairs and the draws.
@@ -696,7 +707,10 @@ function rulesCut(board: Card[]): Pick<StreetSpec, "goodKicker" | "midKicker" | 
 }
 
 function ruleAnswers(street: Street, board: Card[], k: RunoutKinds): Partial<Record<PGroup, Answer>> {
-  return Object.fromEntries(PGROUP_ORDER.map((g) => [g, madeHandAnswer(g, board) ?? ruleAnswer(g, street, k)])) as Partial<Record<PGroup, Answer>>;
+  const out = Object.fromEntries(PGROUP_ORDER.map((g) => [g, madeHandAnswer(g, board) ?? ruleAnswer(g, street, k)])) as Partial<Record<PGroup, Answer>>;
+  // Noam 2026-11-07, A♥7♥6♣ flop only: AK and AQ want at least 25–50bb.
+  if (street === "flop" && spot(board, "A♥", "7♥", "6♣")) out.tpgk = a("b25", "AK and AQ want at least 25–50bb here.");
+  return out;
 }
 
 type RuleTurn = { card: string; kind: Exclude<StreetKind, "flop" | "wet"> | "wet"; story: string; rivers: [{ card: string; story: string }, { card: string; story: string }] };
@@ -939,8 +953,17 @@ function noPairGroupOf(hole: [Card, Card], board: Card[], sdCutoff: number, stro
   // turns flush and combo draws have about 35–45% against BB's range, straight draws alone 20–30%.
   // On the flop the real draws (not backdoors): on A72 the wheel gutshots, solver EV 3.6bb like 7x.
   if (strongDraws && (flushDraw || (flop && realDraw(hole, board)))) return "sdraw";
+  // Noam 2026-11-07 (J♠T♠3♣ 6♣): on the turn, combo draws, flush draws and straight draws apart
+  // (solver EV on 6♣: combo draws 6–7.7bb, flush draws 4–5bb, straight draws 2–4.4bb).
+  if (spot(board, "J♠", "T♠", "3♣", "6♣") && board.length === 4 && flushDraw) return straightDraw ? "cdraw" : "fdraw";
   if (straightDraw || (strongDraws && flushDraw) || suitOnBoard >= (flop ? 1 : 2)) return "imp";
   return Math.max(x.r, y.r) >= sdCutoff ? "khnd" : "air";
+}
+
+/** Noam 2026-11-07: a note changes only the board (and street card) it was written on.
+ * True when this board starts with these cards, e.g. spot(board, "J♠", "T♠", "3♣", "6♣"). */
+function spot(board: Card[], ...cards: string[]): boolean {
+  return cards.every((c, i) => board[i] && board[i].r === card(c).r && board[i].s === card(c).s);
 }
 
 /** The suit with three cards on a four-card board (the flush is in, one more card can come). */
@@ -995,7 +1018,15 @@ function baseGroupOf(hole: [Card, Card], board: Card[], cut: Pick<StreetSpec, "g
   const boat = trips.length > 0 && [...counts].some(([r, n]) => n >= 2 && r !== trips[0][0]);
   const quads = [...counts].some(([r, n]) => n === 4 && usesHole(r));
   if (boat || quads) return "boat";
-  if (flush) return "flush";
+  if (flush) {
+    // Noam 2026-11-07 (A♥7♥6♣ 8♥ T♥): with four of the suit on the board, only the
+    // three highest cards of that suit still out make a "high" flush.
+    const s = SUITS.find((t) => board.filter((c) => c.s === t).length >= 4);
+    if (!s || !spot(board, "A♥", "7♥", "6♣", "8♥", "T♥")) return "flush";
+    const out = [14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2].filter((r) => !board.some((c) => c.s === s && c.r === r));
+    const best = Math.max(...hole.filter((c) => c.s === s).map((c) => c.r));
+    return out.indexOf(best) < 3 ? "flush" : "flushlo";
+  }
   if (straight) return "straight";
 
   // Trips: one hole card with a pair on the board (Noam 2026-11-05, 8♠8♦6♣: its own group).
@@ -1006,15 +1037,21 @@ function baseGroupOf(hole: [Card, Card], board: Card[], cut: Pick<StreetSpec, "g
 
   // Noam 2026-11-05: on a turn with three cards of a suit, a pair holding one
   // card of that suit can still make a flush on the river; a pair without one can't.
+  // Noam 2026-11-07 (J♠T♠3♣ 9♠): split by the pair's strength, as the solver's EV does
+  // (overpair or top pair + a ♠ 7.8–8.7bb, second pair 6.3–6.7bb, weaker pairs 2–5.5bb).
   const fs4 = flushSuitOnTurn(board);
   if (fs4 && (x.s === fs4) !== (y.s === fs4)) {
     const paired = pocket || boardCount(x.r) > 0 || boardCount(y.r) > 0;
-    if (paired) return "pfl";
+    if (paired && !spot(board, "J♠", "T♠", "3♣", "9♠")) return "pfl";
+    if (paired) {
+      const g = baseGroupOf(hole, board.map((c) => ({ ...c, s: c.s === fs4 ? "_" : c.s }) as Card), cut);
+      return ["op", "tpgk", "tpmk", "tpwk"].includes(g) ? "pfl" : g === "mp" || g === "pp1" ? "pflm" : "pflw";
+    }
   }
   const texture = flopTexture(board);
   if (pocket) {
-    // Noam 2026-11-07 (J♠T♠3♣): small pocket pairs go up to 99, not 88.
-    if (flopTexture(board.slice(0, 3)) === "high" && x.r <= 9) return "spp";
+    // Noam 2026-11-07 (J♠T♠3♣ only): small pocket pairs go up to 99 there, not 88.
+    if (flopTexture(board.slice(0, 3)) === "high" && x.r <= (spot(board, "J♠", "T♠", "3♣") ? 9 : 8)) return "spp";
     if (x.r > top) return "op";
     const above = ranks.filter((r) => r > x.r).length;
     return above === 1 ? "pp1" : above === 2 ? "pp2" : "pp3";
@@ -1061,8 +1098,6 @@ function namesOf(g: PGroup, board: Card[], hands: string[], cut: Pick<StreetSpec
   switch (g) {
     case "boat":
       return { label: "Full houses+", name: "Full houses and quads" };
-    case "flush":
-      return { label: "Flushes", name: "Flushes" };
     case "straight":
       return { label: "Straights", name: "Straights" };
     case "trips": {
@@ -1094,10 +1129,17 @@ function namesOf(g: PGroup, board: Card[], hands: string[], cut: Pick<StreetSpec
       return { label: runs(hands.map((h) => rv(h[0])), (r) => `${ch(r)}${ch(r)}`), name: "Small pocket pairs" };
     case "pdraw":
       return { label: "Pair + draw", name: "A pair below top pair plus a flush draw or an open-ender" };
-    case "pfl": {
+    case "pfl":
+    case "pflm":
+    case "pflw": {
       const glyph = { s: "♠", h: "♥", d: "♦", c: "♣" }[flushSuitOnTurn(board) ?? "s"];
-      return { label: `Pair + a ${glyph}`, name: `One pair with a ${glyph}: a fourth ${glyph} on the river makes a flush` };
+      const kind = g === "pfl" ? ["Strong pair", "An overpair or top pair"] : g === "pflm" ? ["Middle pair", "Second pair or a pocket pair between the top two cards"] : ["Weak pair", "A weaker pair"];
+      return { label: `${kind[0]} + a ${glyph}`, name: `${kind[1]} with a ${glyph}: a fourth ${glyph} on the river makes a flush` };
     }
+    case "flush":
+    case "flushlo":
+      if (!spot(board, "A♥", "7♥", "6♣", "8♥", "T♥")) return { label: "Flushes", name: "Flushes" };
+      return g === "flush" ? { label: "High flushes", name: "The three highest flush cards still out" } : { label: "Low flushes", name: "Lower flushes: a higher flush beats them" };
     case "aho":
       return { label: runs(hands.map((h) => rv(h[1])), (r) => `A${ch(r)}`), name: "Ace-high, two overcards" };
     case "mp":
@@ -1111,11 +1153,14 @@ function namesOf(g: PGroup, board: Card[], hands: string[], cut: Pick<StreetSpec
     case "sdraw":
       if (board.length === 3) return { label: hands.length <= 3 ? hands.join(", ") : "Real draws", name: "No pair, but a real draw (not a backdoor): a straight or flush draw" };
       return { label: "Strong draws", name: "Flush draws and combo draws: no pair, but a lot of equity" };
+    case "cdraw":
+      return { label: "Combo draws", name: "No pair, a flush draw plus a straight draw" };
+    case "fdraw":
+      return { label: "Flush draws", name: "No pair, a flush draw (no straight draw)" };
     case "imp":
-      if (cut.strongDraws && board.length === 4) return { label: "Straight draws", name: "No pair, a straight draw (no flush draw)" };
       return board.length === 3
         ? { label: "Can improve", name: "No pair, but a draw: gutshots, backdoor straights, backdoor flushes" }
-        : { label: "Draws", name: "No pair, but a draw: flush draws, straight draws, gutshots, combo draws" };
+        : { label: "Straight draws", name: "No pair, a straight draw or gutshot (no flush draw)" };
     case "khnd": {
       const hi = ch(missingAtOrBelow(ranks, cut.sdCutoff));
       return board.length === 5 ? { label: `${hi}-high`, name: `No pair, ${hi}-high` } : { label: `${hi}-high, no draw`, name: `No pair, ${hi}-high, no draw` };
@@ -1213,7 +1258,9 @@ function flopRule(g: PGroup, board: Card[]): Answer | undefined {
  * can still make a flush bets more, and a pair that can't doesn't bet any more. */
 function flushTurnRule(g: PGroup, board: Card[]): Answer | undefined {
   if (!flushSuitOnTurn(board)) return undefined;
-  if (g === "pfl") return a("b5", "One pair plus a card of the flush suit: it can still improve to a flush, so it bets more: 5–15bb.");
+  if (g === "pfl") return a("b15", "An overpair or top pair that can still make a flush: 15–25bb.");
+  if (g === "pflm") return a("b5", "A middle pair that can still make a flush: it bets more, 5–15bb.");
+  if (g === "pflw") return a("b0", "A weak pair, even with a card of the flush suit, puts in a little: 0–5bb.");
   if (PAIR_GROUPS.has(g) || g === "spp") return a("b0", "The flush is on the board and this pair can't make one: it doesn't bet any more.");
   return undefined;
 }
@@ -1261,6 +1308,13 @@ function noPairFallback(g: PGroup, st: StreetSpec): Answer | undefined {
   if (g === "khnd") return st.answers.sd;
   if (g === "trips") return st.answers.twopair;
   if (g === "imp") return a("b0", "No pair yet, but a draw: worth 0–5bb, like every draw.");
+  return drawAnswer(g);
+}
+
+/** Noam 2026-11-07: strong draws want to build the pot; plain flush draws stay 0–5bb. */
+function drawAnswer(g: PGroup): Answer | undefined {
+  if (g === "cdraw") return a("b5", "A flush draw plus a straight draw: a lot of equity, so it wants to build the pot: 5–15bb.");
+  if (g === "fdraw") return a("b0", "A flush draw alone bets some of the time, but it's worth 0–5bb.");
   return undefined;
 }
 
@@ -1289,8 +1343,8 @@ export function buildRunout(index: number): Runout {
     const pieces: PricePiece[] = [];
     for (const g of PGROUP_ORDER) {
       if (snap.byGroup[g] <= 0) continue;
-      // Noam 2026-11-07 (JT3): an overpair worth stacks on the brick turn is worth stacks from the flop.
-      const stacksLater = i === 0 && g === "op" && brickTurnStacks(spec.board, g) ? a("b50", "Worth stacks on the brick turn (solver), so worth stacks from the flop.") : undefined;
+      // Noam 2026-11-07, J♠T♠3♣ overpairs only: worth stacks on the brick turn, so worth stacks from the flop.
+      const stacksLater = i === 0 && spec.board === "JT3" && g === "op" && brickTurnStacks(spec.board, g) ? a("b50", "Worth stacks on the brick turn (solver), so worth stacks from the flop.") : undefined;
       const found = SOLVER_ANSWERS[spec.id]?.[street]?.[g] ?? stacksLater ?? flushTurnRule(g, board) ?? flopRule(g, board) ?? veryWetRule(g, street, board, everyBoardRule(g, street, riverRule(g, street) ?? st.answers[g] ?? noPairFallback(g, st) ?? madeHandAnswer(g, board)));
       if (!found) throw new Error(`price-hands: no answer for ${g} on ${spec.id} (${street})`);
       // Noam 2026-11-05: trips, like straights and flushes, are always the player's call.
