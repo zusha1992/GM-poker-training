@@ -19,7 +19,7 @@ import { SOLVER_ANSWERS } from "./solver-answers";
 /** Strongest first; a hand is in exactly one group, checked top-down.
  *  pp1/pp2/pp3 = pocket pairs below the top card, by how many board ranks
  *  sit above them (pp3 = three or more). mp = pairs the second board rank,
- *  bp = pairs a lower one. spp = 88 and lower when the flop had two or more
+ *  bp = pairs a lower one. spp = 99 and lower when the flop had two or more
  *  broadway cards, on every street until they improve. aho = ace-high with two overcards on a flop with at most
  *  one broadway card, or a paired one. sd = no pair, high card at or above the
  *  board's showdown cutoff (draws included); air = every other no-pair hand. */
@@ -404,8 +404,8 @@ const JT3_FLOP: StreetSpec = {
   ...JT3_CUT,
   answers: {
     twopair: autoAll("Sets and JT want every chip in on a wet board."),
-    op: a("b25", "QQ–AA beat every jack, but this board moves: build the pot now."),
-    tpgk: a("b15", "AJ and KJ: two streets of value against BB's weaker jacks and draws."),
+    op: a("b50", "QQ–AA are worth stacks on a brick turn, so they're worth stacks from the flop."),
+    tpgk: a("b25", "AJ and KJ are worth more than the weaker jacks: a big pot, 25–50bb."),
     tpmk: a("b15", "Top pair wants 20% on the flop, even on a moving board, assuming it bricks."),
     tpwk: a("b5", "J8 and below: one small bet at most."),
     pp1: SHOW(),
@@ -660,6 +660,8 @@ function ruleAnswer(g: PGroup, street: Street, k: RunoutKinds): Answer {
   // Not on a connected one (K54: "not good enough to go for stacks because of the connectedness").
   if (street === "flop" && n === 3 && !k.wetFlop && !k.connected) return a("b50", "A dry flop: if nothing changes by the river, it wants to get the stacks in.");
   if (street === "flop" && n === 3 && !k.wetFlop) return a("b25", "A connected flop: not good enough to go for stacks, but a big pot.");
+  // Noam 2026-11-07 (A76 AK/AQ, JT3 AJ/KJ): top pair with a good kicker wants a big pot on a wet flop too.
+  if (street === "flop" && g === "tpgk" && k.wetFlop) return a("b25", "Top pair with a good kicker: even on a wet flop it wants a big pot, 25–50bb.");
   // Noam 2026-11-05 (A72 · Q♥ and 6♦): pocket pairs between the top two cards are still worth one more bet on a turn that isn't wet.
   if (street === "turn" && g === "pp1" && k.turn !== "wet") return a("b5", "Still worth one more bet: it gets value from the lower pairs.");
   // Noam 2026-11-05 (A72, Q♥ turn): second pair on a turn that isn't wet still beats the lower pairs and the draws.
@@ -1011,7 +1013,8 @@ function baseGroupOf(hole: [Card, Card], board: Card[], cut: Pick<StreetSpec, "g
   }
   const texture = flopTexture(board);
   if (pocket) {
-    if (flopTexture(board.slice(0, 3)) === "high" && x.r <= 8) return "spp";
+    // Noam 2026-11-07 (J♠T♠3♣): small pocket pairs go up to 99, not 88.
+    if (flopTexture(board.slice(0, 3)) === "high" && x.r <= 9) return "spp";
     if (x.r > top) return "op";
     const above = ranks.filter((r) => r > x.r).length;
     return above === 1 ? "pp1" : above === 2 ? "pp2" : "pp3";
@@ -1261,6 +1264,12 @@ function noPairFallback(g: PGroup, st: StreetSpec): Answer | undefined {
   return undefined;
 }
 
+/** The solver's turn box for a group is stacks on this board's brick turn. */
+function brickTurnStacks(board: string, g: PGroup): boolean {
+  const r = RUNOUTS.find((x) => x.board === board && x.streets[1].kind === "brick");
+  return !!r && SOLVER_ANSWERS[r.id]?.turn?.[g]?.bucket === "b50";
+}
+
 const RUNOUT_CACHE = new Map<number, Runout>();
 
 /** Everything the screen shows for one runout, worked out once. */
@@ -1280,7 +1289,9 @@ export function buildRunout(index: number): Runout {
     const pieces: PricePiece[] = [];
     for (const g of PGROUP_ORDER) {
       if (snap.byGroup[g] <= 0) continue;
-      const found = SOLVER_ANSWERS[spec.id]?.[street]?.[g] ?? flushTurnRule(g, board) ?? flopRule(g, board) ?? veryWetRule(g, street, board, everyBoardRule(g, street, riverRule(g, street) ?? st.answers[g] ?? noPairFallback(g, st) ?? madeHandAnswer(g, board)));
+      // Noam 2026-11-07 (JT3): an overpair worth stacks on the brick turn is worth stacks from the flop.
+      const stacksLater = i === 0 && g === "op" && brickTurnStacks(spec.board, g) ? a("b50", "Worth stacks on the brick turn (solver), so worth stacks from the flop.") : undefined;
+      const found = SOLVER_ANSWERS[spec.id]?.[street]?.[g] ?? stacksLater ?? flushTurnRule(g, board) ?? flopRule(g, board) ?? veryWetRule(g, street, board, everyBoardRule(g, street, riverRule(g, street) ?? st.answers[g] ?? noPairFallback(g, st) ?? madeHandAnswer(g, board)));
       if (!found) throw new Error(`price-hands: no answer for ${g} on ${spec.id} (${street})`);
       // Noam 2026-11-05: trips, like straights and flushes, are always the player's call.
       const ans = g === "trips" && found.auto ? { ...found, auto: false, sure: false } : found;

@@ -75,6 +75,11 @@ What the 5 unpushed rivers change:
   - then Uri reviews;
   - the open questions below still stand. One new one: the river box is capped by the bet sizes (66%, 125%, all-in), so strong hands that pick 66% or 125% land at 15–50bb.
 
+## Update 2026-11-06 (later): groups per runout
+
+- Noam started checking the boards on his phone. The runouts often need **more specific groups**.
+- **Next session:** go over the boards together and split the groups differently in different spots. Agree each split before building it, then re-run the solver boxes for the new groups (the solves are saved, so only the EV and box step needs to re-run).
+
 ## Next steps (as of 2026-11-05)
 
 1. **Browser-test the 5 rivers,** show Noam the table above, and push once he's seen it.

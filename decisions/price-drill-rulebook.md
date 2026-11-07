@@ -215,7 +215,7 @@ Broadway cards are A, K, Q, J and T.
   - **Underpairs from 99 to JJ** are a **small pot**, and so is second pair or better. *(Noam, from Uri)*
   - *Updated 2026-11-05 (Uri on J♠T♠3♣: "Nines is worth 0-5bb"; Noam: make it general):* a pocket pair **between the top two cards** stays 5–15bb. One **below the second card** only puts in a little: **0–5bb**. This changed 99 on JT3 and QT7, JJ and 99 on KQT, and JJ–99 on KQ4.
   - **Ace-high and third pair or lower** are a **tiny pot**.
-  - **Lower pocket pairs are Zero** and **stay Zero on the turn and river unless they improve**. Their own group: "Small pocket pairs". 66 and lower are confirmed; 88 and 77 are included because they're below 99 *(draft)*.
+  - **Lower pocket pairs are Zero** and **stay Zero on the turn and river unless they improve**. Their own group: "Small pocket pairs". 66 and lower are confirmed; 88 and 77 are included because they're below 99 *(draft)*. *Updated 2026-11-07 (Noam, J♠T♠3♣): the group goes up to **99**, so it's 99 and lower.*
 - **A paired flop follows the first rule**, even K-K or Q-Q *(Noam, 2026-11-02)*. The drill's paired board is 8♠8♦6♣.
 
 ### No pair on the flop and turn *(Noam and Uri, 2026-11-02)*
@@ -256,6 +256,15 @@ Broadway cards are A, K, Q, J and T.
 ### A third bet makes a big pot *(Noam, 2026-10-31, from his notes on Q♥T♦7♠)*
 - **The strong top pair on a dry or medium flop wants a big pot** (not stacks): Q♥T♦7♠ counts as dry for this, since no straight is possible yet and there's no flush draw.
 - **On a blank runout, a hand that bet the flop and the turn and still has value bets a healthy third time on the river: big pot**, not medium. Applies to overpairs and strong top pairs on every board (A72 AK/AQ, J♠T♠3♣ overpairs too).
+
+### From Noam's phone review of the solver boards *(Noam, 2026-11-07)*
+- **Top pair with a good kicker on a wet flop is 25–50bb** (A♥7♥6♣: AK, AQ; J♠T♠3♣: AJ, KJ). It stays its own group, above the medium kickers. Applied to every wet flop: JT3, 986, KQT, A76, T87.
+- **If a hand is worth stacks on the brick turn, it's worth stacks from the flop.** Applied to overpairs: when the solver says 50–100bb on the brick turn, the flop is 50–100bb too. That moved JT3, K54, QT7, 986 and KQ4 overpairs to 50–100bb on the flop (K54 was 25–50bb by the connected-flop rule).
+- **An overpair on a turn with no flush and no straight possible still goes for stacks** (K♠5♥4♣ · Q♦: 50–100bb, as the solver says).
+- **Splits to come, from the solver's numbers per hand:**
+  - **Flushes on a four-flush river:** high flushes go for a big pot; low flushes get less (A♥7♥6♣ · 8♥ · T♥). Straights and flushes don't get the same box there.
+  - **A pair plus a draw on the turn:** split by equity, not one group (J♠T♠3♣ · 9♠, "Pair + a ♠").
+  - **Draws on the turn:** draws with a lot of equity (combo draws, strong flush draws) want more money than 0–5bb; weak draws stay 0–5bb (J♠T♠3♣ · 6♣).
 
 ### Cutoffs to set for every new board
 1. Good kicker (A72: Q or better, so AK and AQ: in a single-raised pot AQ is very strong on this board *(Noam)*)
@@ -382,3 +391,4 @@ Their answers are not written one by one: they come from a **value plan**, the r
   - The A72 streets Noam checked didn't change.
 - **2026-11-05**: The start screen can pick a board's exact turn, river and starting street, to get to a spot under review.
 - **2026-11-05**: From Noam's comments on the site (K54 flop; A72 Q♥ turn, 6♦ turn, 6♦ 8♦ river) came box rules 2 (connected flops), 5 and 6. Applied to every board, they changed 41 groups; the ones not on A72 are drafts.
+- **2026-11-07**: From Noam's phone review of the solver boards: good-kicker top pair 25–50bb on wet flops; overpairs worth stacks on the brick turn are stacks from the flop; small pocket pairs go up to 99. Flush, pair-plus-draw and draw splits come next, from the solver per hand.
