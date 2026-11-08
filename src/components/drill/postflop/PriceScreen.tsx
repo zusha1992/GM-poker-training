@@ -27,6 +27,7 @@ import {
 import { LineMatrix, type MatrixPalette } from "./LineMatrix";
 import { MoneyPaddles } from "./MoneyPaddles";
 import { SortPiece } from "./SortPiece";
+import { HandFan } from "./HandFan";
 import { BoardCard, IconButton, InspectPanel, PrimaryButton, Row, Shell, StreetTrack } from "./drill-ui";
 
 /** The matrix shows the range in one quiet color (Noam 2026-11-05: no
@@ -403,6 +404,7 @@ export function PriceScreen() {
                         key={`${st.street}-${current.key}`}
                         piece={current}
                         caption={`${current.pct}% · tap to see`}
+                        visual={<HandFan hands={current.entries.map((e) => e.hand)} color={current.color} open={holding} maxWidth={zone.w - 160} />}
                         delay={0}
                         zoneAt={zoneAt}
                         flyRect={flying?.key === current.key ? flying.rect : null}

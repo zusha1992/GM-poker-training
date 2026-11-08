@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import { animate, motion, useMotionValue, useTransform, type PanInfo } from "motion/react";
 import { SWIPE_THRESHOLD } from "@/components/drill/PieceCard";
 
@@ -220,6 +220,8 @@ type SortPieceProps<D extends string> = {
   allowUp?: boolean;
   /** Replaces the "N% · tap to see" line under the label. */
   caption?: string;
+  /** Drawn instead of the Tetris shape (How many bb: the hands as cards). */
+  visual?: ReactNode;
 };
 
 /** Which drop zone the piece is heading for. The "up" box sits at the top
@@ -253,6 +255,7 @@ export function SortPiece<D extends string = SortDir>({
   blockColors,
   caption,
   allowUp = false,
+  visual,
 }: SortPieceProps<D>) {
   const x = useMotionValue(0);
   const y = useMotionValue(0);
@@ -305,7 +308,7 @@ export function SortPiece<D extends string = SortDir>({
     if (d) onDrop(d);
   }
 
-  const width = tiny ? "w-[62px]" : compact ? "w-[70px]" : caption ? "w-[150px]" : "w-[84px]";
+  const width = visual ? "w-auto" : tiny ? "w-[62px]" : compact ? "w-[70px]" : caption ? "w-[150px]" : "w-[84px]";
   const shape = piece.shape ?? piece.key;
 
   return (
@@ -344,10 +347,10 @@ export function SortPiece<D extends string = SortDir>({
       >
         {/* Gentle bob so the pieces read as floating, not as fixed cards. */}
         <div
-          className={`flex ${piece.key === "whole" ? "h-[76px]" : tiny ? "h-[50px]" : "h-[64px]"} items-center justify-center`}
+          className={`flex ${visual ? "" : piece.key === "whole" ? "h-[76px]" : tiny ? "h-[50px]" : "h-[64px]"} items-center justify-center`}
           style={{ animation: `sortFloat 2.6s ease-in-out ${delay * 4}s infinite` }}
         >
-          <Tetromino kind={shape} color={piece.color} block={tiny ? 12 : compact ? 15 : BLOCK + (piece.key === "whole" ? 4 : 0)} colors={blockColors} />
+          {visual ?? <Tetromino kind={shape} color={piece.color} block={tiny ? 12 : compact ? 15 : BLOCK + (piece.key === "whole" ? 4 : 0)} colors={blockColors} />}
         </div>
         <b className={`font-[family-name:var(--font-display)] ${tiny ? "text-[11.5px] leading-[1.1]" : "leading-none"} ${caption ? "text-[15.5px]" : tiny ? "" : "text-[13.5px]"}`}>
           {piece.label}

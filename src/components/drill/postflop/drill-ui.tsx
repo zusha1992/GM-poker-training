@@ -41,11 +41,11 @@ export function StreetTrack({ current, done }: { current: number; done: boolean 
   );
 }
 
-const SUIT_GLYPH: Record<string, string> = { s: "♠", h: "♥", d: "♦", c: "♣" };
+export const SUIT_GLYPH: Record<string, string> = { s: "♠", h: "♥", d: "♦", c: "♣" };
 
 /** Four-color deck, like GG Poker (Noam 2026-10-31): every suit has its own
  * card color, so suits are easy to tell apart on a phone. */
-const SUIT_COLOR: Record<string, string> = { s: "#30353B", h: "#C8262E", d: "#1F63C6", c: "#1E8C3E" };
+export const SUIT_COLOR: Record<string, string> = { s: "#30353B", h: "#C8262E", d: "#1F63C6", c: "#1E8C3E" };
 
 /** A board card in the top panel; `fresh` = just dealt (flip-in + glow). */
 export function BoardCard({ card, fresh = false }: { card: Card; fresh?: boolean }) {
