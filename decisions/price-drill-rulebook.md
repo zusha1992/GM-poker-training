@@ -83,6 +83,11 @@ Every hand goes into exactly one group, checked from the top down. Groups are re
   - full houses and flushes: 50–100bb;
   - a straight: 50–100bb, but 25–50bb when three cards of a suit are on the board;
   - trips follow sets and two pair.
+- **High and low flushes, on every board with no pair on it** *(Noam, 2026-11-08)*:
+  - **High flushes:** made with one of the three highest cards of the suit still out (and any straight flush). Worth **50–100bb**: they go for stacks.
+  - **Low flushes:** every other flush. Worth **25–50bb**: a big pot, but not all the money.
+  - This wins over the solver's answers. On a **paired board** full houses are possible, so flushes stay one group with their old answer.
+  - The cards on screen show each hand's real suits, so a flush always appears in its suit.
 
 ### A pair on a flush turn *(Noam, 2026-11-05, from Uri on J♠T♠3♣ 9♠)*
 - **Only when the flush is on the board** (three cards of a suit) **on the turn:** a fourth card of that suit can still come.

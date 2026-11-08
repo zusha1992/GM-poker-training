@@ -970,6 +970,10 @@ function spot(board: Card[], ...cards: string[]): boolean {
   return cards.every((c, i) => board[i] && board[i].r === card(c).r && board[i].s === card(c).s);
 }
 
+function boardPaired(board: Card[]): boolean {
+  return new Set(board.map((c) => c.r)).size < board.length;
+}
+
 /** The suit with three cards on a four-card board (the flush is in, one more card can come). */
 function flushSuitOnTurn(board: Card[]): string | null {
   if (board.length !== 4) return null;
@@ -1023,13 +1027,16 @@ function baseGroupOf(hole: [Card, Card], board: Card[], cut: Pick<StreetSpec, "g
   const quads = [...counts].some(([r, n]) => n === 4 && usesHole(r));
   if (boat || quads) return "boat";
   if (flush) {
-    // Noam 2026-11-07 (A♥7♥6♣ 8♥ T♥): with four of the suit on the board, only the
-    // three highest cards of that suit still out make a "high" flush.
-    const s = SUITS.find((t) => board.filter((c) => c.s === t).length >= 4);
-    if (!s || !spot(board, "A♥", "7♥", "6♣", "8♥", "T♥")) return "flush";
+    // Noam 2026-11-08 (every board with no pair on it): a flush made with one of the
+    // three highest cards of the suit still out is a "high" flush, the rest are "low".
+    // A paired board keeps one group (full houses are possible).
+    if (boardPaired(board)) return "flush";
+    const s = SUITS.find((t) => all.filter((c) => c.s === t).length >= 5)!;
     const out = [14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2].filter((r) => !board.some((c) => c.s === s && c.r === r));
     const best = Math.max(...hole.filter((c) => c.s === s).map((c) => c.r));
-    return out.indexOf(best) < 3 ? "flush" : "flushlo";
+    // A straight flush (T♠8♠ on 9♠7♠J♠) is the best hand there is: with the high flushes.
+    const straightFlush = hasStraight(all.filter((c) => c.s === s).map((c) => c.r));
+    return straightFlush || out.indexOf(best) < 3 ? "flush" : "flushlo";
   }
   if (straight) return "straight";
 
@@ -1142,7 +1149,7 @@ function namesOf(g: PGroup, board: Card[], hands: string[], cut: Pick<StreetSpec
     }
     case "flush":
     case "flushlo":
-      if (!spot(board, "A♥", "7♥", "6♣", "8♥", "T♥")) return { label: "Flushes", name: "Flushes" };
+      if (boardPaired(board)) return { label: "Flushes", name: "Flushes" };
       return g === "flush" ? { label: "High flushes", name: "The three highest flush cards still out" } : { label: "Low flushes", name: "Lower flushes: a higher flush beats them" };
     case "aho":
       return { label: runs(hands.map((h) => rv(h[1])), (r) => `A${ch(r)}`), name: "Ace-high, two overcards" };
@@ -1186,7 +1193,11 @@ function namesOf(g: PGroup, board: Card[], hands: string[], cut: Pick<StreetSpec
 
 // ---------- one street, ready to show ----------
 
-export type PriceSnap = MatrixSnap & { byGroup: Record<PGroup, number> };
+export type PriceSnap = MatrixSnap & {
+  byGroup: Record<PGroup, number>;
+  /** One real combo per hand in each group, so the cards on screen show true suits (a flush in its suit). */
+  samples: Map<PGroup, Map<string, [Card, Card]>>;
+};
 
 /** A group the player drags into a box. */
 export type PricePiece = {
@@ -1200,6 +1211,8 @@ export type PricePiece = {
   desc: string;
   partMark: string;
   entries: { hand: string; part: number }[];
+  /** One real combo per hand, for drawing the group as cards. */
+  cards: [Card, Card][];
   pct: number;
   answer: Answer;
 };
@@ -1257,6 +1270,16 @@ function flopRule(g: PGroup, board: Card[]): Answer | undefined {
   // Uri 2026-11-05 (J♠T♠3♣: "Nines is worth 0-5bb"): below the second card it only puts in a little.
   if (g === "pp2" || g === "pp3") return a("b0", "Two or more broadway cards on the flop: a pocket pair below the second card only puts in a little, 0–5bb.", true);
   if (g === "bp") return a("b0", "Two or more broadway cards on the flop: third pair or lower is only worth 0–5bb.", true);
+  return undefined;
+}
+
+/** Noam 2026-11-08: with no pair on the board (so no full house), the high
+ * flushes go for stacks and the low flushes for a big pot, not all the money.
+ * Wins over the solver's answers. */
+function flushRule(g: PGroup, board: Card[]): Answer | undefined {
+  if (boardPaired(board)) return undefined;
+  if (g === "flush") return a("b50", "A high flush with no pair on the board: only a higher flush beats it, so it goes for stacks.", true);
+  if (g === "flushlo") return a("b25", "A low flush: a higher flush beats it, so a big pot but not all the money.", true);
   return undefined;
 }
 
@@ -1356,7 +1379,7 @@ export function buildRunout(index: number): Runout {
       if (snap.byGroup[g] <= 0 || NOT_IN_DRILL.has(g)) continue;
       // Noam 2026-11-07, J♠T♠3♣ overpairs only: worth stacks on the brick turn, so worth stacks from the flop.
       const stacksLater = i === 0 && spec.board === "JT3" && g === "op" && brickTurnStacks(spec.board, g) ? a("b50", "Worth stacks on the brick turn (solver), so worth stacks from the flop.") : undefined;
-      const found = SOLVER_ANSWERS[spec.id]?.[street]?.[g] ?? stacksLater ?? flushTurnRule(g, board) ?? flopRule(g, board) ?? veryWetRule(g, street, board, everyBoardRule(g, street, riverRule(g, street) ?? st.answers[g] ?? noPairFallback(g, st) ?? madeHandAnswer(g, board)));
+      const found = flushRule(g, board) ?? SOLVER_ANSWERS[spec.id]?.[street]?.[g] ?? stacksLater ?? flushTurnRule(g, board) ?? flopRule(g, board) ?? veryWetRule(g, street, board, everyBoardRule(g, street, riverRule(g, street) ?? st.answers[g] ?? noPairFallback(g, st) ?? madeHandAnswer(g, board)));
       if (!found) throw new Error(`price-hands: no answer for ${g} on ${spec.id} (${street})`);
       // Noam 2026-11-05: trips, like straights and flushes, are always the player's call.
       const ans = g === "trips" && found.auto ? { ...found, auto: false, sure: false } : found;
@@ -1380,6 +1403,7 @@ export function buildRunout(index: number): Runout {
         desc: name,
         partMark: "some",
         entries,
+        cards: entries.map((e) => snap.samples.get(g)!.get(e.hand)!),
         pct: Math.round((snap.byGroup[g] / snap.total) * 100),
         answer: ans,
       });
@@ -1407,6 +1431,7 @@ export function buildRunout(index: number): Runout {
 function snapshotOf(street: Street, combos: Combo[], basis: Map<string, number>, board: Card[], cut: StreetSpec): PriceSnap {
   const cells = new Map<string, Partial<Record<PGroup, number>>>();
   const byGroup = Object.fromEntries(PGROUP_ORDER.map((g) => [g, 0])) as Record<PGroup, number>;
+  const samples = new Map<PGroup, Map<string, [Card, Card]>>();
   let total = 0;
   for (const c of combos) {
     const g = priceGroupOf(c.cards, board, cut);
@@ -1415,6 +1440,9 @@ function snapshotOf(street: Street, combos: Combo[], basis: Map<string, number>,
     cells.set(c.hand, cell);
     byGroup[g] += c.weight;
     total += c.weight;
+    const mine = samples.get(g) ?? new Map<string, [Card, Card]>();
+    if (!mine.has(c.hand)) mine.set(c.hand, c.cards);
+    samples.set(g, mine);
   }
-  return { street, cells, basis, total, byGroup };
+  return { street, cells, basis, total, byGroup, samples };
 }

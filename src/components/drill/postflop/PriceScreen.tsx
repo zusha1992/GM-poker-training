@@ -404,7 +404,7 @@ export function PriceScreen() {
                         key={`${st.street}-${current.key}`}
                         piece={current}
                         caption={`${current.pct}% · tap to see`}
-                        visual={<HandFan hands={current.entries.map((e) => e.hand)} color={current.color} open={holding} maxWidth={zone.w - 160} />}
+                        visual={<HandFan cards={current.cards} color={current.color} open={holding} maxWidth={zone.w - 170} />}
                         delay={0}
                         zoneAt={zoneAt}
                         flyRect={flying?.key === current.key ? flying.rect : null}
