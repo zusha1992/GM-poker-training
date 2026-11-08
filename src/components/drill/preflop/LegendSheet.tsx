@@ -2,7 +2,7 @@
 
 import { Sheet } from "@/components/ui/Sheet";
 import { HowToGrid } from "./HowToGrid";
-import { Tetromino } from "@/components/drill/postflop/SortPiece";
+import { SpadeMark, pieceOf } from "@/components/SpadeMark";
 import { shapeOf } from "@/lib/drill/preflop/families";
 import type { DrillAction, DrillPiece, SwipeDirection } from "@/lib/drill/types";
 
@@ -38,7 +38,7 @@ export function LegendSheet({
   return (
     <Sheet open={open} onOpenChange={(next) => !next && onClose()} title="How to answer">
       <HowToGrid modeKey={modeKey} swipes={swipes} labels={labels} />
-      <h2 className="m-0 font-[family-name:var(--font-display)] text-[22px] font-bold">
+      <h2 className="m-0 font-[family-name:var(--font-brand)] text-[22px] font-bold">
         {heroLabel} pieces
       </h2>
       <p className="m-0 text-[14px] leading-[1.5]" style={{ color: "var(--muted)" }}>
@@ -57,7 +57,7 @@ export function LegendSheet({
               style={{ background: "var(--panel-2)" }}
             >
               <div className="w-14 flex-shrink-0 flex justify-center">
-                <Tetromino kind={shapeOf(p.key)} color={p.color} block={11} />
+                <SpadeMark piece={pieceOf(shapeOf(p.key))} color={p.color} size={40} />
               </div>
               <div className="min-w-0 flex-1">
                 <b className="block text-[14px] font-semibold">{p.label}</b>

@@ -38,8 +38,6 @@ type Hand = {
   /** Turn and river are sorted, not swiped: ready-made groups the player
    * drags into a bet or Check. The flop is one piece for the whole range. */
   pieces: Record<Street, SortPieceDef[]>;
-  /** Colors of the flop's 3×3 whole-range piece. */
-  wholeColors: string[];
 };
 
 const HAND_CACHE = new Map<number, Hand>();
@@ -54,7 +52,6 @@ function handFor(index: number): Hand {
     sc,
     line,
     pieces: { flop: [], turn: sortPieces("turn", line.before.turn), river: sortPieces("river", line.before.river) },
-    wholeColors: wholeColorsOf(line.before.flop),
   };
   HAND_CACHE.set(index, hand);
   return hand;
@@ -118,20 +115,6 @@ const WHOLE_PIECE: SortPieceDef = {
   entries: [],
   pct: 100,
 };
-
-/** The 3×3 block's nine colors follow the flop range's real mix of groups,
- * strongest first (largest-remainder rounding to nine blocks). */
-function wholeColorsOf(snap: RangeSnapshot): string[] {
-  const shares = GROUP_ORDER.map((g) => ({ g, exact: (snap.byGroup[g] / snap.total) * 9 }));
-  const counts = shares.map((s) => ({ ...s, n: Math.floor(s.exact) }));
-  let left = 9 - counts.reduce((s, c) => s + c.n, 0);
-  for (const c of [...counts].sort((a, b) => b.exact - b.n - (a.exact - a.n))) {
-    if (left <= 0) break;
-    c.n += 1;
-    left -= 1;
-  }
-  return counts.flatMap((c) => Array<string>(c.n).fill(GROUP_INFO[c.g].pattern ?? GROUP_INFO[c.g].color));
-}
 
 const pctOf = (snap: RangeSnapshot, line: Line) => Math.round((snap.total / line.start) * 100);
 
@@ -337,7 +320,7 @@ export function LineDemoScreen() {
             <span className="inline-block rounded-full px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.08em]" style={{ color: "#2B1C02", background: "var(--mix)" }}>
               Demo · draft answers
             </span>
-            <b className="font-[family-name:var(--font-display)] text-[26px] font-bold">Flop to river</b>
+            <b className="font-[family-name:var(--font-brand)] text-[26px] font-bold">Flop to river</b>
             <p className="m-0 max-w-[330px] text-[13.5px] leading-[1.5]" style={{ color: "var(--muted)" }}>
               BTN opened, BB called. You get one of {SCENARIOS.length} hands at random and play it to the river. On every street you pick one plan for your whole
               range. BB always calls. Watch how each plan shapes the range you take to the next street.
@@ -460,7 +443,6 @@ export function LineDemoScreen() {
               <SortPiece
                 key={`whole-${hand.index}-${seq}`}
                 piece={WHOLE_PIECE}
-                blockColors={hand.wholeColors}
                 caption="The whole range"
                 delay={0}
                 onDrop={(d) => handleSwipe(d)}
@@ -478,7 +460,7 @@ export function LineDemoScreen() {
 
         {phase === "advancing" && (
           <div className="flex flex-col items-center gap-1.5 text-center" style={{ animation: "rdIn 220ms ease-out both" }} data-testid="advancing">
-            <b className="font-[family-name:var(--font-display)] text-[22px] font-bold" style={{ color: betOpt.color, animation: "ldBanner 520ms cubic-bezier(.3,1.4,.5,1) both" }}>
+            <b className="font-[family-name:var(--font-brand)] text-[22px] font-bold" style={{ color: betOpt.color, animation: "ldBanner 520ms cubic-bezier(.3,1.4,.5,1) both" }}>
               {street === "turn" ? `Value + bluffs ${betOpt.label === "Overbet" ? "overbet" : "bet 66%"}` : ADVANCE_TEXT[street]}
             </b>
             <span className="text-[13px]" style={{ color: "var(--muted)" }}>

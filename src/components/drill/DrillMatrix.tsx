@@ -60,7 +60,7 @@ function backgroundFor(state: CellState | undefined): string {
   if (state?.variant === "auto") return FOLD_DIM;
   if (state?.background) return state.background;
   if (state?.pending) return PENDING_FILL;
-  return "var(--panel-2, #212A33)";
+  return "var(--panel-2, #1B2E48)";
 }
 
 function RowCells({

@@ -154,10 +154,10 @@ export function PostflopDrillScreen() {
               Draft — placeholder strategy
             </span>
             <div className="flex flex-col items-center leading-none">
-              <b className="font-[family-name:var(--font-display)] text-[30px] font-bold tracking-[0.04em]" style={{ color: "var(--mix)" }}>
+              <b className="font-[family-name:var(--font-brand)] text-[30px] font-bold tracking-[0.12em]" style={{ color: "var(--ivory)" }}>
                 GM
               </b>
-              <span className="font-[family-name:var(--font-display)] text-[12px] font-semibold tracking-[0.2em] uppercase" style={{ color: "var(--muted)" }}>
+              <span className="mt-1 font-[family-name:var(--font-brand)] text-[12px] font-semibold tracking-[0.32em] uppercase" style={{ color: "var(--gold)" }}>
                 Postflop
               </span>
             </div>

@@ -15,7 +15,7 @@ export function RulebookScreen({ introHtml, sections }: { introHtml: string; sec
   const [open, setOpen] = useState<Record<string, boolean>>({});
 
   return (
-    <div className="mx-auto flex min-h-dvh max-w-[560px] flex-col gap-3 px-4 pb-10 pt-4" style={{ background: "var(--background)", color: "var(--foreground)" }}>
+    <div className="mx-auto flex min-h-dvh w-full max-w-[560px] flex-col gap-3 px-4 pb-10 pt-4" style={{ background: "var(--background)", color: "var(--foreground)" }}>
       <div className="flex items-center gap-2.5">
         <Link
           href="/"

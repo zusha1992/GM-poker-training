@@ -3,190 +3,14 @@
 import { useEffect, useRef, type ReactNode } from "react";
 import { animate, motion, useMotionValue, useTransform, type PanInfo } from "motion/react";
 import { SWIPE_THRESHOLD } from "@/components/drill/PieceCard";
+import { SpadeMark, pieceOf } from "@/components/SpadeMark";
 
 /** left = Check, right = the street's main bet, up = the alternative bet (turn: small bet). */
 export type SortDir = "left" | "right" | "up";
 
-/** What a floating piece needs to show itself. `shape` picks the Tetris
- * shape (defaults to `key`). */
+/** What a floating piece needs to show itself. `shape` picks its chess
+ * piece (see pieceOf; defaults to `key`). */
 export type PieceView = { key: string; label: string; pct: number; color: string; shape?: string };
-
-/** Classic Tetris shapes, as [col, row] blocks. Abstract on purpose: the
- * shape stands for the group, not for where its hands sit in the matrix. */
-const TETROMINO: Record<string, [number, number][]> = {
-  value: [
-    [0, 0],
-    [1, 0],
-    [2, 0],
-    [1, 1],
-  ], // T
-  bluff: [
-    [1, 0],
-    [2, 0],
-    [0, 1],
-    [1, 1],
-  ], // S
-  check: [
-    [0, 0],
-    [0, 1],
-    [0, 2],
-    [1, 2],
-  ], // L
-  giveup: [
-    [0, 0],
-    [1, 0],
-    [1, 1],
-    [2, 1],
-  ], // Z — mirror of the all-in bluff's S: same family, opposite decision
-  // 3×3 square: the whole range as one piece (flop range bet).
-  whole: [
-    [0, 0],
-    [1, 0],
-    [2, 0],
-    [0, 1],
-    [1, 1],
-    [2, 1],
-    [0, 2],
-    [1, 2],
-    [2, 2],
-  ],
-  // Extra shapes for the "how many big blinds" drill, one per hand group.
-  block6: [
-    [0, 0],
-    [1, 0],
-    [2, 0],
-    [0, 1],
-    [1, 1],
-    [2, 1],
-  ],
-  O: [
-    [0, 0],
-    [1, 0],
-    [0, 1],
-    [1, 1],
-  ],
-  I: [
-    [0, 0],
-    [1, 0],
-    [2, 0],
-    [3, 0],
-  ],
-  J: [
-    [1, 0],
-    [1, 1],
-    [0, 2],
-    [1, 2],
-  ],
-  V: [
-    [0, 0],
-    [0, 1],
-    [1, 1],
-  ],
-  I3: [
-    [0, 0],
-    [1, 0],
-    [2, 0],
-  ],
-  dot2: [
-    [0, 0],
-    [1, 0],
-  ],
-  plus: [
-    [1, 0],
-    [0, 1],
-    [1, 1],
-    [2, 1],
-    [1, 2],
-  ],
-  U: [
-    [0, 0],
-    [2, 0],
-    [0, 1],
-    [1, 1],
-    [2, 1],
-  ],
-  // Pentominoes, so each of the 19 preflop hand groups has its own shape.
-  P: [
-    [0, 0],
-    [1, 0],
-    [0, 1],
-    [1, 1],
-    [0, 2],
-  ],
-  W: [
-    [0, 0],
-    [0, 1],
-    [1, 1],
-    [1, 2],
-    [2, 2],
-  ],
-  N: [
-    [1, 0],
-    [1, 1],
-    [0, 2],
-    [1, 2],
-    [0, 3],
-  ],
-  Y: [
-    [1, 0],
-    [0, 1],
-    [1, 1],
-    [1, 2],
-    [1, 3],
-  ],
-  F: [
-    [1, 0],
-    [2, 0],
-    [0, 1],
-    [1, 1],
-    [1, 2],
-  ],
-  L5: [
-    [0, 0],
-    [0, 1],
-    [0, 2],
-    [0, 3],
-    [1, 3],
-  ],
-};
-
-const BLOCK = 19;
-const GAP = 2;
-
-export function Tetromino({
-  kind,
-  color,
-  block = BLOCK,
-  colors,
-}: {
-  kind: string;
-  color: string;
-  block?: number;
-  /** Optional color per block (in shape order), e.g. the whole range's mix of groups. */
-  colors?: string[];
-}) {
-  const cells = TETROMINO[kind];
-  const cols = Math.max(...cells.map(([c]) => c)) + 1;
-  const rows = Math.max(...cells.map(([, r]) => r)) + 1;
-  return (
-    <div className="relative" style={{ width: cols * (block + GAP) - GAP, height: rows * (block + GAP) - GAP }} aria-hidden="true">
-      {cells.map(([c, r], i) => (
-        <i
-          key={`${c}-${r}`}
-          className="absolute rounded-[4px]"
-          style={{
-            left: c * (block + GAP),
-            top: r * (block + GAP),
-            width: block,
-            height: block,
-            background: colors?.[i] ?? color,
-            boxShadow: "inset 0 2px 0 rgba(255,255,255,.35), inset 0 -2px 0 rgba(0,0,0,.28), 0 3px 8px rgba(0,0,0,.35)",
-          }}
-        />
-      ))}
-    </div>
-  );
-}
 
 type SortPieceProps<D extends string> = {
   piece: PieceView;
@@ -214,13 +38,11 @@ type SortPieceProps<D extends string> = {
   compact?: boolean;
   /** Smaller still, for five pieces in a row. */
   tiny?: boolean;
-  /** Per-block colors (whole-range piece). */
-  blockColors?: string[];
   /** Allow dragging up (a third option above the pieces). */
   allowUp?: boolean;
   /** Replaces the "N% · tap to see" line under the label; null hides it. */
   caption?: string | null;
-  /** Drawn instead of the Tetris shape (How many bb: the hands as cards). */
+  /** Drawn instead of the spade mark (the hands as cards). */
   visual?: ReactNode;
   /** With `zoneAt`: the armed box's rect, so the piece leans into it. */
   rectOf?: (d: D) => DOMRect | null;
@@ -269,7 +91,7 @@ function dirOf(dx: number, dy: number, allowUp: boolean): SortDir | null {
   return Math.abs(dx) >= SWIPE_THRESHOLD ? (dx < 0 ? "left" : "right") : null;
 }
 
-/** A floating, ready-made Tetris piece (Value / Bluffs / The rest) that the
+/** A floating, ready-made piece (Value / Bluffs / The rest) that the
  * player drags left to Check or right to Overbet, or taps to see its
  * hands. Same physics as the preflop swipe card: follows the finger,
  * tilts, snaps back, shakes on a wrong answer and flies off on a right one. */
@@ -287,7 +109,6 @@ export function SortPiece<D extends string = SortDir>({
   delay,
   compact = false,
   tiny = false,
-  blockColors,
   caption,
   allowUp = false,
   visual,
@@ -417,7 +238,7 @@ export function SortPiece<D extends string = SortDir>({
           className={`flex ${visual ? "" : piece.key === "whole" ? "h-[76px]" : tiny ? "h-[50px]" : "h-[64px]"} items-center justify-center`}
           style={{ animation: `sortFloat 2.6s ease-in-out ${delay * 4}s infinite` }}
         >
-          {visual ?? <Tetromino kind={shape} color={piece.color} block={tiny ? 12 : compact ? 15 : BLOCK + (piece.key === "whole" ? 4 : 0)} colors={blockColors} />}
+          {visual ?? <SpadeMark piece={pieceOf(shape)} color={piece.color} size={tiny ? 44 : compact ? 54 : piece.key === "whole" ? 76 : 62} />}
         </div>
         <b className={`font-[family-name:var(--font-display)] ${tiny ? "text-[11.5px] leading-[1.1]" : "leading-none"} ${caption === null ? "text-[17px]" : caption ? "text-[15.5px]" : tiny ? "" : "text-[13.5px]"}`}>
           {piece.label}

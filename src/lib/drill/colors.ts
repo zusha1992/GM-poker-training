@@ -11,8 +11,9 @@ export const ACTION_COLORS: Record<string, string> = {
   polar: "#F2564B",
 };
 
-export const FOLD_DIM = "#1F3354";
-export const PENDING_FILL = "#33404C";
+/** Trash (filled in as a fold) and still-to-place cells; globals.css has the same as --fold-dim and --pending. */
+export const FOLD_DIM = "#24436F";
+export const PENDING_FILL = "#3A4658";
 
 export function colorOf(action: string): string {
   return ACTION_COLORS[action] ?? "#888";
@@ -20,7 +21,7 @@ export function colorOf(action: string): string {
 
 /** CSS for a diagonal-stripe "not in your range at all" cell. */
 export const OUT_OF_RANGE_PATTERN =
-  "repeating-linear-gradient(45deg,#1A2128 0 3px,#26303A 3px 6px)";
+  "repeating-linear-gradient(45deg,#14243A 0 3px,#22344F 3px 6px)";
 
 /** CSS for a "mix" piece's gradient fill once answered. */
 export function mixGradient(primary: string, secondary: string, primaryPct: number): string {

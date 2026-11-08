@@ -13,18 +13,20 @@ type SheetProps = {
   /** Hide the title visually while keeping it for screen readers, for
    * sheets that show their own heading inside `children`. */
   hideTitle?: boolean;
+  /** Extra class on the sheet, e.g. "royal" for the lobby's colors. */
+  className?: string;
   children: ReactNode;
 };
 
 /** The bottom-sheet modal used throughout the drill app — lobby pickers,
  * the legend, feedback, help. One Radix-backed component instead of the
  * hand-rolled `sheet()` DOM-string pattern from the old prototype. */
-export function Sheet({ open, onOpenChange, title, hideTitle, children }: SheetProps) {
+export function Sheet({ open, onOpenChange, title, hideTitle, className, children }: SheetProps) {
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
         <Dialog.Overlay className={styles.overlay} />
-        <Dialog.Content className={styles.content}>
+        <Dialog.Content className={`${styles.content} ${className ?? ""}`}>
           <div className={styles.handle} />
           <Dialog.Title className={hideTitle ? styles.srOnly : styles.title}>
             {title}

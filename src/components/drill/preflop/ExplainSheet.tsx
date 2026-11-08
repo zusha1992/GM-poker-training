@@ -1,7 +1,7 @@
 "use client";
 
 import { Sheet } from "@/components/ui/Sheet";
-import { Tetromino } from "@/components/drill/postflop/SortPiece";
+import { SpadeMark, pieceOf } from "@/components/SpadeMark";
 import { shapeOf } from "@/lib/drill/preflop/families";
 import { PlayingCards } from "./PlayingCards";
 import { combosOf } from "@/lib/drill/matrix";
@@ -26,9 +26,9 @@ export function ExplainSheet({ piece, onClose, answered, evContext, evLabel, lab
       {piece && (
         <>
           <div className="flex items-center gap-3.5">
-            <Tetromino kind={shapeOf(piece.key)} color={piece.color} block={16} />
+            <SpadeMark piece={pieceOf(shapeOf(piece.key))} color={piece.color} size={56} />
             <div>
-              <h2 className="m-0 font-[family-name:var(--font-display)] text-[22px] font-bold">
+              <h2 className="m-0 font-[family-name:var(--font-brand)] text-[22px] font-bold">
                 {piece.label}
               </h2>
               <span className="text-[13px]" style={{ color: "var(--muted)" }}>

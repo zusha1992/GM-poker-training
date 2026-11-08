@@ -81,8 +81,8 @@ export const FAM_BY_KEY: Record<string, Family> = Object.fromEntries(
   [...FAMS, ...THREEBET_FAMS].map((f) => [f.key, f]),
 );
 
-/** Each group's own Tetris shape (see Tetromino in SortPiece.tsx), so a
- * group looks the same in every drill and every seat. */
+/** Each group's own mark key (pieceOf in SpadeMark.tsx turns it into a chess
+ * piece), so a group looks the same in every drill and every seat. */
 export const FAMILY_SHAPE: Record<string, string> = {
   PP: "O",
   MP: "block6",

@@ -1,6 +1,6 @@
 "use client";
 
-import { PieceShape } from "./PieceShape";
+import { SpadeMark, pieceOf } from "@/components/SpadeMark";
 import type { DrillAction, DrillPiece, SwipeDirection } from "@/lib/drill/types";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { animate, motion, useMotionValue, useTransform, type PanInfo } from "motion/react";
@@ -41,7 +41,7 @@ type PieceCardProps = {
   subText?: string;
 };
 
-/** The swipeable "Tetris piece" the player drags toward an action. Drag
+/** The swipeable piece the player drags toward an action. Drag
  * physics (follow-the-finger, snap back, rotate-while-dragging, fly off on
  * a correct answer) come from Framer Motion. */
 export function PieceCard({
@@ -122,7 +122,7 @@ export function PieceCard({
       transition={{ duration: 0.5, ease: [0.3, 1.3, 0.5, 1] }}
       className="flex min-w-[112px] max-w-[calc(100%-156px)] cursor-grab touch-none flex-col items-center gap-2 rounded-2xl border-2 px-3 py-2.5 text-center select-none"
     >
-      {icon ?? <PieceShape hands={piece.hands} color={piece.color} maxSize={52} />}
+      {icon ?? <SpadeMark piece={pieceOf(piece.key)} color={piece.color} size={52} />}
       <div
         className="font-[family-name:var(--font-display)] font-bold"
         style={{ fontSize: longLabel ? 13.5 : 15.5 }}

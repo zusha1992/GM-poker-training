@@ -1,4 +1,5 @@
 import type { DrillAction, SwipeDirection } from "@/lib/drill/types";
+import { SpadeMark } from "@/components/SpadeMark";
 import { colorOf } from "@/lib/drill/colors";
 
 const ARROW: Record<SwipeDirection, string> = { up: "↑", down: "↓", left: "←", right: "→" };
@@ -55,11 +56,7 @@ export function HowToGrid({ modeKey, swipes, labels }: HowToGridProps) {
         className="col-start-2 row-start-2 grid h-[72px] w-[72px] place-items-center rounded-2xl border-2"
         style={{ background: "var(--panel-2)", borderColor: "var(--line)", animation: "wig 2.4s ease-in-out infinite" }}
       >
-        <svg width="34" height="34" viewBox="0 0 24 24" aria-hidden="true">
-          <rect x="3" y="3" width="8" height="8" rx="2" fill="#FFD36B" />
-          <rect x="13" y="3" width="8" height="8" rx="2" fill="#FFD36B" />
-          <rect x="13" y="13" width="8" height="8" rx="2" fill="#FFD36B" />
-        </svg>
+        <SpadeMark piece="knight" color="#FFD36B" size={40} />
       </div>
     </div>
   );

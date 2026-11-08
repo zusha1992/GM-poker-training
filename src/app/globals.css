@@ -1,16 +1,27 @@
 @import "tailwindcss";
 
 :root {
-  --background: #0f1317;
-  --foreground: #eef2f5;
-  --panel: #182027;
-  --panel-2: #212a33;
-  --line: #2c3640;
-  --muted: #9aa6b1;
+  /* The GM brand (logo option 4A, Noam 2026-11-08): midnight navy, ivory and
+   * soft gold. The action colors below stay bright so the drills read fast. */
+  --background: #0e1a2b;
+  --foreground: #f4efe3;
+  --panel: #14243a;
+  --panel-2: #1b2e48;
+  --line: #2a3d5a;
+  --muted: #aab6c8;
+  --gold: #c9a55a;
+  --ivory: #f4efe3;
   --raise: #f2564b;
   --call: #35c277;
   --fold: #3d7ef0;
   --mix: #f2b33d;
+  --fold-dim: #24436f;
+  --pending: #3a4658;
+}
+
+/* The lobby and its sheets: gold in place of the bright "mix" yellow. */
+.royal {
+  --mix: #c9a55a;
 }
 
 @theme inline {

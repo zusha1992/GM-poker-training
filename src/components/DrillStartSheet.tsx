@@ -1,5 +1,6 @@
 "use client";
 
+import { SpadeMark } from "@/components/SpadeMark";
 import { useEffect, useRef, useState } from "react";
 import { Sheet } from "@/components/ui/Sheet";
 import { clickSound } from "@/lib/drill/sound";
@@ -27,11 +28,11 @@ export function DrillStartSheet({ drill, onClose, onPlay }: Props) {
   }
 
   return (
-    <Sheet open={!!drill} onOpenChange={(open) => !open && onClose()} title={drill?.title ?? ""} hideTitle>
+    <Sheet open={!!drill} onOpenChange={(open) => !open && onClose()} title={drill?.title ?? ""} hideTitle className="royal">
       {drill && (
         <div className="flex flex-col gap-3" data-testid="drill-start">
           <div>
-            <h2 className="m-0 font-[family-name:var(--font-display)] text-[22px] font-bold">{drill.title}</h2>
+            <h2 className="m-0 font-[family-name:var(--font-brand)] text-[22px] font-bold">{drill.title}</h2>
             <span className="text-[13px]" style={{ color: "var(--muted)" }}>
               {drill.sub}
             </span>
@@ -79,24 +80,20 @@ export function DrillStartSheet({ drill, onClose, onPlay }: Props) {
           <button
             type="button"
             className="flex min-h-[64px] cursor-pointer items-center gap-3 rounded-2xl p-3.5 text-left transition-transform active:scale-[0.98]"
-            style={{ background: "var(--mix)", color: "#2B1C02", animation: ended ? "bump .5s ease 2" : undefined }}
+            style={{ background: "var(--mix)", color: "#0E1A2B", animation: ended ? "bump .5s ease 2" : undefined }}
             onClick={() => {
               clickSound();
               onPlay();
             }}
             data-testid="play-drill"
           >
-            <span className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full" style={{ background: "#2B1C02", color: "var(--mix)" }}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                <rect x="3" y="3" width="8" height="8" rx="1.5" />
-                <rect x="13" y="3" width="8" height="8" rx="1.5" />
-                <rect x="3" y="13" width="8" height="8" rx="1.5" />
-              </svg>
+            <span className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full" style={{ background: "#0E1A2B", color: "var(--mix)" }}>
+              <SpadeMark piece="king" color="currentColor" size={24} />
             </span>
             <span className="min-w-0 flex-1">
               <b className="block font-[family-name:var(--font-display)] text-[17px] font-bold">{ended ? "Now try it: play the drill" : "Play the drill"}</b>
               <span className="text-[12.5px]" style={{ opacity: 0.75 }}>
-                Drag the pieces where they belong
+                Drag each hand group where it belongs
               </span>
             </span>
           </button>

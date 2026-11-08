@@ -1,7 +1,7 @@
 "use client";
 
 import { rankChar, STREETS, type Card } from "@/lib/drill/postflop/line-demo";
-import { Tetromino } from "./SortPiece";
+import { SpadeMark, pieceOf } from "@/components/SpadeMark";
 
 /** Small building blocks shared by the postflop drills (flop to river, how many big blinds). */
 
@@ -88,7 +88,7 @@ export function InspectPanel({ piece, onBack, backLabel = "Back to sorting" }: {
   return (
     <div className="flex h-full w-full flex-col gap-1.5 p-2.5" style={{ animation: "rdIn 200ms ease-out both" }} data-testid="inspect-panel">
       <div className="flex items-center gap-2.5">
-        <Tetromino kind={piece.shape ?? piece.key} color={piece.color} block={11} />
+        <SpadeMark piece={pieceOf(piece.shape ?? piece.key)} color={piece.color} size={40} />
         <div className="min-w-0 flex-1">
           <b className="font-[family-name:var(--font-display)] text-[15px]">
             {piece.label} <span style={{ color: "var(--muted)", fontWeight: 500 }}>· {piece.pct}% of the range</span>
