@@ -218,8 +218,8 @@ type SortPieceProps<D extends string> = {
   blockColors?: string[];
   /** Allow dragging up (a third option above the pieces). */
   allowUp?: boolean;
-  /** Replaces the "N% · tap to see" line under the label. */
-  caption?: string;
+  /** Replaces the "N% · tap to see" line under the label; null hides it. */
+  caption?: string | null;
   /** Drawn instead of the Tetris shape (How many bb: the hands as cards). */
   visual?: ReactNode;
   /** With `zoneAt`: the armed box's rect, so the piece leans into it. */
@@ -374,7 +374,7 @@ export function SortPiece<D extends string = SortDir>({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [shakeSeq]);
 
-  const width = visual ? "w-auto" : tiny ? "w-[62px]" : compact ? "w-[70px]" : caption ? "w-[150px]" : "w-[84px]";
+  const width = visual ? "w-auto" : tiny ? "w-[62px]" : compact ? "w-[70px]" : caption != null ? "w-[150px]" : "w-[84px]";
   const shape = piece.shape ?? piece.key;
 
   return (
@@ -404,7 +404,7 @@ export function SortPiece<D extends string = SortDir>({
       className={`relative flex ${width} cursor-grab flex-col items-center ${tiny ? "gap-1" : "gap-1.5"} text-center select-none`}
       data-testid={`sort-${piece.key}`}
       role="button"
-      aria-label={`${piece.label}, ${caption ?? `${piece.pct}% of the range`}. ${zoneAt ? "Drag it to a box" : "Drag left to check or right to overbet"}. Tap to see the hands.`}
+      aria-label={`${piece.label}, ${caption || `${piece.pct}% of the range`}.${zoneAt ? "Drag it to a box" : "Drag left to check or right to overbet"}. Tap to see the hands.`}
     >
       <motion.div className="flex w-full flex-col items-center" style={{ x: pullX, y: pullY, scale: pullScale }}>
       <motion.div
@@ -419,12 +419,14 @@ export function SortPiece<D extends string = SortDir>({
         >
           {visual ?? <Tetromino kind={shape} color={piece.color} block={tiny ? 12 : compact ? 15 : BLOCK + (piece.key === "whole" ? 4 : 0)} colors={blockColors} />}
         </div>
-        <b className={`font-[family-name:var(--font-display)] ${tiny ? "text-[11.5px] leading-[1.1]" : "leading-none"} ${caption ? "text-[15.5px]" : tiny ? "" : "text-[13.5px]"}`}>
+        <b className={`font-[family-name:var(--font-display)] ${tiny ? "text-[11.5px] leading-[1.1]" : "leading-none"} ${caption === null ? "text-[17px]" : caption ? "text-[15.5px]" : tiny ? "" : "text-[13.5px]"}`}>
           {piece.label}
         </b>
-        <span className="text-[10.5px] leading-none" style={{ color: "var(--muted)" }}>
-          {caption ?? `${piece.pct}%${compact || tiny ? "" : " · tap to see"}`}
-        </span>
+        {caption !== null && (
+          <span className="text-[10.5px] leading-none" style={{ color: "var(--muted)" }}>
+            {caption ?? `${piece.pct}%${compact || tiny ? "" : " · tap to see"}`}
+          </span>
+        )}
       </motion.div>
       </motion.div>
     </motion.div>

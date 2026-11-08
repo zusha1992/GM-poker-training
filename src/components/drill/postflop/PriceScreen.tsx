@@ -33,9 +33,9 @@ import { BoardCard, IconButton, InspectPanel, PrimaryButton, Row, Shell, StreetT
 /** The matrix shows the range in one quiet color (Noam 2026-11-05: no
  * emphasis on what goes for stacks); only groups the player placed get color. */
 const RANGE = "#46525C";
-/** "deal" = a card just came: its story shows and the obvious groups place
- * themselves. "advancing" = every group placed: BTN bets, BB calls, next card. */
-type Phase = "intro" | "deal" | "decide" | "advancing" | "final";
+/** "advancing" = every group placed: BTN bets, BB calls, next card. A new
+ * street goes straight to its first group (Noam 2026-11-08: no story screen). */
+type Phase = "intro" | "decide" | "advancing" | "final";
 
 /** A random runout of the chosen board (any board when null), never the
  * same one twice in a row. `?runout=N` forces one (feedback links, testing). */
@@ -174,30 +174,25 @@ export function PriceScreen() {
     }, ms);
   }
 
-  /** A new card: show its story, then the obvious groups drop into their boxes. */
+  /** A new card: the obvious groups drop into their boxes and the first group comes right away. */
   function enterStreet(i: number, r: Runout = runout) {
-    busy.current = true;
     const s = r.streets[i];
+    const auto: Partial<Record<PGroup, Bucket>> = {};
+    for (const g of s.auto) auto[g] = s.answers[g]!.bucket;
     setStreetIdx(i);
-    setPlaced({});
+    setPlaced(auto);
     setTries({});
     setQueue(shuffled(s.pieces));
     setFlying(null);
     setInspecting(false);
     setSeq((n) => n + 1);
-    setPhase("deal");
+    setPhase("decide");
+    busy.current = false;
     later(() => {
-      const auto: Partial<Record<PGroup, Bucket>> = {};
-      for (const g of s.auto) auto[g] = s.answers[g]!.bucket;
-      setPlaced(auto);
       flashPaddles([...new Set(s.auto.map((g) => s.answers[g]!.bucket))]);
       tone(523, 0.08);
       setTimeout(() => tone(659, 0.12), 80);
-    }, 900);
-    later(() => {
-      setPhase("decide");
-      busy.current = false;
-    }, 2000);
+    }, 300);
   }
 
   /** "spot" = the Start button: the turn, river and street picked on the intro screen. */
@@ -351,7 +346,7 @@ export function PriceScreen() {
         <div className="flex items-center justify-between gap-2">
           <div className="flex gap-1">
             {st.board.map((c, i) => (
-              <BoardCard key={i} card={c} fresh={phase === "deal" && i >= 3 && i === st.board.length - 1} />
+              <BoardCard key={i} card={c} fresh={phase === "decide" && i >= 3 && i === st.board.length - 1} />
             ))}
           </div>
           <div className="flex flex-col items-end gap-0.5 text-right">
@@ -389,22 +384,12 @@ export function PriceScreen() {
 
                 <div className="absolute inset-y-2 left-[64px] right-[64px] flex items-center justify-center">
                   <Toast toast={toast} />
-                  {phase === "deal" && (
-                    <div className="flex flex-col items-center gap-1 px-1 text-center" style={{ animation: "rdIn 220ms ease-out both" }} data-testid="story">
-                      <b className="font-[family-name:var(--font-display)] text-[17px]" style={{ animation: "ldBanner 520ms cubic-bezier(.3,1.4,.5,1) both" }}>
-                        {st.street === "flop" ? "The flop" : st.story.split(" · ")[0]}
-                      </b>
-                      <span className="text-[12.5px] leading-snug" style={{ color: "var(--muted)" }}>
-                        {st.street === "flop" ? st.story : st.story.split(" · ").slice(1).join(" · ")}
-                      </span>
-                    </div>
-                  )}
                   {phase === "decide" && current && (
                     <div className="flex flex-col items-center" data-testid="sort-row">
                       <SortPiece<Bucket>
                         key={`${st.street}-${current.key}`}
                         piece={current}
-                        caption={`${current.pct}% · tap to see`}
+                        caption={null}
                         visual={<HandFan cards={current.cards} color={current.color} open={holding} maxWidth={zone.w - 170} />}
                         delay={0}
                         zoneAt={zoneAt}
