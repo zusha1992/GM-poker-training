@@ -83,7 +83,7 @@ export function MoneyPaddles({ w, h, armed, holding, flash, hitRef }: Props) {
               key={key}
               ref={(el) => hitRef(b, el)}
               className={cls}
-              style={{ ...style, [side]: INSET, top, width: SIDE_HIT, height: L }}
+              style={{ ...style, [side]: INSET, top, width: SIDE_HIT, height: L, transformOrigin: `${side} center` }}
               data-testid={`bucket-${b}`}
             >
               <span
@@ -105,7 +105,7 @@ export function MoneyPaddles({ w, h, armed, holding, flash, hitRef }: Props) {
         const radius = { [`border${cap(v)}${cap(hz)}Radius`]: r } as CSSProperties;
         const innerRadius = { [`border${cap(v)}${cap(hz)}Radius`]: Math.max(4, r - 6) } as CSSProperties;
         return (
-          <div key={key} ref={(el) => hitRef(b, el)} className={cls} style={{ ...style, [v]: INSET, [hz]: INSET, width: a, height: a }} data-testid={`bucket-${b}`}>
+          <div key={key} ref={(el) => hitRef(b, el)} className={cls} style={{ ...style, [v]: INSET, [hz]: INSET, width: a, height: a, transformOrigin: `${hz} ${v}` }} data-testid={`bucket-${b}`}>
             <span
               className={styles.pool}
               style={{ ...radius, background: `radial-gradient(circle at ${hz} ${v}, color-mix(in srgb, var(--c) 45%, transparent), transparent 75%)` }}

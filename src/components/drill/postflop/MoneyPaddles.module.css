@@ -4,6 +4,13 @@
 .paddle {
   position: absolute;
   pointer-events: none;
+  transition: transform 220ms cubic-bezier(0.3, 1.5, 0.5, 1);
+}
+
+/* The box the piece is near reaches out toward it (Noam 2026-11-08: a magnet
+ * that sucks the cards in). Each paddle sets its transform-origin on its outer edge. */
+.paddle.armed {
+  transform: scale(1.16);
 }
 
 .stroke {

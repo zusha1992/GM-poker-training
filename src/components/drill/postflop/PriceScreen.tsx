@@ -33,6 +33,8 @@ import { BoardCard, IconButton, InspectPanel, PrimaryButton, Row, Shell, StreetT
 /** The matrix shows the range in one quiet color (Noam 2026-11-05: no
  * emphasis on what goes for stacks); only groups the player placed get color. */
 const RANGE = "#46525C";
+/** How far from the middle toward a box (share of the way) the finger must go for it to catch the piece. */
+const REACH = 0.5;
 
 /** "deal" = a card just came: its story shows and the obvious groups place
  * themselves. "advancing" = every group placed: BTN bets, BB calls, next card. */
@@ -211,12 +213,39 @@ export function PriceScreen() {
     enterStreet(which === "spot" ? Math.max(linked, startStreet) : linked, r);
   }
 
+  /** The box that catches the piece (Noam 2026-11-08: easier to drop; the box
+   * reaches out and pulls the cards in). Like a pie menu: each box owns the
+   * directions closest to it from the middle of the drop area, and catches
+   * once the finger is REACH of the way there (or on the box itself). */
   function zoneAt(x: number, y: number): Bucket | null {
+    const area = zoneRef.current?.getBoundingClientRect();
+    if (!area) return null;
+    const cx = area.left + area.width / 2;
+    const cy = area.top + area.height / 2;
+    const angle = Math.atan2(y - cy, x - cx);
+    const dist = Math.hypot(x - cx, y - cy);
+    let best: Bucket | null = null;
+    let bestTurn = Infinity;
+    let bestReach = 0;
     for (const b of BUCKETS) {
       const r = boxes.current[b]?.getBoundingClientRect();
-      if (r && x >= r.left - 10 && x <= r.right + 10 && y >= r.top - 10 && y <= r.bottom + 10) return b;
+      if (!r) continue;
+      if (x >= r.left && x <= r.right && y >= r.top && y <= r.bottom) return b;
+      const bx = r.left + r.width / 2 - cx;
+      const by = r.top + r.height / 2 - cy;
+      const turn = Math.abs(Math.atan2(Math.sin(Math.atan2(by, bx) - angle), Math.cos(Math.atan2(by, bx) - angle)));
+      if (turn < bestTurn) {
+        best = b;
+        bestTurn = turn;
+        bestReach = Math.hypot(bx, by) * REACH;
+      }
     }
-    return null;
+    return dist >= bestReach ? best : null;
+  }
+  const rectOf = (b: Bucket) => boxes.current[b]?.getBoundingClientRect() ?? null;
+  function arm(b: Bucket | null) {
+    setArmed(b);
+    if (b) buzz(8);
   }
 
   function handleDrop(p: PricePiece, b: Bucket) {
@@ -409,7 +438,8 @@ export function PriceScreen() {
                         zoneAt={zoneAt}
                         flyRect={flying?.key === current.key ? flying.rect : null}
                         onDrop={(b) => handleDrop(current, b)}
-                        onArm={setArmed}
+                        onArm={arm}
+                        rectOf={rectOf}
                         onHold={setHolding}
                         onInspect={() => setInspecting(true)}
                         shakeSeq={shake}

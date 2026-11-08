@@ -292,7 +292,8 @@ Broadway cards are A, K, Q, J and T.
 
 - **Made hands only** *(Noam & Uri, 2026-11-07)*: the drill is about how much to play with an actual hand. Draws and hands with no pair (ace-high, K-high, air) are left out, never asked, and stay grey on the matrix. They get their own drill later: draws are more complicated to play. Pairs that also have a draw stay in.
 
-- **A group is shown as its cards, not a Tetris piece** *(Noam, 2026-11-08, design option A)*: each hand is two cards, the hands fanned in an arc like a player spreading them, strongest on the left, at most six hands (the rest counted as "+N"). The fan opens a little while it's held; the group's color glows under it. Dragging is unchanged.
+- **A group is shown as its cards, not a Tetris piece** *(Noam, 2026-11-08, design option A)*: each hand is two cards, the hands fanned in an arc like a player spreading them, strongest on the left, at most six hands (the rest counted as "+N"). The fan opens a little while it's held; the group's color glows under it.
+- **Dropping is easy** *(Noam, 2026-11-08)*: each box owns the directions closest to it from the middle (like a pie menu). Once the finger is halfway to a box, that box lights up, reaches out toward the cards and pulls them in (they lean toward it and shrink), with a small buzz. Letting go then drops the group there. A short drag in the middle snaps back.
 - **One group at a time, in mixed order** (not strongest to weakest, so the player can't just walk down the ladder).
 - The current group is **lit in its own color** on the matrix. Groups not answered yet are **grey**, and answered groups take **their box's money color**. By the end of a street the matrix is a money map.
 - Obvious groups place themselves: straight+ always, and sets & two pair when they're all-in. Everything else is asked.

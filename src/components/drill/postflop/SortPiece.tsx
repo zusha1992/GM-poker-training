@@ -222,7 +222,14 @@ type SortPieceProps<D extends string> = {
   caption?: string;
   /** Drawn instead of the Tetris shape (How many bb: the hands as cards). */
   visual?: ReactNode;
+  /** With `zoneAt`: the armed box's rect, so the piece leans into it. */
+  rectOf?: (d: D) => DOMRect | null;
 };
+
+/** How far toward the armed box the piece leans (share of the distance), and how much it shrinks. */
+const PULL = 0.32;
+const PULL_SCALE = 0.72;
+const PULL_SPRING = { type: "spring", stiffness: 520, damping: 32 } as const;
 
 /** Which drop zone the piece is heading for. The "up" box sits at the top
  * centre while pieces start left/centre/right, so reaching it is often a
@@ -256,9 +263,14 @@ export function SortPiece<D extends string = SortDir>({
   caption,
   allowUp = false,
   visual,
+  rectOf,
 }: SortPieceProps<D>) {
   const x = useMotionValue(0);
   const y = useMotionValue(0);
+  // The lean toward the armed box (a magnet), on top of the drag itself.
+  const pullX = useMotionValue(0);
+  const pullY = useMotionValue(0);
+  const pullScale = useMotionValue(1);
   const rotate = useTransform(x, (v) => v / 12);
   const armed = useRef<D | null>(null);
   const didDrag = useRef(false);
@@ -274,12 +286,15 @@ export function SortPiece<D extends string = SortDir>({
   useEffect(() => {
     if (!flyTo) return;
     if (flyRect && self.current) {
-      // Fly into the box it was dropped on, shrinking as it lands.
+      // Fly into the box it was dropped on, shrinking as it lands. The lean
+      // toward the box folds into the flight, so it lands dead center.
       const me = self.current.getBoundingClientRect();
       const dx = flyRect.left + flyRect.width / 2 - (me.left + me.width / 2);
       const dy = flyRect.top + flyRect.height / 2 - (me.top + me.height / 2);
-      void animate(x, x.get() + dx, { duration: 0.34, ease: "easeIn" });
-      void animate(y, y.get() + dy, { duration: 0.34, ease: "easeIn" });
+      void animate(x, x.get() + dx, { duration: 0.3, ease: [0.5, 0, 0.9, 0.6] });
+      void animate(y, y.get() + dy, { duration: 0.3, ease: [0.5, 0, 0.9, 0.6] });
+      void animate(pullX, 0, { duration: 0.3, ease: "easeIn" });
+      void animate(pullY, 0, { duration: 0.3, ease: "easeIn" });
       return;
     }
     void animate(x, flyTo === "left" ? -320 : flyTo === "right" ? 320 : 0, { duration: 0.38, ease: "easeIn" });
@@ -292,12 +307,27 @@ export function SortPiece<D extends string = SortDir>({
     return dirOf(info.offset.x, info.offset.y, allowUp) as D | null;
   }
 
+  function lean(d: D | null) {
+    const box = d && rectOf ? rectOf(d) : null;
+    const me = self.current?.getBoundingClientRect();
+    if (!box || !me) {
+      void animate(pullX, 0, PULL_SPRING);
+      void animate(pullY, 0, PULL_SPRING);
+      void animate(pullScale, 1, PULL_SPRING);
+      return;
+    }
+    void animate(pullX, (box.left + box.width / 2 - (me.left + me.width / 2)) * PULL, PULL_SPRING);
+    void animate(pullY, (box.top + box.height / 2 - (me.top + me.height / 2)) * PULL, PULL_SPRING);
+    void animate(pullScale, PULL_SCALE, PULL_SPRING);
+  }
+
   function handleDrag(_: unknown, info: PanInfo) {
     const d = target(info);
     if (d !== armed.current) {
       armed.current = d;
       onArm(d);
     }
+    if (rectOf) lean(d);
   }
 
   function handleDragEnd(_: unknown, info: PanInfo) {
@@ -305,8 +335,16 @@ export function SortPiece<D extends string = SortDir>({
     onArm(null);
     onHold(false);
     const d = target(info);
+    // A right drop flies on from the lean; anything else lets go of it.
+    if (!d) lean(null);
     if (d) onDrop(d);
   }
+
+  // A wrong drop shakes the piece home: let go of the lean too.
+  useEffect(() => {
+    if (shakeSeq) lean(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shakeSeq]);
 
   const width = visual ? "w-auto" : tiny ? "w-[62px]" : compact ? "w-[70px]" : caption ? "w-[150px]" : "w-[84px]";
   const shape = piece.shape ?? piece.key;
@@ -340,6 +378,7 @@ export function SortPiece<D extends string = SortDir>({
       role="button"
       aria-label={`${piece.label}, ${caption ?? `${piece.pct}% of the range`}. ${zoneAt ? "Drag it to a box" : "Drag left to check or right to overbet"}. Tap to see the hands.`}
     >
+      <motion.div className="flex w-full flex-col items-center" style={{ x: pullX, y: pullY, scale: pullScale }}>
       <motion.div
         className={`flex w-full flex-col items-center ${tiny ? "gap-1" : "gap-1.5"}`}
         animate={intoBox ? { scale: 0.3, opacity: 0 } : { scale: 1, opacity: 1 }}
@@ -358,6 +397,7 @@ export function SortPiece<D extends string = SortDir>({
         <span className="text-[10.5px] leading-none" style={{ color: "var(--muted)" }}>
           {caption ?? `${piece.pct}%${compact || tiny ? "" : " · tap to see"}`}
         </span>
+      </motion.div>
       </motion.div>
     </motion.div>
   );
