@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { rankChar, type Card } from "@/lib/drill/postflop/line-demo";
+import { rankChar, type Card, type Suit } from "@/lib/drill/postflop/line-demo";
 import { SUIT_COLOR, SUIT_GLYPH } from "./drill-ui";
 
 /** A hand group shown as the cards themselves (Noam 2026-11-08, option A):
@@ -25,19 +25,40 @@ const BOX_W = 216;
 const BOX_H = 104;
 const TOP = 6;
 
-/** The group's hands as real combos (so a flush shows its suit), one per rank
- * pair ("A9s" and "A9o" are one hand), high card first, strongest hand first. */
+/** The group's hands, one per hand (same ranks and same suited-ness count once),
+ * high card first, strongest hand first. */
 export function fanHands(combos: [Card, Card][]): [Card, Card][] {
   const byRanks = new Map<string, [Card, Card]>();
   for (const [x, y] of combos) {
     const pair: [Card, Card] = x.r >= y.r ? [x, y] : [y, x];
-    const key = `${pair[0].r}-${pair[1].r}`;
+    const key = `${pair[0].r}-${pair[1].r}-${x.s === y.s}`;
     if (!byRanks.has(key)) byRanks.set(key, pair);
   }
   return [...byRanks.values()].sort((a, b) => {
     const ap = a[0].r === a[1].r, bp = b[0].r === b[1].r;
     if (ap !== bp) return ap ? -1 : 1;
     return b[0].r - a[0].r || b[1].r - a[1].r;
+  });
+}
+
+const RANKS = "AKQJT98765432";
+const SUITED: Suit[] = ["s", "h", "d", "c"];
+const MIXED: [Suit, Suit][] = [
+  ["s", "h"],
+  ["d", "c"],
+  ["h", "d"],
+  ["c", "s"],
+];
+
+/** Cards for hand names with no board ("AKs", "AKo", "77"): a suited hand in
+ * one suit, any other hand in two, the suits turning from hand to hand. */
+export function cardsOfHands(hands: string[]): [Card, Card][] {
+  return hands.map((h, i) => {
+    const hi = 14 - RANKS.indexOf(h[0]);
+    const lo = 14 - RANKS.indexOf(h[1]);
+    if (h[2] === "s") return [{ r: hi, s: SUITED[i % 4] }, { r: lo, s: SUITED[i % 4] }];
+    const [s1, s2] = MIXED[i % 4];
+    return [{ r: hi, s: s1 }, { r: lo, s: s2 }];
   });
 }
 

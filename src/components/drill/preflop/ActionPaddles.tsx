@@ -46,7 +46,7 @@ export function ActionPaddles({ w, h, swipes, labels, armed, holding, flash, hit
               key={key}
               ref={(el) => hitRef(action, el)}
               className={cls}
-              style={{ ...style, [dir]: INSET, top: "50%", width: HIT, height: side, transform: "translateY(-50%)" }}
+              style={{ ...style, [dir]: INSET, top: "50%", width: HIT, height: side, transform: "translateY(-50%)", transformOrigin: `${dir} center` }}
               data-testid={testId}
             >
               <span className={styles.stroke} style={{ left: dir === "left" ? 0 : "auto", right: dir === "right" ? 0 : "auto", width: STROKE, borderRadius: STROKE / 2, background: "var(--c)" }} />
@@ -64,7 +64,7 @@ export function ActionPaddles({ w, h, swipes, labels, armed, holding, flash, hit
             key={key}
             ref={(el) => hitRef(action, el)}
             className={cls}
-            style={{ ...style, [edge]: INSET, left: "50%", width: flat, height: HIT, transform: "translateX(-50%)" }}
+            style={{ ...style, [edge]: INSET, left: "50%", width: flat, height: HIT, transform: "translateX(-50%)", transformOrigin: `center ${edge}` }}
             data-testid={testId}
           >
             <span className={styles.stroke} style={{ top: edge === "top" ? 0 : "auto", bottom: edge === "bottom" ? 0 : "auto", height: STROKE, borderRadius: STROKE / 2, background: "var(--c)" }} />

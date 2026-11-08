@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { SortPiece } from "@/components/drill/postflop/SortPiece";
+import { pieTarget, SortPiece } from "@/components/drill/postflop/SortPiece";
+import { cardsOfHands, HandFan } from "@/components/drill/postflop/HandFan";
 import { ActionPaddles } from "./ActionPaddles";
 import { DrillMatrix, type CellState } from "@/components/drill/DrillMatrix";
 import { Celebration, type CelebrationTrigger } from "@/components/drill/Celebration";
@@ -233,12 +234,14 @@ export function PreflopDrillScreen({ modeKey }: PreflopDrillScreenProps) {
     paddles.current[a] = el;
   }, []);
 
+  /** The paddle that catches the piece: it reaches out and pulls the cards in (see pieTarget). */
   function zoneAt(x: number, y: number): DrillAction | null {
-    for (const a of Object.values(mode.swipes)) {
-      const r = paddles.current[a]?.getBoundingClientRect();
-      if (r && x >= r.left - 10 && x <= r.right + 10 && y >= r.top - 10 && y <= r.bottom + 10) return a;
-    }
-    return null;
+    return pieTarget(zoneRef.current?.getBoundingClientRect(), Object.values(mode.swipes).map((a) => [a, paddles.current[a]?.getBoundingClientRect()]), x, y);
+  }
+  const rectOf = (a: DrillAction) => paddles.current[a]?.getBoundingClientRect() ?? null;
+  function arm(a: DrillAction | null) {
+    setDragPreview(a);
+    if (a) buzz(8);
   }
 
   function paint(pc: DrillPiece, action: DrillAction) {
@@ -567,11 +570,13 @@ export function PreflopDrillScreen({ modeKey }: PreflopDrillScreenProps) {
             key={piece.key}
             piece={{ key: piece.key, label: piece.label, pct: 0, color: piece.color, shape: shapeOf(piece.key) }}
             caption={piece.sub}
+            visual={<HandFan cards={cardsOfHands(piece.hands)} color={piece.color} open={holding} maxWidth={zone.w - 170} />}
             delay={0}
             zoneAt={zoneAt}
+            rectOf={rectOf}
             flyRect={flying?.rect ?? null}
             onDrop={handleDrop}
-            onArm={setDragPreview}
+            onArm={arm}
             onHold={setHolding}
             onInspect={() => {
               setExplainPiece(piece);

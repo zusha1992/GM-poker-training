@@ -226,6 +226,34 @@ type SortPieceProps<D extends string> = {
   rectOf?: (d: D) => DOMRect | null;
 };
 
+/** The box that catches a piece dropped at (x, y) (Noam 2026-11-08: easier to
+ * drop). Like a pie menu: each box owns the directions closest to it from the
+ * middle of the drop area, and catches once the finger is `reach` of the way
+ * there, or is on the box itself. */
+export function pieTarget<D extends string>(area: DOMRect | undefined, boxes: [D, DOMRect | undefined][], x: number, y: number, reach = 0.5): D | null {
+  if (!area) return null;
+  const cx = area.left + area.width / 2;
+  const cy = area.top + area.height / 2;
+  const angle = Math.atan2(y - cy, x - cx);
+  let best: D | null = null;
+  let bestTurn = Infinity;
+  let bestReach = 0;
+  for (const [d, r] of boxes) {
+    if (!r) continue;
+    if (x >= r.left && x <= r.right && y >= r.top && y <= r.bottom) return d;
+    const bx = r.left + r.width / 2 - cx;
+    const by = r.top + r.height / 2 - cy;
+    const diff = Math.atan2(by, bx) - angle;
+    const turn = Math.abs(Math.atan2(Math.sin(diff), Math.cos(diff)));
+    if (turn < bestTurn) {
+      best = d;
+      bestTurn = turn;
+      bestReach = Math.hypot(bx, by) * reach;
+    }
+  }
+  return Math.hypot(x - cx, y - cy) >= bestReach ? best : null;
+}
+
 /** How far toward the armed box the piece leans (share of the distance), and how much it shrinks. */
 const PULL = 0.32;
 const PULL_SCALE = 0.72;
