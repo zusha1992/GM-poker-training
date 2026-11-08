@@ -12,7 +12,7 @@
  *
  * All answers below are DRAFTS. `sure: false` marks the ones Uri should check.
  */
-import { btnRangeCombos, card, hasStraight, rankChar, type Card, type Combo, type Street } from "./line-demo";
+import { btnRangeCombos, card, hasStraight, rankChar, type Card, type Combo, type Street, type Suit } from "./line-demo";
 import type { MatrixSnap } from "@/components/drill/postflop/LineMatrix";
 import { SOLVER_ANSWERS } from "./solver-answers";
 
@@ -1195,8 +1195,8 @@ function namesOf(g: PGroup, board: Card[], hands: string[], cut: Pick<StreetSpec
 
 export type PriceSnap = MatrixSnap & {
   byGroup: Record<PGroup, number>;
-  /** One real combo per hand in each group, so the cards on screen show true suits (a flush in its suit). */
-  samples: Map<PGroup, Map<string, [Card, Card]>>;
+  /** Every real combo of each hand in each group, for drawing the group as cards. */
+  samples: Map<PGroup, Map<string, [Card, Card][]>>;
 };
 
 /** A group the player drags into a box. */
@@ -1403,7 +1403,7 @@ export function buildRunout(index: number): Runout {
         desc: name,
         partMark: "some",
         entries,
-        cards: entries.map((e) => snap.samples.get(g)!.get(e.hand)!),
+        cards: cardsToShow(g, entries.map((e) => e.hand), snap.samples.get(g)!, board),
         pct: Math.round((snap.byGroup[g] / snap.total) * 100),
         answer: ans,
       });
@@ -1428,10 +1428,44 @@ export function buildRunout(index: number): Runout {
   return runout;
 }
 
+/** Groups where the suit is the point (a flush, a pair with a card of the flush suit). */
+const SUIT_GROUPS = new Set<PGroup>(["flush", "flushlo", "pfl", "pflm", "pflw", "pdraw"]);
+
+/** Two different suits per hand, turning from hand to hand. */
+const MIXED_SUITS: [Suit, Suit][] = [
+  ["s", "h"],
+  ["d", "c"],
+  ["h", "d"],
+  ["c", "s"],
+  ["s", "d"],
+  ["h", "c"],
+];
+
+/** One combo per hand (A9s and A9o count as one) for the cards on screen
+ * (Noam 2026-11-08). In a suit group (flushes, a pair with a card of the flush
+ * suit) every card is a real combo in its suit. In any other group the suit
+ * doesn't matter, so every hand shows two different suits, changing from hand
+ * to hand: "5x" reads as any 5x, never as spades. */
+function cardsToShow(g: PGroup, hands: string[], combos: Map<string, [Card, Card][]>, board: Card[]): [Card, Card][] {
+  const byRanks = new Map<string, string[]>();
+  for (const h of hands) byRanks.set(h.slice(0, 2), [...(byRanks.get(h.slice(0, 2)) ?? []), h]);
+  const onBoard = (r: number, s: Suit) => board.some((c) => c.r === r && c.s === s);
+  return [...byRanks.values()].map((classes, i) => {
+    const real = combos.get(classes[0])![0];
+    if (SUIT_GROUPS.has(g)) return real;
+    const [hi, lo] = [real[0].r, real[1].r].sort((x, y) => y - x);
+    for (let k = 0; k < MIXED_SUITS.length; k++) {
+      const [s1, s2] = MIXED_SUITS[(i + k) % MIXED_SUITS.length];
+      if (!onBoard(hi, s1) && !onBoard(lo, s2)) return [{ r: hi, s: s1 }, { r: lo, s: s2 }];
+    }
+    return real;
+  });
+}
+
 function snapshotOf(street: Street, combos: Combo[], basis: Map<string, number>, board: Card[], cut: StreetSpec): PriceSnap {
   const cells = new Map<string, Partial<Record<PGroup, number>>>();
   const byGroup = Object.fromEntries(PGROUP_ORDER.map((g) => [g, 0])) as Record<PGroup, number>;
-  const samples = new Map<PGroup, Map<string, [Card, Card]>>();
+  const samples = new Map<PGroup, Map<string, [Card, Card][]>>();
   let total = 0;
   for (const c of combos) {
     const g = priceGroupOf(c.cards, board, cut);
@@ -1440,8 +1474,8 @@ function snapshotOf(street: Street, combos: Combo[], basis: Map<string, number>,
     cells.set(c.hand, cell);
     byGroup[g] += c.weight;
     total += c.weight;
-    const mine = samples.get(g) ?? new Map<string, [Card, Card]>();
-    if (!mine.has(c.hand)) mine.set(c.hand, c.cards);
+    const mine = samples.get(g) ?? new Map<string, [Card, Card][]>();
+    mine.set(c.hand, [...(mine.get(c.hand) ?? []), c.cards]);
     samples.set(g, mine);
   }
   return { street, cells, basis, total, byGroup, samples };

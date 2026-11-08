@@ -87,7 +87,7 @@ Every hand goes into exactly one group, checked from the top down. Groups are re
   - **High flushes:** made with one of the three highest cards of the suit still out (and any straight flush). Worth **50–100bb**: they go for stacks.
   - **Low flushes:** every other flush. Worth **25–50bb**: a big pot, but not all the money.
   - This wins over the solver's answers. On a **paired board** full houses are possible, so flushes stay one group with their old answer.
-  - The cards on screen show each hand's real suits, so a flush always appears in its suit.
+  - On screen a flush always appears in its suit (and "pair + a ♠" shows the ♠). **Every other group shows mixed suits**, two different suits per hand, changing from hand to hand: "5x" is any 5x, so it must never look like spades *(Noam, 2026-11-08, K54)*.
 
 ### A pair on a flush turn *(Noam, 2026-11-05, from Uri on J♠T♠3♣ 9♠)*
 - **Only when the flush is on the board** (three cards of a suit) **on the turn:** a fourth card of that suit can still come.
