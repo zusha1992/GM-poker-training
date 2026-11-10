@@ -25,7 +25,11 @@ const DRILLS: DrillCard[] = [
   { key: "tb", title: "3-bet", sub: "Facing an open · pick any seats", meta: "15 spots", piece: "knight", section: "Preflop", href: "/drills/preflop/tb" },
   { key: "fb", title: "Facing a 3-bet", sub: "You opened · 4-bet, call or fold", meta: "15 spots", piece: "bishop", section: "Preflop", href: "/drills/preflop/fb" },
   { key: "fv", title: "Facing a 4-bet", sub: "You 3-bet · all in, call or fold", meta: "15 spots", piece: "rook", section: "Preflop", href: "/drills/preflop/fv" },
-  { key: "price", title: "How many big blinds?", sub: "BTN vs BB · 11 boards · what each hand group wants", meta: "New", piece: "king", section: "Postflop", href: "/drills/postflop/price" },
+  // Noam & Uri 2026-11-10: "How many big blinds?" split into a drill per street.
+  { key: "flop", title: "Flop: how many bb?", sub: "BTN vs BB · 11 flops · made hands by equity", meta: "New", piece: "bishop", section: "Postflop", href: "/drills/postflop/flop" },
+  { key: "turn", title: "Turn: how many bb?", sub: "After a flop bet and call", meta: "Soon", piece: "rook", section: "Postflop", href: "/drills/postflop/turn" },
+  { key: "river", title: "River: how many bb?", sub: "After two bets and calls", meta: "Soon", piece: "queen", section: "Postflop", href: "/drills/postflop/river" },
+  { key: "price", title: "Full hand: how many bb?", sub: "The old drill · flop to river in one go", meta: "Old", piece: "king", section: "Postflop", href: "/drills/postflop/price" },
   { key: "line", title: "Flop to river", sub: "BTN vs BB · 20 random hands", meta: "Demo", piece: "queen", section: "Postflop", href: "/drills/postflop/line" },
   { key: "postflop", title: "BTN c-bet vs BB", sub: "K72r · one strategy", meta: "Draft", piece: "pawn", section: "Postflop", href: "/drills/postflop/btn-vs-bb" },
 ];

@@ -6,6 +6,47 @@ This is a living document. It holds every rule for splitting BTN's range into ha
 
 ---
 
+## 0. Split into Flop, Turn and River drills *(Noam & Uri, 2026-11-10)*
+
+The full-hand drill is split into three smaller drills, one per street. The **Flop** drill is built first. Turn and River are in the lobby as "Coming soon". The old full-hand drill stays playable as "Full hand (old)". Everything below section 0 is the old drill's rules.
+
+The Flop drill's rules:
+- **Spot:** BTN opens, BB calls, one of the 11 flops.
+- **Asked:** only made hands. Ace-high with no draw is the weakest group asked; everything else is a pair or better. Draws, backdoor draws and K-high or worse are not asked.
+- **Groups and boxes come from equity, not from the solver's strategy** *(Noam)*. The solver's lines mix sizes (bet big then check twice, and so on), so they don't show the pot a hand wants. Each hand gets its equity against a ladder of BB ranges:
+
+  | Level | BB range |
+  |---|---|
+  | L0 | BB's whole range |
+  | L1 | BB after calling a flop bet (from the solver) |
+  | L2 | BB's middle pair or better |
+  | L3 | BB's top pair or better |
+
+  Its box is the biggest one whose test it passes:
+
+  | Box | Test |
+  |---|---|
+  | 50–100 | L3 ≥ 50% |
+  | 25–50 | L2 ≥ 50% |
+  | 15–25 | L1 ≥ 60% |
+  | 5–15 | L1 ≥ 50% |
+  | 0–5 | L0 ≥ 50% |
+  | Pot is too big | fails every test |
+
+  The levels and percentages are draft settings, tuned so that A72 lands close to Noam's checked answers.
+- **Groups:**
+  - Inside a box, hands are split at the biggest equity gaps, so a group never straddles two boxes.
+  - Two pair is never grouped with one-pair hands below the best one; it goes up to the top-kicker group *(Noam, A72 and K54)*.
+  - Pairs below top pair are ordered by the pair's rank, e.g. on J♠T♠3♣: 99–77, then 66–44, then 3x *(Noam)*.
+  - A7s and A7o are one hand.
+  - No group of one hand.
+- **Code:**
+  - `scripts/analysis/flop-equity-groups.ts` writes `src/lib/drill/postflop/flop-groups.ts`.
+  - Readable reports per board are in `decisions/ranges/flop-equity/`.
+  - Feedback on a board changes only that board (section 3, "Board by board").
+
+---
+
 ## 1. The spot and the question
 
 - Single-raised pot, BTN vs BB, 100bb deep. The player is BTN, the aggressor. *(doc, 2026-10-28)*

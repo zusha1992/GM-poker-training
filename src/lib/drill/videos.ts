@@ -8,6 +8,9 @@ export const DRILL_VIDEOS: Record<string, string> = {
   postflop: "",
   line: "",
   price: "",
+  flop: "",
+  turn: "",
+  river: "",
 };
 
 export type YouTubeVideo = { id: string; vertical: boolean };

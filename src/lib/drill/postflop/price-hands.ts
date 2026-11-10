@@ -1446,7 +1446,7 @@ const MIXED_SUITS: [Suit, Suit][] = [
  * suit) every card is a real combo in its suit. In any other group the suit
  * doesn't matter, so every hand shows two different suits, changing from hand
  * to hand: "5x" reads as any 5x, never as spades. */
-function cardsToShow(g: PGroup, hands: string[], combos: Map<string, [Card, Card][]>, board: Card[]): [Card, Card][] {
+export function cardsToShow(g: PGroup, hands: string[], combos: Map<string, [Card, Card][]>, board: Card[]): [Card, Card][] {
   const byRanks = new Map<string, string[]>();
   for (const h of hands) byRanks.set(h.slice(0, 2), [...(byRanks.get(h.slice(0, 2)) ?? []), h]);
   const onBoard = (r: number, s: Suit) => board.some((c) => c.r === r && c.s === s);
