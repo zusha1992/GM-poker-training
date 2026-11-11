@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { FeedbackSheet } from "@/components/drill/FeedbackSheet";
 import type { FeedbackContext } from "@/lib/drill/feedback";
@@ -13,7 +13,7 @@ import { LineMatrix, type MatrixPalette } from "./LineMatrix";
 import { MoneyPaddles } from "./MoneyPaddles";
 import { pieTarget, SortPiece } from "./SortPiece";
 import { HandFan } from "./HandFan";
-import { BoardCard, IconButton, InspectPanel, PrimaryButton, Row, Shell } from "./drill-ui";
+import { IconButton, InspectPanel, PrimaryButton, Row, Shell, SUIT_COLOR } from "./drill-ui";
 
 /** The matrix shows the range in one quiet color; groups the player placed take their box's color. */
 const RANGE = "#46525C";
@@ -64,6 +64,10 @@ export function FlopScreen() {
   const zoneRef = useRef<HTMLDivElement>(null);
   const [zone, setZone] = useState({ w: 328, h: 236 });
   const { toast, show: showToast } = useToast();
+  /** The trailer's step (see TRAILER), or null once it's over; `dealt` = the flop is on the table. */
+  const [trailer, setTrailer] = useState<number | null>(null);
+  const [dealt, setDealt] = useState(false);
+  const trailerGen = useRef(0);
 
   const zoneShown = phase === "decide";
   useEffect(() => {
@@ -81,7 +85,7 @@ export function FlopScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const current = queue.find((p) => !placed[p.key]) ?? null;
+  const current = trailer === null ? (queue.find((p) => !placed[p.key]) ?? null) : null;
   const done = queue.filter((p) => placed[p.key]).length;
 
   const palette: MatrixPalette = {
@@ -122,10 +126,32 @@ export function FlopScreen() {
     setSeq((n) => n + 1);
     setPhase("decide");
     busy.current = false;
-    later(() => {
-      tone(523, 0.08);
-      setTimeout(() => tone(659, 0.12), 80);
-    }, 300);
+    playTrailer();
+  }
+
+  /** Noam 2026-11-11: a short "story so far" before the first group: the pot
+   * type, BTN opens, BB calls, the flop is dealt. A tap skips it. */
+  function playTrailer() {
+    const gen = ++trailerGen.current;
+    const at = (ms: number, fn: () => void) =>
+      setTimeout(() => {
+        if (gen === trailerGen.current) fn();
+      }, ms);
+    setDealt(false);
+    setTrailer(0);
+    tone(440, 0.07);
+    at(TRAILER_STEP, () => { setTrailer(1); tone(523, 0.07); });
+    at(TRAILER_STEP * 2, () => { setTrailer(2); tone(587, 0.07); });
+    at(TRAILER_STEP * 3, () => { setTrailer(3); tone(659, 0.08); });
+    at(TRAILER_STEP * 3 + 450, () => setDealt(true));
+    at(TRAILER_STEP * 3 + 1500, () => setTrailer(4));
+    at(TRAILER_STEP * 3 + 1850, () => { setTrailer(null); tone(784, 0.1); });
+  }
+
+  function skipTrailer() {
+    trailerGen.current += 1;
+    setDealt(true);
+    setTrailer(null);
   }
 
   function zoneAt(x: number, y: number): Bucket | null {
@@ -237,17 +263,12 @@ export function FlopScreen() {
           <path d="M4 11l8-7 8 7" />
           <path d="M6 10v10h12V10" />
         </IconButton>
-        <div className="min-w-0 flex-1">
-          <b className="block truncate font-[family-name:var(--font-display)] text-[14px] font-bold">
-            Flop · how many bb?{" "}
-            <span className="font-medium" style={{ color: "var(--muted)" }} data-testid="board-id">
-              · {spot.name}
-            </span>
-          </b>
-          <span className="text-[10.5px]" style={{ color: "var(--muted)" }}>
-            Made hands only · grouped by equity
+        <b className="min-w-0 flex-1 truncate text-center font-[family-name:var(--font-brand)] text-[16px] font-bold">
+          Flop{" "}
+          <span className="font-semibold" style={{ color: "var(--gold)" }} data-testid="board-id">
+            · {spot.name}
           </span>
-        </div>
+        </b>
         <IconButton label="Start over" onClick={() => start(spot.name)}>
           <path d="M20 12a8 8 0 1 1-2.3-5.6" />
           <path d="M20 4v5h-5" />
@@ -257,31 +278,23 @@ export function FlopScreen() {
         </IconButton>
       </div>
 
-      <div className="flex flex-shrink-0 items-center justify-between gap-2 rounded-[14px] p-2" style={{ background: "var(--panel)", border: "1px solid var(--line)" }}>
-        <div className="flex gap-1">
-          {spot.board.map((c, i) => (
-            <BoardCard key={i} card={c} />
-          ))}
-        </div>
-        <div className="flex flex-col items-end gap-0.5 text-right">
-          <span className="font-[family-name:var(--font-display)] text-[12px]" style={{ color: "var(--muted)" }}>
-            Pot <b style={{ color: "var(--mix)" }}>{spot.pot}bb</b> · Behind <b style={{ color: "var(--foreground)" }}>{spot.behind}bb</b>
-          </span>
-          <span className="text-[11px]" style={{ color: "var(--muted)" }}>
-            BTN opened, BB called
-          </span>
-        </div>
-      </div>
-
       {phase === "final" ? (
-        <Summary spot={spot} missed={missed} onNext={() => start(pickBoard(spot.name, null))} onReplay={() => start(spot.name)} />
+        <>
+          <BigBoard board={spot.board} dealt small />
+          <Summary spot={spot} missed={missed} onNext={() => start(pickBoard(spot.name, null))} onReplay={() => start(spot.name)} />
+        </>
       ) : (
         <>
-          <div className="flex flex-shrink-0 flex-col gap-1 rounded-xl p-1.5" style={{ background: "var(--panel)", border: "1px solid var(--line)" }}>
-            <div className="mx-auto w-full" style={{ maxWidth: "max(220px, calc(100dvh - 476px))" }}>
-              <LineMatrix snap={spot.snap} seq={seq} palette={palette} />
+          {/* Noam 2026-11-11: a smaller matrix up top (it still fills with each box's color);
+              the trailer plays over it, then fades out. */}
+          <div className="relative mx-auto w-full flex-shrink-0" style={{ maxWidth: "min(250px, max(170px, calc(100dvh - 590px)))" }}>
+            <div className="rounded-xl p-1" style={{ background: "var(--panel)", border: "1px solid var(--line)", opacity: trailer === null || trailer === 4 ? 1 : 0, transition: "opacity 300ms" }}>
+              <LineMatrix snap={spot.snap} seq={seq} palette={palette} mini />
             </div>
+            {trailer !== null && <Trailer step={trailer} onSkip={skipTrailer} />}
           </div>
+
+          <BigBoard board={spot.board} dealt={dealt} />
 
           <div ref={zoneRef} className="relative mt-0.5 min-h-[236px] flex-1" style={{ touchAction: "none" }} data-testid="buckets">
             {inspecting && current ? (
@@ -340,6 +353,114 @@ export function FlopScreen() {
         pageUrl={`/drills/postflop/flop?board=${spot.name}`}
       />
     </Shell>
+  );
+}
+
+/** How long each line of the trailer stays alone before the next one comes, ms. */
+const TRAILER_STEP = 750;
+
+/** The story so far, line by line: the pot type, BTN opens, BB calls, the pot.
+ * Step 4 = fading out. A tap anywhere skips it. */
+function Trailer({ step, onSkip }: { step: number; onSkip: () => void }) {
+  const line = (i: number, children: ReactNode) =>
+    step >= i && (
+      <div className="flex items-center justify-center gap-2" style={{ animation: "rdIn 320ms ease-out both" }}>
+        {children}
+      </div>
+    );
+  const seat = (name: string, color: string) => (
+    <b className="flex h-[34px] w-[48px] items-center justify-center rounded-full font-[family-name:var(--font-display)] text-[14px]" style={{ background: `color-mix(in srgb, ${color} 22%, transparent)`, border: `1.5px solid ${color}`, color }}>
+      {name}
+    </b>
+  );
+  const chips = (n: number, color: string) => (
+    <span className="flex">
+      {Array.from({ length: n }, (_, i) => (
+        <i
+          key={i}
+          className="-ml-1 inline-block h-[16px] w-[16px] rounded-full first:ml-0"
+          style={{ background: color, border: "2px dashed rgba(255,255,255,.75)", animation: `chipIn 420ms ${120 + i * 90}ms cubic-bezier(.3,1.4,.5,1) both` }}
+        />
+      ))}
+    </span>
+  );
+  return (
+    <button
+      type="button"
+      className="absolute inset-0 flex cursor-pointer flex-col justify-center gap-3 rounded-xl border-0 p-3"
+      style={{ background: "var(--panel)", border: "1px solid var(--line)", animation: step === 4 ? "trailerOut 350ms ease-in both" : undefined }}
+      onClick={onSkip}
+      aria-label="The story so far. Tap to skip."
+      data-testid="trailer"
+    >
+      {line(
+        0,
+        <b className="font-[family-name:var(--font-brand)] text-[19px] font-bold tracking-[0.04em]" style={{ color: "var(--gold)" }}>
+          Single-raised pot
+        </b>,
+      )}
+      {line(
+        1,
+        <>
+          {seat("BTN", "var(--raise)")}
+          <span className="font-[family-name:var(--font-display)] text-[16px] font-semibold">opens 2.5bb</span>
+          {chips(3, "var(--raise)")}
+        </>,
+      )}
+      {line(
+        2,
+        <>
+          {seat("BB", "var(--call)")}
+          <span className="font-[family-name:var(--font-display)] text-[16px] font-semibold">calls</span>
+          {chips(3, "var(--call)")}
+        </>,
+      )}
+      {line(
+        3,
+        <span className="rounded-full px-3 py-1 font-[family-name:var(--font-display)] text-[15px] font-bold" style={{ background: "var(--panel-2)", border: "1px solid var(--gold)", color: "var(--gold)" }}>
+          Pot 5.5bb · the flop
+        </span>,
+      )}
+      <span className="text-[10.5px]" style={{ color: "var(--muted)" }}>
+        Tap to skip
+      </span>
+    </button>
+  );
+}
+
+/** The flop, big and in the middle (Noam 2026-11-11). Before the deal: empty slots; then the cards flip in one by one. */
+function BigBoard({ board, dealt, small = false }: { board: Card[]; dealt: boolean; small?: boolean }) {
+  const w = small ? 44 : 62;
+  return (
+    <div className="flex flex-shrink-0 justify-center gap-2 py-1" data-testid="big-board">
+      {board.map((c, i) => {
+        const r = rankChar(c.r);
+        const color = SUIT_COLOR[c.s];
+        const size = { width: w, height: Math.round(w * 1.38) };
+        if (!dealt) return <span key={i} className="rounded-[9px]" style={{ ...size, border: "1.5px dashed var(--line)" }} />;
+        return (
+          <span
+            key={i}
+            className="flex flex-col items-center justify-center rounded-[9px] font-[family-name:var(--font-display)] font-bold leading-none"
+            style={{
+              ...size,
+              fontSize: small ? 20 : 30,
+              background: `linear-gradient(180deg, color-mix(in srgb, ${color} 82%, #ffffff) 0%, ${color} 55%)`,
+              color: "#FFFFFF",
+              border: "1px solid rgba(255,255,255,.25)",
+              boxShadow: "0 3px 10px rgba(0,0,0,.35)",
+              animation: small ? undefined : `ldDeal 520ms ${i * 160}ms cubic-bezier(.3,1.4,.5,1) both`,
+            }}
+            data-testid="board-card"
+          >
+            {r === "T" ? "10" : r}
+            <em className="mt-0.5 not-italic" style={{ fontSize: small ? 16 : 24 }}>
+              {SUIT_GLYPH[c.s]}
+            </em>
+          </span>
+        );
+      })}
+    </div>
   );
 }
 
