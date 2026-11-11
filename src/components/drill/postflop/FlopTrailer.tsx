@@ -1,0 +1,291 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+import { AnimatePresence, motion } from "motion/react";
+import { SpadeMark } from "@/components/SpadeMark";
+import { rankChar, type Card } from "@/lib/drill/postflop/line-demo";
+import { tone } from "@/lib/drill/sound";
+import { SUIT_COLOR, SUIT_GLYPH } from "./drill-ui";
+
+/** The story so far, on its own screen before every flop (Noam 2026-11-11):
+ * a 6-max table, the folds, BTN raises, SB folds, BB calls, the bets go into
+ * the pot and the flop is dealt and turned over. Then the drill. A tap skips. */
+
+type Seat = "UTG" | "HJ" | "CO" | "BTN" | "SB" | "BB";
+
+/** Seat centers on the table, in % of the table box. BTN (you) at the bottom. */
+const SEAT_AT: Record<Seat, [number, number]> = { BTN: [50, 91], SB: [11, 70], BB: [11, 27], UTG: [50, 8], HJ: [89, 27], CO: [89, 70] };
+const POT_AT: [number, number] = [50, 36];
+/** Where a seat's bet sits: part of the way to the middle. */
+const betAt = (s: Seat): [number, number] => {
+  const [x, y] = SEAT_AT[s];
+  return [x + (50 - x) * 0.4, y + (50 - y) * 0.4];
+};
+
+/** The timeline, ms from the start. */
+const T = { folds: 500, raise: 1300, sbFold: 2100, call: 2600, sweep: 3400, deal: 3950, flip: 4500, caption: 5500, out: 6400 };
+
+type Step = keyof typeof T;
+const ORDER = Object.keys(T) as Step[];
+
+export function FlopTrailer({ board, onDone }: { board: Card[]; onDone: () => void }) {
+  const [step, setStep] = useState(-1);
+  const done = useRef(false);
+  const finish = () => {
+    if (done.current) return;
+    done.current = true;
+    onDone();
+  };
+
+  useEffect(() => {
+    const timers = ORDER.map((k, i) =>
+      setTimeout(() => {
+        setStep(i);
+        if (k === "raise" || k === "call") [0, 70, 140].forEach((d) => setTimeout(() => tone(1250 + d, 0.035, "triangle"), d));
+        if (k === "sweep") [0, 60, 120, 180].forEach((d) => setTimeout(() => tone(1100 - d, 0.04, "triangle"), d));
+        if (k === "flip") [0, 260, 520].forEach((d, n) => setTimeout(() => tone(523 + n * 131, 0.09), d));
+        if (k === "caption") tone(784, 0.14);
+      }, T[k]),
+    );
+    timers.push(setTimeout(finish, T.out + 450));
+    return () => timers.forEach(clearTimeout);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const at = (k: Step) => step >= ORDER.indexOf(k);
+  const folded: Record<Seat, boolean> = { UTG: at("folds"), HJ: at("folds"), CO: at("folds"), SB: at("sbFold"), BTN: false, BB: false };
+  const action: Partial<Record<Seat, string>> = {
+    ...(at("folds") ? { UTG: "Fold", HJ: "Fold", CO: "Fold" } : {}),
+    ...(at("raise") ? { BTN: "Raise 2.5" } : {}),
+    ...(at("sbFold") ? { SB: "Fold" } : {}),
+    ...(at("call") ? { BB: "Call" } : {}),
+  };
+  const stack: Record<Seat, string> = { UTG: "100", HJ: "100", CO: "100", SB: "99.5", BB: at("call") ? "97.5" : "99", BTN: at("raise") ? "97.5" : "100" };
+  const swept = at("sweep");
+  const pot = swept ? "5.5" : at("call") ? "5.5" : at("raise") ? "4" : "1.5";
+
+  return (
+    <motion.div
+      className="royal relative mx-auto flex h-dvh w-full max-w-[460px] flex-col items-center overflow-hidden px-4 py-5"
+      style={{ background: "radial-gradient(120% 60% at 50% 45%, #182C47 0%, var(--background) 70%)", color: "var(--foreground)" }}
+      animate={at("out") ? { opacity: 0, scale: 1.04 } : { opacity: 1, scale: 1 }}
+      transition={{ duration: 0.4, ease: "easeIn" }}
+      onClick={finish}
+      data-testid="trailer"
+    >
+      <motion.div className="flex flex-col items-center gap-1 text-center" initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
+        <b className="font-[family-name:var(--font-brand)] text-[24px] font-bold tracking-[0.05em]" style={{ color: "var(--gold)" }}>
+          Single-raised pot
+        </b>
+        <span className="text-[13px] tracking-[0.12em] uppercase" style={{ color: "var(--muted)" }}>
+          6-max · 100bb deep
+        </span>
+      </motion.div>
+
+      {/* The table. */}
+      <div className="relative my-auto aspect-[3/4] w-full max-w-[380px]">
+        <motion.div
+          className="absolute rounded-[50%]"
+          style={{
+            inset: "9% 12%",
+            background: "radial-gradient(ellipse at 50% 40%, #1F5A4C 0%, #133B33 62%, #0C2924 100%)",
+            border: "10px solid #3A2A1C",
+            boxShadow: "0 0 0 2px #C9A55A55, inset 0 0 40px rgba(0,0,0,.55), 0 18px 40px rgba(0,0,0,.5)",
+          }}
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.5, ease: [0.3, 1.2, 0.5, 1] }}
+        />
+        <div className="absolute flex flex-col items-center opacity-25" style={{ left: "50%", top: "74%", transform: "translate(-50%,-50%)" }}>
+          <SpadeMark piece="king" color="var(--ivory)" size={46} />
+        </div>
+
+        {/* Pot. */}
+        <motion.div
+          className="absolute flex flex-col items-center gap-1"
+          style={{ left: `${POT_AT[0]}%`, top: `${POT_AT[1]}%`, transform: "translate(-50%,-50%)" }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.3 }}
+        >
+          <AnimatePresence>{swept && <Chips key="pot" n={5} color="#C9A55A" />}</AnimatePresence>
+          <motion.span
+            key={pot}
+            className="rounded-full px-2.5 py-0.5 font-[family-name:var(--font-display)] text-[14px] font-bold"
+            style={{ background: "rgba(0,0,0,.45)", color: "var(--gold)", border: "1px solid #C9A55A88" }}
+            initial={{ scale: 1.3 }}
+            animate={{ scale: 1 }}
+            data-testid="trailer-pot"
+          >
+            Pot {pot}bb
+          </motion.span>
+        </motion.div>
+
+        {/* The bets: blinds first, then BTN's raise and BB's call; swept into the pot. */}
+        <Bet seat="SB" n={1} color="#9DB4C4" show from={false} swept={swept} />
+        <Bet seat="BB" n={1} color="#9DB4C4" show from={false} swept={swept} />
+        <Bet seat="BB" n={3} color="#35C277" show={at("call")} from swept={swept} />
+        <Bet seat="BTN" n={3} color="#F2564B" show={at("raise")} from swept={swept} />
+
+        {/* The flop: three cards land face down, then turn over one by one. */}
+        <div className="absolute flex gap-1.5" style={{ left: "50%", top: "53%", transform: "translate(-50%,-50%)" }}>
+          {board.map((c, i) => (
+            <TableCard key={i} card={c} i={i} landed={at("deal")} flipped={at("flip")} />
+          ))}
+        </div>
+
+        {(Object.keys(SEAT_AT) as Seat[]).map((s) => (
+          <SeatBadge key={s} seat={s} folded={folded[s]} action={action[s]} stack={stack[s]} hero={s === "BTN"} />
+        ))}
+      </div>
+
+      <div className="flex h-[64px] flex-col items-center justify-center gap-2">
+        <AnimatePresence>
+          {at("caption") && (
+            <motion.b
+              className="font-[family-name:var(--font-brand)] text-[19px] font-bold"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.35 }}
+              data-testid="trailer-caption"
+            >
+              Your made hands: how many bb?
+            </motion.b>
+          )}
+        </AnimatePresence>
+        <span className="text-[11.5px]" style={{ color: "var(--muted)" }}>
+          Tap to skip
+        </span>
+      </div>
+    </motion.div>
+  );
+}
+
+function SeatBadge({ seat, folded, action, stack, hero }: { seat: Seat; folded: boolean; action?: string; stack: string; hero: boolean }) {
+  const [x, y] = SEAT_AT[seat];
+  const color = action?.startsWith("Raise") ? "var(--raise)" : action === "Call" ? "var(--call)" : "var(--muted)";
+  return (
+    <motion.div
+      className="absolute flex flex-col items-center"
+      style={{ left: `${x}%`, top: `${y}%`, x: "-50%", y: "-50%" }}
+      initial={{ opacity: 0, scale: 0.6 }}
+      animate={{ opacity: folded ? 0.35 : 1, scale: 1 }}
+      transition={{ duration: 0.35, delay: folded ? 0 : 0.15 + Object.keys(SEAT_AT).indexOf(seat) * 0.05 }}
+    >
+      <div
+        className="flex h-[52px] w-[52px] flex-col items-center justify-center rounded-full leading-none"
+        style={{
+          background: hero ? "linear-gradient(180deg, #24395A, #14243A)" : "#14243A",
+          border: `2px solid ${hero ? "var(--gold)" : "var(--line)"}`,
+          boxShadow: hero ? "0 0 14px #C9A55A55" : undefined,
+        }}
+      >
+        <b className="font-[family-name:var(--font-display)] text-[13px]" style={{ color: hero ? "var(--gold)" : "var(--foreground)" }}>
+          {seat}
+        </b>
+        <span className="mt-0.5 font-[family-name:var(--font-display)] text-[10px]" style={{ color: "var(--muted)" }}>
+          {stack}
+        </span>
+      </div>
+      <AnimatePresence>
+        {action && (
+          <motion.span
+            key={action}
+            className="mt-1 rounded-full px-2 py-px font-[family-name:var(--font-display)] text-[11.5px] font-bold"
+            style={{ color, background: "rgba(0,0,0,.55)", border: `1px solid ${color}` }}
+            initial={{ opacity: 0, y: -6, scale: 0.7 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            transition={{ type: "spring", stiffness: 500, damping: 22 }}
+          >
+            {action}
+          </motion.span>
+        )}
+      </AnimatePresence>
+    </motion.div>
+  );
+}
+
+/** A seat's chips: slide from the seat to its bet spot (`from`), then into the pot once swept. */
+function Bet({ seat, n, color, show, from, swept }: { seat: Seat; n: number; color: string; show: boolean; from: boolean; swept: boolean }) {
+  if (!show) return null;
+  const [sx, sy] = SEAT_AT[seat];
+  const [bx, by] = betAt(seat);
+  const target = swept ? POT_AT : [bx, by];
+  return (
+    <motion.div
+      className="absolute"
+      style={{ x: "-50%", y: "-50%" }}
+      initial={from ? { left: `${sx}%`, top: `${sy}%`, opacity: 0 } : { left: `${bx}%`, top: `${by}%`, opacity: 0 }}
+      animate={{ left: `${target[0]}%`, top: `${target[1]}%`, opacity: swept ? 0 : 1 }}
+      transition={{ duration: swept ? 0.45 : 0.5, ease: swept ? "easeIn" : [0.3, 1.25, 0.5, 1] }}
+    >
+      <Chips n={n} color={color} />
+    </motion.div>
+  );
+}
+
+/** A small stack of casino chips. */
+function Chips({ n, color }: { n: number; color: string }) {
+  return (
+    <motion.div className="relative h-[22px] w-[26px]" initial={{ scale: 0.6, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ opacity: 0 }}>
+      {Array.from({ length: n }, (_, i) => (
+        <i
+          key={i}
+          className="absolute left-0 h-[10px] w-[26px] rounded-[50%]"
+          style={{ bottom: i * 4, background: color, border: "2px dashed rgba(255,255,255,.8)", boxShadow: "0 1px 0 rgba(0,0,0,.45)" }}
+        />
+      ))}
+    </motion.div>
+  );
+}
+
+/** A flop card: flies in face down from the dealer, then turns over. */
+function TableCard({ card, i, landed, flipped }: { card: Card; i: number; landed: boolean; flipped: boolean }) {
+  const w = 46, h = 64;
+  const color = SUIT_COLOR[card.s];
+  const r = rankChar(card.r);
+  if (!landed) return <span style={{ width: w, height: h }} />;
+  return (
+    <motion.div
+      style={{ width: w, height: h, perspective: 500 }}
+      initial={{ y: -90, x: 40 - i * 52, opacity: 0, rotate: -12 }}
+      animate={{ y: 0, x: 0, opacity: 1, rotate: 0 }}
+      transition={{ duration: 0.4, delay: i * 0.12, ease: [0.2, 0.9, 0.3, 1] }}
+    >
+      <motion.div
+        className="relative h-full w-full"
+        style={{ transformStyle: "preserve-3d" }}
+        initial={{ rotateY: 0 }}
+        animate={{ rotateY: flipped ? 180 : 0 }}
+        transition={{ duration: 0.45, delay: flipped ? i * 0.26 : 0, ease: "easeInOut" }}
+      >
+        {/* Back: navy with the gold spade. */}
+        <div
+          className="absolute inset-0 flex items-center justify-center rounded-[7px]"
+          style={{ backfaceVisibility: "hidden", background: "linear-gradient(160deg, #1B2E48, #0E1A2B)", border: "2px solid #C9A55A", boxShadow: "0 3px 8px rgba(0,0,0,.45)" }}
+        >
+          <SpadeMark piece="king" color="#C9A55A" size={26} />
+        </div>
+        {/* Face. */}
+        <div
+          className="absolute inset-0 flex flex-col items-center justify-center rounded-[7px] font-[family-name:var(--font-display)] font-bold leading-none"
+          style={{
+            backfaceVisibility: "hidden",
+            transform: "rotateY(180deg)",
+            background: `linear-gradient(180deg, color-mix(in srgb, ${color} 82%, #ffffff) 0%, ${color} 55%)`,
+            color: "#fff",
+            border: "1px solid rgba(255,255,255,.25)",
+            boxShadow: "0 3px 8px rgba(0,0,0,.45)",
+            fontSize: 22,
+          }}
+          data-testid="trailer-card"
+        >
+          {r === "T" ? "10" : r}
+          <em className="mt-0.5 not-italic" style={{ fontSize: 17 }}>
+            {SUIT_GLYPH[card.s]}
+          </em>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+}
