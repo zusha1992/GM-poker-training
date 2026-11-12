@@ -56,6 +56,7 @@ After this review, a board's groups are Noam's own, and they replace the compute
 | 8 | **Small pairs** (pocket pairs below the second card plus bottom pair) are one group at 0–5, **never "Pot is too big"**. | 66–33, K2: 0–5 | 99–44, 22, 3x: 0–5 |
 | 9 | **Ace-high** with no real draw is asked. A backdoor doesn't count as a draw, so A5 or A4 on J♠T♠3♣ are ace-high; AK and AQ there are gutshots, so they're draws and not asked. **On a dry board, or one without many draws, ace-high is never Pot is too big:** in a single-raised pot it can be good, and AQ–AT take one bet of value (0–5). Pot is too big only on wet, connected boards. On K♠5♥4♣ (rainbow): AQ–AT 0–5, A9–A6 0–5. | — | A9–A4, A2: Pot is too big |
 | 10 | **Every group has a name in words** under the cards ("Second pair", "Small pairs"); the hands show when it's tapped. | | |
+| 11 | **Two pair goes for half a stack, not stacks, when a straight or a flush can already be made on the flop** (Noam 2026-11-12, 9-8-6). Boards: 9-8-6, K-Q-T, T-8-7. | 98, 96, 86 on 9-8-6: 25–50 | — |
 
 Which boards count as dry or wet is still Noam's call per board: K♠5♥4♣ is treated as connected, so like a wet board, from his earlier note.
 

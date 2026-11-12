@@ -145,9 +145,12 @@ const BOARD_TYPE: Record<string, BoardType> = { A72: "dry", JT3: "wet", K54: "be
 
 /** Noam's earlier notes on single boards (the old full-hand drill), kept over the principles: group name → box. */
 const BOARD_NOTES: Record<string, Record<string, Bucket>> = {
-  // Noam 2026-11-07 and 2026-11-10 (9♠8♦6♣): overpairs 15–25, top pair even with a good kicker 5–15,
+  // Noam 2026-11-12 (T♥8♥7♠): 55–22 Pot is too big.
+  T87: { "Small pairs": "big" },
+  // Noam 2026-11-07 and 2026-11-10 (9♠8♦6♣): overpairs 15–25 (kept 2026-11-12), top pair even with a good kicker 5–15,
   // the underpairs 55–22 "the pot is too big for them already".
-  "986": { Overpairs: "b15", "Top pair, good kicker": "b5", "Top pair, weak kicker": "b5", "Small pairs": "big" },
+  // Noam 2026-11-12: two pair 25–50, not stacks: sets and straights are out there.
+  "986": { "Two pair": "b25", Overpairs: "b15", "Top pair, good kicker": "b5", "Top pair, weak kicker": "b5", "Small pairs": "big" },
   // Noam 2026-11-11 (K♦Q♣T♥): a very connected board, so top pair one box down; it won't
   // feel comfortable betting on a lot of turns. Even AK and KJ only 15–25.
   // Two pair (KQ, KT, QT) only 25–50: more straights here.
@@ -160,6 +163,23 @@ const BOARD_NOTES: Record<string, Record<string, Bucket>> = {
 };
 
 /** The principles from Noam's review of A72, JT3 and K54 (rulebook section 0), as a draft for a new board. */
+/** Boards where bottom pair is its own group, apart from the small pocket pairs; the pocket pairs
+ * from this rank up join it (Noam 2026-11-12, T♥8♥7♠: A7–75 with 66 at 0–5, 55–22 Pot is too big). */
+const BOTTOM_PAIR_APART: Record<string, number> = { T87: 6 };
+
+/** A straight or a flush can already be made on this flop: three cards of one suit,
+ * or three different ranks inside five (the ace counts low too). */
+function straightOrFlushOnFlop(board: Card[]): boolean {
+  if (board.length === 3 && board.every((c) => c.s === board[0].s)) return true;
+  const ranks = new Set(board.flatMap((c) => (c.r === 14 ? [14, 1] : [c.r])));
+  for (let lo = 1; lo <= 10; lo++) {
+    let n = 0;
+    for (let r = lo; r < lo + 5; r++) if (ranks.has(r)) n++;
+    if (n >= 3) return true;
+  }
+  return false;
+}
+
 function principleGroups(name: string, board: Card[], hands: Hand[]): Group[] {
   const type = BOARD_TYPE[name] ?? "wet";
   const ranks = [...new Set(board.map((c) => c.r))].sort((a, b) => b - a);
@@ -178,7 +198,9 @@ function principleGroups(name: string, board: Card[], hands: Hand[]): Group[] {
   const top3 = [...monsters, ...sets, ...(type === "dry" ? twoPair : [])];
   const parts = [monsters.some((h) => h.cat === "boat") && "full houses", monsters.some((h) => h.cat === "straight") && "straights", sets.length && "sets", type === "dry" && twoPair.length && "two pair"].filter(Boolean);
   add(parts.join(" & ").replace(/^./, (c) => c.toUpperCase()), "b50", top3);
-  if (type !== "dry") add("Two pair", "b50", twoPair);
+  // Noam 2026-11-12 (9♠8♦6♣): when a straight or a flush is already possible on the flop,
+  // two pair doesn't go for stacks anymore, only half a stack: 25–50.
+  if (type !== "dry") add("Two pair", straightOrFlushOnFlop(board) ? "b25" : "b50", twoPair);
   // Trips on a paired board: by kicker.
   add("Trips, good kicker", "b50", of(["trips"], (h) => Math.max(rv(h.key[0]), rv(h.key[1])) >= 10 && h.key[0] !== h.key[1]));
   add("Trips, weak kicker", "b25", of(["trips"], (h) => Math.max(rv(h.key[0]), rv(h.key[1])) < 10));
@@ -204,7 +226,13 @@ function principleGroups(name: string, board: Card[], hands: Hand[]): Group[] {
   const rest = type === "dry" ? [] : between.filter((h) => h.pairRank < 10);
   add(type === "dry" ? `Pocket pairs under the ${ch(top)}` : "Big pocket pairs", "b5", big);
   add(rest.length ? "Medium pairs & second pair" : "Second pair", "b5", [...rest, ...second]);
-  add("Small pairs", "b0", of(["pp2", "pp3", "spp", "bp"]));
+  const joins = BOTTOM_PAIR_APART[name];
+  if (joins !== undefined) {
+    const small = of(["pp2", "pp3", "spp"]);
+    const up = small.filter((h) => h.pairRank >= joins);
+    add(up.length ? `Bottom pair & ${up.map((h) => h.key).join(", ")}` : "Bottom pair", "b0", [...of(["bp"]), ...up]);
+    add("Small pairs", "b0", small.filter((h) => h.pairRank < joins));
+  } else add("Small pairs", "b0", of(["pp2", "pp3", "spp", "bp"]));
 
   // Ace-high: never Pot is too big on a dry or in-between board (K54); AQ–AT apart there.
   const aceHigh = of(["aho", "khnd"]);
