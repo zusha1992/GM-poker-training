@@ -1,6 +1,7 @@
 import type { MatrixSnap } from "@/components/drill/postflop/LineMatrix";
 import { btnRangeCombos, card, type Card } from "./line-demo";
 import { FLOP_GROUPS, type FlopGroup } from "./flop-groups";
+import { TURN_GROUPS } from "./turn-groups";
 import { BOARDS, cardsToShow, priceGroupOf, realDraw, RUNOUTS, type Bucket, type PGroup } from "./price-hands";
 
 /** Flop drill (Noam & Uri 2026-11-10): the first of the three "How many bb"
@@ -48,19 +49,35 @@ export type FlopPiece = {
   eq: number[];
 };
 
-export type FlopSpot = { name: string; board: Card[]; pot: number; behind: number; snap: MatrixSnap; pieces: FlopPiece[]; order: string[] };
+export type Street = "flop" | "turn";
+/** `name`: the flop ("A72") or the turn spot ("A72-Qh"); `flop`: its flop. */
+export type FlopSpot = { name: string; flop: string; street: Street; board: Card[]; pot: number; behind: number; snap: MatrixSnap; pieces: FlopPiece[]; order: string[] };
 
 const CACHE = new Map<string, FlopSpot>();
 
 export const FLOP_BOARDS = BOARDS.filter((b) => FLOP_GROUPS[b.name]?.length);
 
+/** "Q♥" → "Qh". */
+const code = (c: string) => c[0] + ({ "♠": "s", "♥": "h", "♦": "d", "♣": "c" } as Record<string, string>)[c[1]];
+
+/** Turn drill (Noam 2026-11-12): every flop's three turns, e.g. "A72-Qh". */
+export const TURN_SPOTS: { name: string; flop: string; turn: string }[] = BOARDS.flatMap((b) =>
+  b.turns.map((t) => ({ name: `${b.name}-${code(t.card)}`, flop: b.name, turn: t.card })).filter((t) => TURN_GROUPS[t.name]?.length),
+);
+
+/** The spots of a street. */
+export const spotsOf = (street: Street) => (street === "flop" ? FLOP_BOARDS.map((b) => ({ name: b.name, flop: b.name })) : TURN_SPOTS);
+
 export function buildFlopSpot(name: string): FlopSpot {
   const cached = CACHE.get(name);
   if (cached) return cached;
-  const spec = BOARDS.find((b) => b.name === name)!;
-  const cut = RUNOUTS.find((r) => r.board === name)!.streets[0];
-  const board = spec.flop.map(card);
-  const groups: FlopGroup[] = FLOP_GROUPS[name];
+  const [flopName, turnCode] = name.split("-");
+  const spec = BOARDS.find((b) => b.name === flopName)!;
+  const turn = turnCode ? spec.turns.find((t) => code(t.card) === turnCode)! : undefined;
+  // On the turn a pair with a draw is still a pair (as in the generator).
+  const cut = turn ? { ...turn, pairDraws: false } : RUNOUTS.find((r) => r.board === flopName)!.streets[0];
+  const board = [...spec.flop, ...(turn ? [turn.card] : [])].map(card);
+  const groups: FlopGroup[] = turn ? TURN_GROUPS[name] : FLOP_GROUPS[name];
   const groupOf = new Map<string, string>();
   for (const g of groups) for (const h of g.hands) groupOf.set(h, g.id);
 
@@ -96,7 +113,9 @@ export function buildFlopSpot(name: string): FlopSpot {
       key: g.id,
       shape: SHAPE_OF[g.box],
       label: g.label,
-      name: `Equity: ${g.eq[3].toFixed(0)}% vs BB's top pair+ · ${g.eq[2].toFixed(0)}% vs middle pair+ · ${g.eq[1].toFixed(0)}% vs a flop call · ${g.eq[0].toFixed(0)}% vs all`,
+      name: turn
+        ? `Equity: ${g.eq[3].toFixed(0)}% vs BB's top pair+ · ${g.eq[2].toFixed(0)}% vs middle pair+ · ${g.eq[1].toFixed(0)}% vs a turn call · ${g.eq[0].toFixed(0)}% vs BB's flop calls`
+        : `Equity: ${g.eq[3].toFixed(0)}% vs BB's top pair+ · ${g.eq[2].toFixed(0)}% vs middle pair+ · ${g.eq[1].toFixed(0)}% vs a flop call · ${g.eq[0].toFixed(0)}% vs all`,
       desc: g.handsLabel ?? g.label,
       hands: g.handsLabel ?? g.label,
       color: GROUP_COLORS[i % GROUP_COLORS.length],
@@ -109,7 +128,10 @@ export function buildFlopSpot(name: string): FlopSpot {
     };
   });
 
-  const spot: FlopSpot = { name, board, pot: 5.5, behind: 97.5, snap: { street: "flop", cells, basis, total }, pieces, order: [...groups.map((g) => g.id), REST] };
+  // The flop bet is 1.8bb and called (as in the old full-hand drill): 9.1bb in the pot on the turn.
+  const money = turn ? { pot: 9.1, behind: 95.7 } : { pot: 5.5, behind: 97.5 };
+  const street: Street = turn ? "turn" : "flop";
+  const spot: FlopSpot = { name, flop: flopName, street, board, ...money, snap: { street, cells, basis, total }, pieces, order: [...groups.map((g) => g.id), REST] };
   CACHE.set(name, spot);
   return spot;
 }

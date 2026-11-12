@@ -11,7 +11,7 @@ export function feedbackLink(row: Pick<FeedbackRow, "drill" | "pageUrl">): strin
     const i = RUNOUTS.findIndex((r) => r.id === id);
     if (i >= 0) return `/drills/postflop/price?runout=${i}${street ? `&street=${street}` : ""}`;
   }
-  if (area === "postflop" && drill === "flop" && id) return `/drills/postflop/flop?board=${encodeURIComponent(id)}`;
+  if (area === "postflop" && (drill === "flop" || drill === "turn") && id) return `/drills/postflop/${drill}?board=${encodeURIComponent(id)}`;
   if (area === "postflop" && drill === "line-demo" && id) {
     const i = SCENARIOS.findIndex((s) => s.id === id);
     if (i >= 0) return `/drills/postflop/line?hand=${i}`;

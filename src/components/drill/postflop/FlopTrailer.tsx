@@ -24,12 +24,15 @@ const betAt = (s: Seat): [number, number] => {
 
 /** The timeline, ms from the start. */
 // Noam 2026-11-11: shorter, and a quick hand-over to the drill.
-const T = { folds: 250, raise: 700, sbFold: 1100, call: 1350, sweep: 1850, deal: 2150, flip: 2450, caption: 3050, out: 3450 };
+const FLOP_T = { folds: 250, raise: 700, sbFold: 1100, call: 1350, sweep: 1850, deal: 2150, flip: 2450, caption: 3050, out: 3450 };
+// Noam 2026-11-12, turn drill: then BTN bets the flop small, BB calls, the bets go in and the turn is dealt.
+const TURN_T = { folds: 250, raise: 700, sbFold: 1100, call: 1350, sweep: 1850, deal: 2150, flip: 2450, fbet: 3000, fcall: 3400, fsweep: 3850, tdeal: 4100, tflip: 4350, caption: 4900, out: 5300 };
 
-type Step = keyof typeof T;
-const ORDER = Object.keys(T) as Step[];
+type Step = keyof typeof TURN_T;
 
-export function FlopTrailer({ board, onDone }: { board: Card[]; onDone: () => void }) {
+export function FlopTrailer({ board, street = "flop", onDone }: { board: Card[]; street?: "flop" | "turn"; onDone: () => void }) {
+  const T: Partial<Record<Step, number>> = street === "turn" ? TURN_T : FLOP_T;
+  const ORDER = Object.keys(T) as Step[];
   const [step, setStep] = useState(-1);
   const done = useRef(false);
   const finish = () => {
@@ -42,28 +45,39 @@ export function FlopTrailer({ board, onDone }: { board: Card[]; onDone: () => vo
     const timers = ORDER.map((k, i) =>
       setTimeout(() => {
         setStep(i);
-        if (k === "raise" || k === "call") [0, 70, 140].forEach((d) => setTimeout(() => tone(1250 + d, 0.035, "triangle"), d));
-        if (k === "sweep") [0, 60, 120, 180].forEach((d) => setTimeout(() => tone(1100 - d, 0.04, "triangle"), d));
+        if (k === "raise" || k === "call" || k === "fbet" || k === "fcall") [0, 70, 140].forEach((d) => setTimeout(() => tone(1250 + d, 0.035, "triangle"), d));
+        if (k === "sweep" || k === "fsweep") [0, 60, 120, 180].forEach((d) => setTimeout(() => tone(1100 - d, 0.04, "triangle"), d));
         if (k === "flip") [0, 150, 300].forEach((d, n) => setTimeout(() => tone(523 + n * 131, 0.09), d));
+        if (k === "tflip") tone(915, 0.1);
         if (k === "caption") tone(784, 0.14);
-      }, T[k]),
+      }, T[k]!),
     );
-    timers.push(setTimeout(finish, T.out + 160));
+    timers.push(setTimeout(finish, T.out! + 160));
     return () => timers.forEach(clearTimeout);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const at = (k: Step) => step >= ORDER.indexOf(k);
+  const at = (k: Step) => ORDER.includes(k) && step >= ORDER.indexOf(k);
   const folded: Record<Seat, boolean> = { UTG: at("folds"), HJ: at("folds"), CO: at("folds"), SB: at("sbFold"), BTN: false, BB: false };
   const action: Partial<Record<Seat, string>> = {
     ...(at("folds") ? { UTG: "Fold", HJ: "Fold", CO: "Fold" } : {}),
     ...(at("raise") ? { BTN: "Raise 2.5" } : {}),
     ...(at("sbFold") ? { SB: "Fold" } : {}),
     ...(at("call") ? { BB: "Call" } : {}),
+    ...(at("fbet") ? { BTN: "Bet 1.8" } : {}),
+    ...(at("fcall") ? { BB: "Call 1.8" } : {}),
   };
-  const stack: Record<Seat, string> = { UTG: "100", HJ: "100", CO: "100", SB: "99.5", BB: at("call") ? "97.5" : "99", BTN: at("raise") ? "97.5" : "100" };
+  const stack: Record<Seat, string> = {
+    UTG: "100",
+    HJ: "100",
+    CO: "100",
+    SB: "99.5",
+    BB: at("fcall") ? "95.7" : at("call") ? "97.5" : "99",
+    BTN: at("fbet") ? "95.7" : at("raise") ? "97.5" : "100",
+  };
   const swept = at("sweep");
-  const pot = swept ? "5.5" : at("call") ? "5.5" : at("raise") ? "4" : "1.5";
+  const fswept = at("fsweep");
+  const pot = at("fcall") ? "9.1" : at("fbet") ? "7.3" : swept ? "5.5" : at("call") ? "5.5" : at("raise") ? "4" : "1.5";
 
   return (
     <motion.div
@@ -79,7 +93,7 @@ export function FlopTrailer({ board, onDone }: { board: Card[]; onDone: () => vo
           Single-raised pot
         </b>
         <span className="text-[13px] tracking-[0.12em] uppercase" style={{ color: "var(--muted)" }}>
-          6-max · 100bb deep
+          {street === "turn" ? "Flop bet 1.8 · called" : "6-max · 100bb deep"}
         </span>
       </motion.div>
 
@@ -127,12 +141,12 @@ export function FlopTrailer({ board, onDone }: { board: Card[]; onDone: () => vo
         <Bet seat="BB" n={1} color="#9DB4C4" show from={false} swept={swept} />
         <Bet seat="BB" n={3} color="#35C277" show={at("call")} from swept={swept} />
         <Bet seat="BTN" n={3} color="#F2564B" show={at("raise")} from swept={swept} />
+        <Bet seat="BTN" n={2} color="#F2564B" show={at("fbet")} from swept={fswept} />
+        <Bet seat="BB" n={2} color="#35C277" show={at("fcall")} from swept={fswept} />
 
-        {/* The flop: three cards land face down, then turn over one by one. */}
+        {/* The flop: three cards land face down, then turn over one by one; the turn after the flop bet and call. */}
         <div className="absolute flex gap-1.5" style={{ left: "50%", top: "53%", transform: "translate(-50%,-50%)" }}>
-          {board.map((c, i) => (
-            <TableCard key={i} card={c} i={i} landed={at("deal")} flipped={at("flip")} />
-          ))}
+          {board.map((c, i) => (i < 3 ? <TableCard key={i} card={c} i={i} landed={at("deal")} flipped={at("flip")} /> : <TableCard key={i} card={c} i={0} landed={at("tdeal")} flipped={at("tflip")} />))}
         </div>
 
         {(Object.keys(SEAT_AT) as Seat[]).map((s) => (
@@ -164,7 +178,7 @@ export function FlopTrailer({ board, onDone }: { board: Card[]; onDone: () => vo
 
 function SeatBadge({ seat, folded, action, stack, hero }: { seat: Seat; folded: boolean; action?: string; stack: string; hero: boolean }) {
   const [x, y] = SEAT_AT[seat];
-  const color = action?.startsWith("Raise") ? "var(--raise)" : action === "Call" ? "var(--call)" : "var(--muted)";
+  const color = action?.startsWith("Raise") || action?.startsWith("Bet") ? "var(--raise)" : action?.startsWith("Call") ? "var(--call)" : "var(--muted)";
   return (
     <motion.div
       className="absolute flex flex-col items-center"

@@ -60,6 +60,25 @@ After this review, a board's groups are Noam's own, and they replace the compute
 
 Which boards count as dry or wet is still Noam's call per board: K♠5♥4♣ is treated as connected, so like a wet board, from his earlier note.
 
+### Turn drill, first version *(Noam, 2026-11-12)*
+
+The same principles as the flop, one street later. The answers are drafts for Noam and Uri to play and correct, board by board.
+
+- **Spot:** BTN opens, BB calls; BTN bets the flop small (1.8bb), BB calls. The pot is 9.1bb, 95.7bb behind. Every flop has its three turns from the old full-hand drill, so there are 33 turns.
+- **Asked:** made hands only, ace-high and better; no draws. A pair with a draw is asked as a pair.
+- **Equity ladder, moved up a street:**
+
+  | Level | BB's range on the turn |
+  |---|---|
+  | L0 | BB's range after calling the flop (solver) |
+  | L1 | BB after calling a turn bet (solver) |
+  | L2 | BB's middle pair or better |
+  | L3 | BB's top pair or better |
+
+  The box tests are the same as on the flop.
+- **Groups:** Noam's flop principles, applied to the 4-card board. A turn that makes a straight or a flush possible makes the board wet (principle 11 then puts two pair at 25–50). Flop notes for one board are not carried to its turns.
+- **Code:** `npx tsx scripts/analysis/flop-equity-groups.ts --turn` writes `src/lib/drill/postflop/turn-groups.ts` and `decisions/ranges/turn-equity/<spot>.md`.
+
 - **Code:**
   - `scripts/analysis/flop-equity-groups.ts` writes `src/lib/drill/postflop/flop-groups.ts`. Reviewed boards are the `REVIEWED` list in it.
   - Readable reports per board are in `decisions/ranges/flop-equity/`.

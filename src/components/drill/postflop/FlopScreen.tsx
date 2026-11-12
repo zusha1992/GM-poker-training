@@ -8,7 +8,7 @@ import { Toast, useToast } from "@/components/drill/Toast";
 import { badSound, buzz, goodSound, tone } from "@/lib/drill/sound";
 import { rankChar, type Card } from "@/lib/drill/postflop/line-demo";
 import { BUCKET_COLOR, BUCKET_RANK, BUCKETS, bucketShort, bucketTiny, type Bucket } from "@/lib/drill/postflop/price-hands";
-import { buildFlopSpot, FLOP_BOARDS, type FlopPiece, type FlopSpot } from "@/lib/drill/postflop/flop-drill";
+import { buildFlopSpot, FLOP_BOARDS, spotsOf, type FlopPiece, type FlopSpot, type Street } from "@/lib/drill/postflop/flop-drill";
 import { LineMatrix, type MatrixPalette } from "./LineMatrix";
 import { MoneyPaddles } from "./MoneyPaddles";
 import { pieTarget, SortPiece } from "./SortPiece";
@@ -32,19 +32,21 @@ function shuffled<T>(xs: T[]): T[] {
   return out;
 }
 
-/** A random board (the picked one when set), never the same one twice in a row. */
-function pickBoard(current: string | null, picked: string | null): string {
-  if (picked) return picked;
-  const pool = FLOP_BOARDS.map((b) => b.name).filter((n) => n !== current);
-  return pool[Math.floor(Math.random() * pool.length)];
+/** A random spot of this street (of the picked flop when set), never the same one twice in a row. */
+function pickBoard(street: Street, current: string | null, picked: string | null): string {
+  const all = spotsOf(street).filter((s) => !picked || s.flop === picked);
+  const pool = all.length > 1 ? all.filter((s) => s.name !== current) : all;
+  return pool[Math.floor(Math.random() * pool.length)].name;
 }
+
+const TITLE: Record<Street, string> = { flop: "Flop", turn: "Turn" };
 
 /** "Flop: how many big blinds?" (Noam & Uri 2026-11-10): one flop, BTN's made
  * hands in equity groups, one at a time: drag each into how many big blinds
  * it's worth by the river. */
-export function FlopScreen() {
+export function FlopScreen({ street = "flop" }: { street?: Street }) {
   const router = useRouter();
-  const [spot, setSpot] = useState<FlopSpot>(() => buildFlopSpot(FLOP_BOARDS[0].name));
+  const [spot, setSpot] = useState<FlopSpot>(() => buildFlopSpot(spotsOf(street)[0].name));
   const [phase, setPhase] = useState<Phase>("intro");
   const [picked, setPicked] = useState<string | null>(null);
   const [placed, setPlaced] = useState<Partial<Record<string, Bucket>>>({});
@@ -80,7 +82,7 @@ export function FlopScreen() {
   // Opened from a feedback link (?board=A72): skip the intro, straight to that board.
   useEffect(() => {
     const b = new URLSearchParams(window.location.search).get("board");
-    if (b && FLOP_BOARDS.some((x) => x.name === b)) start(b);
+    if (b && spotsOf(street).some((x) => x.name === b)) start(b);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -97,8 +99,8 @@ export function FlopScreen() {
 
   const focusPiece = phase === "decide" ? current : null;
   const feedbackContext: FeedbackContext = {
-    drill: "Flop: how many big blinds",
-    spot: `${spot.board.map(cardText).join(" ")} · Flop`,
+    drill: `${TITLE[street]}: how many big blinds`,
+    spot: `${spot.board.map(cardText).join(" ")} · ${TITLE[street]}`,
     focus: focusPiece ? `${focusPiece.label} (${focusPiece.hands})` : phase === "final" ? "End-of-board summary" : undefined,
     app: focusPiece ? bucketShort(focusPiece.answer.bucket) : undefined,
     player: focusPiece && tries[focusPiece.key] ? `${bucketShort(tries[focusPiece.key]!)} (wrong)` : undefined,
@@ -114,7 +116,7 @@ export function FlopScreen() {
   /** `name` = this board; otherwise the picked board, or a random one. */
   function start(name?: string) {
     generation.current += 1;
-    const s = buildFlopSpot(name ?? pickBoard(spot.name, picked));
+    const s = buildFlopSpot(name ?? pickBoard(street, spot.name, picked));
     setSpot(s);
     setMissed(new Set());
     setPlaced({});
@@ -181,7 +183,7 @@ export function FlopScreen() {
     }, 380);
   }
 
-  if (phase !== "intro" && trailer) return <FlopTrailer key={seq} board={spot.board} onDone={endTrailer} />;
+  if (phase !== "intro" && trailer) return <FlopTrailer key={seq} board={spot.board} street={street} onDone={endTrailer} />;
 
   if (phase === "intro") {
     return (
@@ -191,9 +193,9 @@ export function FlopScreen() {
             <span className="inline-block rounded-full px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.08em]" style={{ color: "#2B1C02", background: "var(--mix)" }}>
               Prototype · equity answers
             </span>
-            <b className="font-[family-name:var(--font-brand)] text-[26px] font-bold">Flop: how many big blinds?</b>
+            <b className="font-[family-name:var(--font-brand)] text-[26px] font-bold">{TITLE[street]}: how many big blinds?</b>
             <p className="m-0 max-w-[330px] text-[13.5px] leading-[1.5]" style={{ color: "var(--muted)" }}>
-              BTN opened, BB called, 100bb deep. Your made hands come in groups, one at a time: drag each into how many big blinds it&apos;s worth by the river. Draws and
+              BTN opened, BB called, 100bb deep.{street === "turn" && " You bet the flop small (1.8bb), BB called."} Your made hands come in groups, one at a time: drag each into how many big blinds it&apos;s worth by the river. Draws and
               trash aren&apos;t asked.
             </p>
           </div>
@@ -203,9 +205,9 @@ export function FlopScreen() {
           </div>
           <div className="grid grid-cols-2 gap-1.5" role="radiogroup" aria-label="Board" data-testid="board-picker">
             <b className="col-span-2 font-[family-name:var(--font-display)] text-[13px] tracking-[0.06em] uppercase" style={{ color: "var(--muted)" }}>
-              Board · {FLOP_BOARDS.length} flops
+              {street === "turn" ? `Flop · ${FLOP_BOARDS.length} flops, 3 turns each` : `Board · ${FLOP_BOARDS.length} flops`}
             </b>
-            {[{ key: null as string | null, title: "Mix them all", sub: "A random flop each time" }, ...FLOP_BOARDS.map((b) => ({ key: b.name as string | null, title: b.flop.join(" "), sub: b.blurb }))].map((o) => {
+            {[{ key: null as string | null, title: "Mix them all", sub: street === "turn" ? "A random flop and turn each time" : "A random flop each time" }, ...FLOP_BOARDS.map((b) => ({ key: b.name as string | null, title: b.flop.join(" "), sub: b.blurb }))].map((o) => {
               const on = picked === o.key;
               return (
                 <button
@@ -247,7 +249,7 @@ export function FlopScreen() {
           <path d="M6 10v10h12V10" />
         </IconButton>
         <b className="min-w-0 flex-1 truncate text-center font-[family-name:var(--font-brand)] text-[16px] font-bold">
-          Flop{" "}
+          {TITLE[street]}{" "}
           <span className="font-semibold" style={{ color: "var(--gold)" }} data-testid="board-id">
             · {spot.name}
           </span>
@@ -264,7 +266,7 @@ export function FlopScreen() {
       {phase === "final" ? (
         <>
           <BigBoard board={spot.board} dealt small />
-          <Summary spot={spot} missed={missed} onNext={() => start(pickBoard(spot.name, null))} onReplay={() => start(spot.name)} />
+          <Summary spot={spot} missed={missed} onNext={() => start(pickBoard(street, spot.name, null))} onReplay={() => start(spot.name)} />
         </>
       ) : (
         <>
@@ -329,9 +331,9 @@ export function FlopScreen() {
         hideAppAnswer={phase === "decide" && !!current && !placed[current.key]}
         open={feedbackOpen}
         onClose={() => setFeedbackOpen(false)}
-        drillTag={`postflop:flop:${spot.name}`}
-        drillLabel={`Flop: how many bb · ${spot.name}`}
-        pageUrl={`/drills/postflop/flop?board=${spot.name}`}
+        drillTag={`postflop:${street}:${spot.name}`}
+        drillLabel={`${TITLE[street]}: how many bb · ${spot.name}`}
+        pageUrl={`/drills/postflop/${street}?board=${spot.name}`}
       />
     </Shell>
   );
@@ -357,7 +359,7 @@ function BigBoard({ board, dealt, small = false }: { board: Card[]; dealt: boole
               background: `linear-gradient(180deg, color-mix(in srgb, ${color} 82%, #ffffff) 0%, ${color} 55%)`,
               color: "#FFFFFF",
               border: "1px solid rgba(255,255,255,.25)",
-              boxShadow: "0 3px 10px rgba(0,0,0,.35)",
+              boxShadow: i === 3 ? "0 0 0 2px var(--gold), 0 3px 10px rgba(0,0,0,.35)" : "0 3px 10px rgba(0,0,0,.35)",
               animation: small ? undefined : "rdIn 160ms ease-out both",
             }}
             data-testid="board-card"
@@ -429,7 +431,7 @@ function Summary({ spot, missed, onNext, onReplay }: { spot: FlopSpot; missed: S
       </p>
 
       <div className="flex gap-2">
-        <PrimaryButton onClick={onNext}>Next board</PrimaryButton>
+        <PrimaryButton onClick={onNext}>{spot.street === "turn" ? "Next turn" : "Next board"}</PrimaryButton>
         <button type="button" className="h-[44px] flex-1 cursor-pointer rounded-xl border text-[13px] font-semibold" style={{ borderColor: "var(--line)" }} onClick={onReplay}>
           Replay
         </button>
