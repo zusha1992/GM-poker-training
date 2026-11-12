@@ -57,9 +57,6 @@ export function Lobby() {
             </span>
           </div>
           <Rule glyph="♠" />
-          <p className="m-0 max-w-[300px] text-[14px] leading-snug" style={{ color: "var(--muted)" }}>
-            Think in whole ranges, the way a grandmaster thinks in plans.
-          </p>
         </header>
 
         {(["Preflop", "Postflop"] as const).map((section) => (

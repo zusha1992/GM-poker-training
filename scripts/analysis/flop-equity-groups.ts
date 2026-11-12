@@ -8,7 +8,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { score, bbCombos, type Combo } from "./price-equity";
 import { btnRangeCombos, card, type Card } from "../../src/lib/drill/postflop/line-demo";
-import { BOARDS, priceGroupOf, RUNOUTS, type Bucket, type PGroup } from "../../src/lib/drill/postflop/price-hands";
+import { BOARDS, priceGroupOf, realDraw, RUNOUTS, type Bucket, type PGroup } from "../../src/lib/drill/postflop/price-hands";
 
 const SAMPLES = Number(process.env.SAMPLES ?? 6000); // per hand and level: about ±0.7%
 const SUITS = ["s", "h", "d", "c"];
@@ -88,12 +88,147 @@ const LEVEL_OF: Record<Bucket, number> = { b50: 3, b25: 2, b15: 1, b5: 1, b0: 0,
 const BOX_TEXT: Record<Bucket, string> = { big: "Pot is too big", b0: "0–5bb", b5: "5–15bb", b15: "15–25bb", b25: "25–50bb", b50: "50–100bb" };
 const LEVEL_TEXT = ["BB's whole range", "BB after calling a flop bet", "BB's middle pair or better", "BB's top pair or better"];
 
+/** Boards Noam has reviewed: his groups and boxes replace the computed ones (the
+ * equity is still computed, to show). Every made hand must be listed. */
+/** `name`: the group's name in words, shown under the cards (Noam 2026-11-11). */
+const REVIEWED: Record<string, { name?: string; hands: string[]; box: Bucket }[]> = {
+  // Noam 2026-11-11: two pair with the sets (dry board); top pair in two groups,
+  // AT and up / A9 and down at 15–25; all 7x one group at 5–15; the weakest pairs together at 0–5.
+  A72: [
+    { name: "Sets & two pair", hands: ["AA", "77", "22", "A7", "A2"], box: "b50" },
+    { name: "Top pair, good kicker", hands: ["AK", "AQ", "AJ", "AT"], box: "b50" },
+    { name: "Top pair, weak kicker", hands: ["A9", "A8", "A6", "A5", "A4", "A3"], box: "b15" },
+    { name: "Pocket pairs under the ace", hands: ["KK", "QQ", "JJ", "TT", "99", "88"], box: "b5" },
+    { name: "Second pair", hands: ["K7", "Q7", "J7", "T7", "97", "87", "76", "75"], box: "b5" },
+    { name: "Small pairs", hands: ["66", "55", "44", "33", "K2"], box: "b0" },
+  ],
+  // Noam 2026-11-11: the A72 principles carried over (draft for him to play): weak top pair
+  // 15–25, all second pair one group at 5–15, the weakest pairs and 3x together at 0–5.
+  JT3: [
+    { name: "Sets", hands: ["JJ", "TT", "33"], box: "b50" },
+    // Noam 2026-11-11: two pair apart from one pair. Overpairs still go for stacks;
+    // top pair (AJ–QJ) only for a big pot.
+    { name: "Two pair", hands: ["JT"], box: "b50" },
+    { name: "Overpairs", hands: ["AA", "KK", "QQ"], box: "b50" },
+    { name: "Top pair, good kicker", hands: ["AJ", "KJ", "QJ"], box: "b25" },
+    { name: "Top pair, weak kicker", hands: ["J9", "J8", "J7"], box: "b15" },
+    { name: "Second pair", hands: ["AT", "KT", "QT", "T9", "T8", "T7"], box: "b5" },
+    { name: "Small pairs", hands: ["99", "88", "77", "66", "55", "44", "22", "A3", "K3", "43"], box: "b0" },
+    { name: "Ace-high", hands: ["A9", "A8", "A7", "A6", "A5", "A4", "A2"], box: "big" },
+  ],
+  // Draft 2026-11-11: the A72/JT3 principles on K♠5♥4♣ (connected, so like JT3: two pair
+  // on its own, top pair good kicker only 25–50), for Noam to play.
+  K54: [
+    { name: "Sets", hands: ["KK", "55", "44"], box: "b50" },
+    { name: "Two pair", hands: ["K5", "K4", "54"], box: "b50" },
+    { name: "Overpair", hands: ["AA"], box: "b50" },
+    // Noam 2026-11-11: AK and KQ apart, worth a big pot (25–50; the board is in between dry and wet).
+    { name: "Top pair, top kicker", hands: ["AK", "KQ"], box: "b25" },
+    // Noam 2026-11-11: top pair in three groups on this board.
+    { name: "Top pair, good kicker", hands: ["KJ", "KT", "K9", "K8"], box: "b25" },
+    { name: "Top pair, weak kicker", hands: ["K7", "K6", "K3", "K2"], box: "b15" },
+    // Noam 2026-11-11: QQ–TT are worth clearly more than 99–66, which go with 5x.
+    { name: "Big pocket pairs", hands: ["QQ", "JJ", "TT"], box: "b5" },
+    { name: "Medium pairs & second pair", hands: ["99", "88", "77", "66", "A5", "Q5", "75", "65"], box: "b5" },
+    { name: "Small pairs", hands: ["A4", "64", "43", "33", "22"], box: "b0" },
+    // Noam 2026-11-11: on a rainbow board without many draws ace-high is never "Pot is too big";
+    // AQ–AT take one bet of value.
+    { name: "Ace-high, good kicker", hands: ["AQ", "AJ", "AT"], box: "b0" },
+    { name: "Ace-high", hands: ["A9", "A8", "A7", "A6"], box: "b0" },
+  ],
+};
+
+/** Noam 2026-11-11: how dry each board is. Two-tone = really wet; rainbow but
+ * connected = in between (K♠5♥4♣); rainbow, not connected = dry. */
+type BoardType = "dry" | "between" | "wet";
+const BOARD_TYPE: Record<string, BoardType> = { A72: "dry", JT3: "wet", K54: "between", QT7: "between", "986": "wet", KQT: "wet", A76: "wet", KQ4: "wet", T87: "wet", "962": "wet", "886": "dry" };
+
+/** Noam's earlier notes on single boards (the old full-hand drill), kept over the principles: group name → box. */
+const BOARD_NOTES: Record<string, Record<string, Bucket>> = {
+  // Noam 2026-11-07 and 2026-11-10 (9♠8♦6♣): overpairs 15–25, top pair even with a good kicker 5–15,
+  // the underpairs 55–22 "the pot is too big for them already".
+  "986": { Overpairs: "b15", "Top pair, good kicker": "b5", "Top pair, weak kicker": "b5", "Small pairs": "big" },
+  // Noam 2026-11-11 (K♦Q♣T♥): a very connected board, so top pair one box down; it won't
+  // feel comfortable betting on a lot of turns. Even AK and KJ only 15–25.
+  // Two pair (KQ, KT, QT) only 25–50: more straights here.
+  // AA too: not a whole stack unless it improves.
+  // Noam 2026-11-11 (8♠8♦6♣): overpairs only 25–50: called for stacks, they're up against an 8 (trips) at least.
+  "886": { Overpairs: "b25" },
+  // Noam 2026-11-11 (9♦6♦2♥): the lower the top pair, the less it's worth; even a good kicker only 15–25.
+  "962": { "Top pair, good kicker": "b15", "Top pair, weak kicker": "b5" },
+  KQT: { "Two pair": "b25", Overpair: "b25", "Top pair, good kicker": "b15", "Top pair, weak kicker": "b5" },
+};
+
+/** The principles from Noam's review of A72, JT3 and K54 (rulebook section 0), as a draft for a new board. */
+function principleGroups(name: string, board: Card[], hands: Hand[]): Group[] {
+  const type = BOARD_TYPE[name] ?? "wet";
+  const ranks = [...new Set(board.map((c) => c.r))].sort((a, b) => b - a);
+  const top = ranks[0];
+  const pocket = (h: Hand) => h.key[0] === h.key[1];
+  const kicker = (h: Hand) => [rv(h.key[0]), rv(h.key[1])].find((r) => r !== top) ?? 0;
+  const out: Group[] = [];
+  const add = (name: string, box: Bucket, hs: Hand[]) => {
+    if (hs.length) out.push({ name, box, hands: hs });
+  };
+  const of = (cats: PGroup[], extra: (h: Hand) => boolean = () => true) => hands.filter((h) => cats.includes(h.cat) && extra(h));
+
+  const sets = of(["twopair"], pocket);
+  const twoPair = of(["twopair"], (h) => !pocket(h));
+  const monsters = of(["boat", "straight", "flush", "flushlo"]);
+  const top3 = [...monsters, ...sets, ...(type === "dry" ? twoPair : [])];
+  const parts = [monsters.some((h) => h.cat === "boat") && "full houses", monsters.some((h) => h.cat === "straight") && "straights", sets.length && "sets", type === "dry" && twoPair.length && "two pair"].filter(Boolean);
+  add(parts.join(" & ").replace(/^./, (c) => c.toUpperCase()), "b50", top3);
+  if (type !== "dry") add("Two pair", "b50", twoPair);
+  // Trips on a paired board: by kicker.
+  add("Trips, good kicker", "b50", of(["trips"], (h) => Math.max(rv(h.key[0]), rv(h.key[1])) >= 10 && h.key[0] !== h.key[1]));
+  add("Trips, weak kicker", "b25", of(["trips"], (h) => Math.max(rv(h.key[0]), rv(h.key[1])) < 10));
+  add(of(["op"]).length > 1 ? "Overpairs" : "Overpair", "b50", of(["op"]));
+
+  // Top pair: dry and wet in two groups at the T kicker; in between in three (K54: AK+KQ / down to the 8 / the rest).
+  const tp = of(["tpgk", "tpmk", "tpwk"]).sort((a, b) => kicker(b) - kicker(a));
+  if (type === "between") {
+    const best = [...new Set(tp.map(kicker))].slice(0, 2);
+    add("Top pair, top kicker", "b25", tp.filter((h) => best.includes(kicker(h))));
+    add("Top pair, good kicker", "b25", tp.filter((h) => !best.includes(kicker(h)) && kicker(h) >= 8));
+    add("Top pair, weak kicker", "b15", tp.filter((h) => !best.includes(kicker(h)) && kicker(h) < 8));
+  } else {
+    add("Top pair, good kicker", type === "dry" ? "b50" : "b25", tp.filter((h) => kicker(h) >= 10));
+    add("Top pair, weak kicker", "b15", tp.filter((h) => kicker(h) < 10));
+  }
+
+  // Pocket pairs between the top two cards: one group on a dry board (A72 KK–88); else
+  // the big ones apart and the rest with second pair (K54: QQ–TT / 99–66 with 5x).
+  const between = of(["pp1"]);
+  const second = of(["mp"]);
+  const big = type === "dry" ? between : between.filter((h) => h.pairRank >= 10);
+  const rest = type === "dry" ? [] : between.filter((h) => h.pairRank < 10);
+  add(type === "dry" ? `Pocket pairs under the ${ch(top)}` : "Big pocket pairs", "b5", big);
+  add(rest.length ? "Medium pairs & second pair" : "Second pair", "b5", [...rest, ...second]);
+  add("Small pairs", "b0", of(["pp2", "pp3", "spp", "bp"]));
+
+  // Ace-high: never Pot is too big on a dry or in-between board (K54); AQ–AT apart there.
+  const aceHigh = of(["aho", "khnd"]);
+  if (type === "wet") add("Ace-high", "big", aceHigh);
+  else {
+    add("Ace-high, good kicker", "b0", aceHigh.filter((h) => rv(h.key[1]) >= 10));
+    add("Ace-high", "b0", aceHigh.filter((h) => rv(h.key[1]) < 10));
+  }
+  const notes = BOARD_NOTES[name] ?? {};
+  for (const g of out) if (g.name && notes[g.name]) g.box = notes[g.name];
+  // Biggest box first (a stable sort keeps the order above inside a box).
+  out.sort((a, b) => BOX_RANK[b.box] - BOX_RANK[a.box]);
+  const listed = new Set(out.flatMap((g) => g.hands));
+  const left = hands.filter((h) => !listed.has(h));
+  if (left.length) throw new Error(`${name} principles: no group for ${left.map((h) => `${h.key} (${h.cat})`).join(" ")}`);
+  return out;
+}
+
 /** Inside a box a group splits only at an equity gap this big, and only into groups of about this many hands. */
 const MIN_GAP = 0.04;
 const HANDS_PER_GROUP = 4;
 
 type Hand = { key: string; cat: PGroup; pairRank: number; eq: number[]; box: Bucket; weight: number };
-type Group = { hands: Hand[]; box: Bucket };
+type Group = { hands: Hand[]; box: Bucket; name?: string };
 
 function boxOf(eq: number[]): Bucket {
   for (const l of LADDER) if (eq[l.level] >= l.need) return l.box;
@@ -117,9 +252,12 @@ function solveBoard(name: string) {
   // most common group names the hand).
   const byHand = new Map<string, { combos: [Card, Card][]; weight: number; cats: Map<PGroup, number> }>();
   for (const c of btnRangeCombos(board).combos) {
-    const g = priceGroupOf(c.cards, board, cut);
+    let g = priceGroupOf(c.cards, board, cut);
+    const ace = Math.max(c.cards[0].r, c.cards[1].r) === 14;
+    // Noam 2026-11-11: ace-high with only a backdoor draw is ace-high; a real draw is not asked.
+    if (g === "imp" && ace && !realDraw(c.cards, board)) g = "khnd";
     if (!MADE.has(g)) continue;
-    if (g === "khnd" && Math.max(c.cards[0].r, c.cards[1].r) !== 14) continue;
+    if (g === "khnd" && !ace) continue;
     const cur = byHand.get(rankKey(c.hand)) ?? { combos: [] as [Card, Card][], weight: 0, cats: new Map<PGroup, number>() };
     cur.combos.push(c.cards);
     cur.weight += c.weight;
@@ -222,7 +360,18 @@ function solveBoard(name: string) {
     i = -1;
   }
 
-  return { name, board, hands, groups: groups.map((g) => ({ ...g, hands: g.hands.sort((a, b) => at(b) - at(a) || b.eq[1] - a.eq[1]) })) };
+  const reviewed = REVIEWED[name];
+  if (!reviewed) groups = principleGroups(name, board, hands);
+  if (reviewed) {
+    const byKey = new Map(hands.map((h) => [h.key, h]));
+    const listed = new Set(reviewed.flatMap((g) => g.hands));
+    const missing = hands.filter((h) => !listed.has(h.key)).map((h) => h.key);
+    const unknown = [...listed].filter((k) => !byKey.has(k));
+    if (missing.length || unknown.length) throw new Error(`${name} review: not listed ${missing.join(" ")} · not made hands ${unknown.join(" ")}`);
+    groups = reviewed.map((g) => ({ box: g.box, name: g.name, hands: g.hands.map((k) => byKey.get(k)!) }));
+  }
+
+  return { name, board, hands, reviewed: !!reviewed, groups: groups.map((g) => ({ ...g, hands: g.hands.sort((a, b) => at(b) - at(a) || b.eq[1] - a.eq[1]) })) };
 }
 
 /** "KK–99, A5, K7" — pocket pairs and same-high-card kickers as runs. */
@@ -246,22 +395,10 @@ function labelOf(keys: string[]): string {
   return parts.join(", ");
 }
 
-function whyOf(box: Bucket, eq: number[]): string {
+/** A reviewed group's box is Noam's: the reason just shows its equity. */
+function whyReviewed(box: Bucket, eq: number[], source: string): string {
   const p = (x: number) => `${Math.round(x * 100)}%`;
-  switch (box) {
-    case "b50":
-      return `Wins ${p(eq[3])} against BB's top pair or better: it wants the stacks in.`;
-    case "b25":
-      return `Wins ${p(eq[2])} against BB's middle pair or better, but only ${p(eq[3])} against its top pairs: a big pot, not stacks.`;
-    case "b15":
-      return `Wins ${p(eq[1])} against the hands that call a flop bet, but only ${p(eq[2])} against BB's middle pair or better: a medium pot.`;
-    case "b5":
-      return `Just ahead (${p(eq[1])}) of the hands that call a flop bet: about one bet of value.`;
-    case "b0":
-      return `Behind the hands that call a bet (${p(eq[1])}), ahead of BB's whole range (${p(eq[0])}): a little money, mostly showdown.`;
-    default:
-      return `Behind even BB's whole range (${p(eq[0])}): the pot is already too big for it.`;
-  }
+  return `${BOX_TEXT[box]} (${source}). Wins ${p(eq[3])} against BB's top pair or better, ${p(eq[1])} against the hands that call a flop bet, ${p(eq[0])} against BB's whole range.`;
 }
 
 const names = process.argv.slice(2).length ? process.argv.slice(2) : BOARDS.map((b) => b.name);
@@ -273,11 +410,12 @@ for (const name of names) {
   const avg = (g: Group) => [0, 1, 2, 3].map((l) => g.hands.reduce((s, h) => s + h.eq[l] * h.weight, 0) / g.hands.reduce((s, h) => s + h.weight, 0));
   const groups = r.groups.map((g, i) => ({
     id: `g${i + 1}`,
-    label: labelOf(g.hands.map((h) => h.key)),
+    label: g.name ?? labelOf(g.hands.map((h) => h.key)),
+    handsLabel: labelOf(g.hands.map((h) => h.key)),
     hands: g.hands.map((h) => h.key),
     box: g.box,
     eq: avg(g).map((x) => Math.round(x * 1000) / 10),
-    why: whyOf(g.box, avg(g)),
+    why: whyReviewed(g.box, avg(g), r.reviewed ? "Noam's review" : "draft from Noam's principles"),
   }));
   out.push(`  ${JSON.stringify(name)}: ${JSON.stringify(groups)},`);
 
@@ -289,9 +427,9 @@ for (const name of names) {
     LEVEL_TEXT.map((t, i) => `L${i} = ${t}`).join(" · ") + ".",
     "Box = the biggest box whose test the hand passes: 50–100 if L3 ≥ 50%, 25–50 if L2 ≥ 50%, 15–25 if L1 ≥ 60%, 5–15 if L1 ≥ 50%, 0–5 if L0 ≥ 50%, else Pot is too big.",
     "",
-    "| Group | Box | Hands | L0 | L1 | L2 | L3 |",
-    "|---|---|---|---|---|---|---|",
-    ...groups.map((g) => `| ${g.id} | ${BOX_TEXT[g.box]} | ${g.label} | ${g.eq.map((x) => `${Math.round(x)}%`).join(" | ")} |`),
+    "| Group | Box | Name | Hands | L0 | L1 | L2 | L3 |",
+    "|---|---|---|---|---|---|---|---|",
+    ...groups.map((g) => `| ${g.id} | ${BOX_TEXT[g.box]} | ${g.label} | ${g.handsLabel} | ${g.eq.map((x) => `${Math.round(x)}%`).join(" | ")} |`),
     "",
     "## Every hand",
     "",
@@ -305,9 +443,20 @@ for (const name of names) {
   for (const g of groups) console.log(`  ${g.id} ${BOX_TEXT[g.box].padEnd(14)} ${g.label}`);
 }
 
-if (process.argv.slice(2).length === 0) {
+// With boards named, only their lines change; the other boards stay as generated.
+const FILE = "src/lib/drill/postflop/flop-groups.ts";
+if (process.argv.slice(2).length) {
+  let text = readFileSync(FILE, "utf8");
+  for (const [i, name] of names.entries()) {
+    const re = new RegExp(`^  ${JSON.stringify(name)}: .*,$`, "m");
+    if (!re.test(text)) throw new Error(`${name} is not in ${FILE}`);
+    text = text.replace(re, () => out[i]);
+  }
+  writeFileSync(FILE, text);
+} else {
+
   writeFileSync(
-    "src/lib/drill/postflop/flop-groups.ts",
+    FILE,
     [
       "// Generated by scripts/analysis/flop-equity-groups.ts — do not edit by hand.",
       "// Flop drill (Noam & Uri 2026-11-10): BTN's made hands on each flop, grouped and",
@@ -315,7 +464,8 @@ if (process.argv.slice(2).length === 0) {
       'import type { Bucket } from "./price-hands";',
       "",
       "/** eq = the group's equity (%) vs BB's whole range, BB after calling a flop bet, BB's middle pair+, BB's top pair+. */",
-      "export type FlopGroup = { id: string; label: string; hands: string[]; box: Bucket; eq: number[]; why: string };",
+      "/** label = the group's name (words once reviewed, else its hands); handsLabel = its hands, e.g. \"AK–AT\". */",
+      "export type FlopGroup = { id: string; label: string; handsLabel?: string; hands: string[]; box: Bucket; eq: number[]; why: string };",
       "",
       "export const FLOP_GROUPS: Record<string, FlopGroup[]> = {",
       ...out,

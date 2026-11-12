@@ -99,7 +99,7 @@ export function FlopScreen() {
   const feedbackContext: FeedbackContext = {
     drill: "Flop: how many big blinds",
     spot: `${spot.board.map(cardText).join(" ")} · Flop`,
-    focus: focusPiece ? `${focusPiece.label}` : phase === "final" ? "End-of-board summary" : undefined,
+    focus: focusPiece ? `${focusPiece.label} (${focusPiece.hands})` : phase === "final" ? "End-of-board summary" : undefined,
     app: focusPiece ? bucketShort(focusPiece.answer.bucket) : undefined,
     player: focusPiece && tries[focusPiece.key] ? `${bucketShort(tries[focusPiece.key]!)} (wrong)` : undefined,
   };
@@ -131,10 +131,8 @@ export function FlopScreen() {
   /** Noam 2026-11-11: the opening scene is over (or skipped): the board, then the first group. */
   function endTrailer() {
     setTrailer(false);
-    later(() => {
-      tone(523, 0.08);
-      setTimeout(() => tone(659, 0.12), 80);
-    }, 250);
+    tone(523, 0.08);
+    setTimeout(() => tone(659, 0.12), 80);
   }
 
   function zoneAt(x: number, y: number): Bucket | null {
@@ -282,7 +280,7 @@ export function FlopScreen() {
           <div ref={zoneRef} className="relative mt-auto flex-shrink-0" style={{ touchAction: "none", height: "clamp(236px, 37dvh, 310px)" }} data-testid="buckets">
             {inspecting && current ? (
               <div className="absolute inset-0 overflow-hidden rounded-2xl" style={{ border: "1px solid var(--line)", background: "var(--panel)" }}>
-                <InspectPanel piece={{ ...current, desc: current.name }} onBack={() => setInspecting(false)} backLabel="Back" />
+                <InspectPanel piece={{ ...current, desc: `${current.hands} · ${current.name}` }} onBack={() => setInspecting(false)} backLabel="Back" />
               </div>
             ) : (
               <>
@@ -360,7 +358,7 @@ function BigBoard({ board, dealt, small = false }: { board: Card[]; dealt: boole
               color: "#FFFFFF",
               border: "1px solid rgba(255,255,255,.25)",
               boxShadow: "0 3px 10px rgba(0,0,0,.35)",
-              animation: small ? undefined : `ldDeal 520ms ${i * 160}ms cubic-bezier(.3,1.4,.5,1) both`,
+              animation: small ? undefined : "rdIn 160ms ease-out both",
             }}
             data-testid="board-card"
           >
@@ -407,7 +405,10 @@ function Summary({ spot, missed, onNext, onReplay }: { spot: FlopSpot; missed: S
               data-testid={`summary-${p.key}`}
             >
               <i className="inline-block h-[9px] w-[9px] flex-shrink-0 rounded-[2px]" style={{ background: p.color }} />
-              <span className="min-w-0 flex-1">{p.label}</span>
+              <span className="min-w-0 flex-1">
+                {p.label}
+                {p.hands !== p.label && <span style={{ color: "var(--muted)" }}> · {p.hands}</span>}
+              </span>
               {missed.has(p.key) && <span style={{ color: "var(--raise)" }}>✕</span>}
               <b className="flex-shrink-0 font-[family-name:var(--font-display)]" style={{ color }}>
                 {bucketTiny(p.answer.bucket)}

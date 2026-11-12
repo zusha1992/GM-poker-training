@@ -23,7 +23,8 @@ const betAt = (s: Seat): [number, number] => {
 };
 
 /** The timeline, ms from the start. */
-const T = { folds: 500, raise: 1300, sbFold: 2100, call: 2600, sweep: 3400, deal: 3950, flip: 4500, caption: 5500, out: 6400 };
+// Noam 2026-11-11: shorter, and a quick hand-over to the drill.
+const T = { folds: 250, raise: 700, sbFold: 1100, call: 1350, sweep: 1850, deal: 2150, flip: 2450, caption: 3050, out: 3450 };
 
 type Step = keyof typeof T;
 const ORDER = Object.keys(T) as Step[];
@@ -43,11 +44,11 @@ export function FlopTrailer({ board, onDone }: { board: Card[]; onDone: () => vo
         setStep(i);
         if (k === "raise" || k === "call") [0, 70, 140].forEach((d) => setTimeout(() => tone(1250 + d, 0.035, "triangle"), d));
         if (k === "sweep") [0, 60, 120, 180].forEach((d) => setTimeout(() => tone(1100 - d, 0.04, "triangle"), d));
-        if (k === "flip") [0, 260, 520].forEach((d, n) => setTimeout(() => tone(523 + n * 131, 0.09), d));
+        if (k === "flip") [0, 150, 300].forEach((d, n) => setTimeout(() => tone(523 + n * 131, 0.09), d));
         if (k === "caption") tone(784, 0.14);
       }, T[k]),
     );
-    timers.push(setTimeout(finish, T.out + 450));
+    timers.push(setTimeout(finish, T.out + 160));
     return () => timers.forEach(clearTimeout);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -69,7 +70,7 @@ export function FlopTrailer({ board, onDone }: { board: Card[]; onDone: () => vo
       className="royal relative mx-auto flex h-dvh w-full max-w-[460px] flex-col items-center overflow-hidden px-4 py-5"
       style={{ background: "radial-gradient(120% 60% at 50% 45%, #182C47 0%, var(--background) 70%)", color: "var(--foreground)" }}
       animate={at("out") ? { opacity: 0, scale: 1.04 } : { opacity: 1, scale: 1 }}
-      transition={{ duration: 0.4, ease: "easeIn" }}
+      transition={{ duration: 0.16, ease: "easeIn" }}
       onClick={finish}
       data-testid="trailer"
     >
@@ -250,14 +251,14 @@ function TableCard({ card, i, landed, flipped }: { card: Card; i: number; landed
       style={{ width: w, height: h, perspective: 500 }}
       initial={{ y: -90, x: 40 - i * 52, opacity: 0, rotate: -12 }}
       animate={{ y: 0, x: 0, opacity: 1, rotate: 0 }}
-      transition={{ duration: 0.4, delay: i * 0.12, ease: [0.2, 0.9, 0.3, 1] }}
+      transition={{ duration: 0.3, delay: i * 0.07, ease: [0.2, 0.9, 0.3, 1] }}
     >
       <motion.div
         className="relative h-full w-full"
         style={{ transformStyle: "preserve-3d" }}
         initial={{ rotateY: 0 }}
         animate={{ rotateY: flipped ? 180 : 0 }}
-        transition={{ duration: 0.45, delay: flipped ? i * 0.26 : 0, ease: "easeInOut" }}
+        transition={{ duration: 0.32, delay: flipped ? i * 0.15 : 0, ease: "easeInOut" }}
       >
         {/* Back: navy with the gold spade. */}
         <div

@@ -922,7 +922,8 @@ function flopTexture(board: Card[]): "low" | "high" | null {
  * - khnd: king-high (the showdown cutoff) with no draw, e.g. K9o, K5 of hearts.
  * - air: trash, queen-high or lower with no draw. */
 /** A real draw on the flop: four to a straight with a hole card in it, or four to a flush. */
-function realDraw(hole: [Card, Card], board: Card[]): boolean {
+/** A flush draw or a straight draw (a gutshot or better), not a backdoor. */
+export function realDraw(hole: [Card, Card], board: Card[]): boolean {
   const all = [...hole, ...board];
   if (SUITS.some((s) => hole.some((c) => c.s === s) && all.filter((c) => c.s === s).length >= 4)) return true;
   const low = (r: number) => (r === 14 ? [1, 14] : [r]);

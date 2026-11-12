@@ -40,8 +40,27 @@ The Flop drill's rules:
   - Pairs below top pair are ordered by the pair's rank, e.g. on J♠T♠3♣: 99–77, then 66–44, then 3x *(Noam)*.
   - A7s and A7o are one hand.
   - No group of one hand.
+### Flop principles from Noam's review of A♣7♦2♠ and J♠T♠3♣ *(Noam, 2026-11-11)*
+
+After this review, a board's groups are Noam's own, and they replace the computed ones. The equity is still shown when a group is tapped. These principles carry over to new boards as a draft that Noam then plays and corrects:
+
+| # | Principle | A♣7♦2♠ (dry) | J♠T♠3♣ (wet) |
+|---|---|---|---|
+| 1 | **Sets** go for stacks. | AA, 77, 22: 50–100 | JJ, TT, 33: 50–100 |
+| 2 | **Two pair is never with one-pair hands.** On a dry board it goes with the sets; on a wet board it's its own group. Two pair and better go for stacks. | A7, A2 with the sets | JT alone: 50–100 |
+| 3 | **Overpairs** are their own group, apart from top pair. | — | AA–QQ: 50–100 |
+| 4 | **Top pair splits in two:** good kickers and weak kickers. | AK–AT: 50–100 · A9–A3: 15–25 | AJ, KJ, QJ: 25–50 · J9–J7: 15–25 |
+| 5 | **Top pair, good kicker** goes for stacks on a dry board, but only for a big pot (25–50) on a wet one. | | |
+| 6 | **Pocket pairs between the top two cards** are their own group: 5–15. | KK–88: 5–15 | — |
+| 7 | **Second pair is one group whatever the kicker:** 5–15. | All 7x: 5–15 | All Tx: 5–15 |
+| 8 | **Small pairs** (pocket pairs below the second card plus bottom pair) are one group at 0–5, **never "Pot is too big"**. | 66–33, K2: 0–5 | 99–44, 22, 3x: 0–5 |
+| 9 | **Ace-high** with no real draw is asked. A backdoor doesn't count as a draw, so A5 or A4 on J♠T♠3♣ are ace-high; AK and AQ there are gutshots, so they're draws and not asked. **On a dry board, or one without many draws, ace-high is never Pot is too big:** in a single-raised pot it can be good, and AQ–AT take one bet of value (0–5). Pot is too big only on wet, connected boards. On K♠5♥4♣ (rainbow): AQ–AT 0–5, A9–A6 0–5. | — | A9–A4, A2: Pot is too big |
+| 10 | **Every group has a name in words** under the cards ("Second pair", "Small pairs"); the hands show when it's tapped. | | |
+
+Which boards count as dry or wet is still Noam's call per board: K♠5♥4♣ is treated as connected, so like a wet board, from his earlier note.
+
 - **Code:**
-  - `scripts/analysis/flop-equity-groups.ts` writes `src/lib/drill/postflop/flop-groups.ts`.
+  - `scripts/analysis/flop-equity-groups.ts` writes `src/lib/drill/postflop/flop-groups.ts`. Reviewed boards are the `REVIEWED` list in it.
   - Readable reports per board are in `decisions/ranges/flop-equity/`.
   - Feedback on a board changes only that board (section 3, "Board by board").
 
