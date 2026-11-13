@@ -516,7 +516,12 @@ function whyReviewed(box: Bucket, eq: number[], source: string, street = "flop")
 }
 
 const TURN = process.argv.includes("--turn");
-const args = process.argv.slice(2).filter((a) => a !== "--turn");
+const FORCE = process.argv.includes("--force");
+const args = process.argv.slice(2).filter((a) => a !== "--turn" && a !== "--force");
+/** Turns Noam has reviewed (2026-11-13): a general rule never changes them. Only his own note on
+ * that turn does: rerun it with --force after adding the note to BOARD_NOTES. */
+const REVIEWED_TURNS = new Set(["A72-6d", "962-8d"]);
+let locked = 0;
 const flops = args.length ? args.map((a) => a.split("-")[0]) : BOARDS.map((b) => b.name);
 /** With --turn: every turn of the named flops ("A72"), or one turn ("A72-Qh"). */
 const spots: [string, number | undefined][] = TURN
@@ -533,6 +538,12 @@ const out: string[] = [];
 const done: string[] = [];
 mkdirSync(DIR, { recursive: true });
 for (const [flopName, turn] of spots) {
+  const spotName = turn === undefined ? flopName : `${flopName}-${code(BOARDS.find((b) => b.name === flopName)!.turns[turn].card)}`;
+  if (TURN && REVIEWED_TURNS.has(spotName) && !FORCE) {
+    console.log(`${spotName}: reviewed by Noam, left as it is (--force to change it)`);
+    locked++;
+    continue;
+  }
   const t0 = Date.now();
   const r = solveBoard(flopName, turn);
   const name = r.name;
@@ -577,7 +588,7 @@ for (const [flopName, turn] of spots) {
 
 // With boards named, only their lines change; the other boards stay as generated.
 const FILE = TURN ? "src/lib/drill/postflop/turn-groups.ts" : "src/lib/drill/postflop/flop-groups.ts";
-if (args.length && existsSync(FILE)) {
+if ((args.length || locked) && existsSync(FILE)) {
   let text = readFileSync(FILE, "utf8");
   for (const [i, name] of done.entries()) {
     const re = new RegExp(`^  ${JSON.stringify(name)}: .*,$`, "m");
