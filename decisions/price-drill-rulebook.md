@@ -79,6 +79,22 @@ The same principles as the flop, one street later. The answers are drafts for No
 - **Groups:** Noam's flop principles, applied to the 4-card board. A turn that makes a straight or a flush possible makes the board wet (principle 11 then puts two pair at 25–50). Flop notes for one board are not carried to its turns.
 - **Code:** `npx tsx scripts/analysis/flop-equity-groups.ts --turn` writes `src/lib/drill/postflop/turn-groups.ts` and `decisions/ranges/turn-equity/<spot>.md`.
 
+#### Turn review, turn by turn *(Noam, 2026-11-13)*
+
+Each note changes only its own turn. When Noam has finished, the notes that look general will be proposed for the other turns.
+
+**Principle (Noam, 2026-11-13, "very important"):** BB's calling range gets smaller and stronger street by street, so on the turn **one pair doesn't go for the whole stack yet**. Whether a hand like AK (top pair) goes for stacks is decided only on the river. Sets and two pair are different: by this point they are way ahead, so they can still go for stacks on the turn. **Applied to all 33 turns (2026-11-13, Noam: "take this review and see what you can change on the other turns"):** overpairs and top pair are capped at 25–50 on every turn.
+
+**Wet turns like A♣7♦2♠ 6♦** (Noam: "very wet, brings in the flush draw and the straight draw, so it's not like other turns"). A wet turn makes a flush possible, or it brings a flush draw (the flop had one card of its suit) and lands within two ranks of a flop card (an ace doesn't count). There are 13: 886-7s, 962-8d, 986-7s, A72-5c, A72-6d, A76-8h, JT3-9s, K54-3s, KQ4-Ad, KQT-Jd, QT7-5d, QT7-Jh, T87-9h. On them:
+- Second pair (or medium pairs & second pair) goes to **0–5**.
+- Top pair splits at the J: AK–AJ (or KA–KJ) are the good kickers, and the T goes down with the weak ones.
+
+| Turn | Note | Change |
+|---|---|---|
+| A♣7♦2♠ **6♦** | "Second pair is not worth more than five... we don't want to isolate our second pair against better hands." | Second pair (K7–75): 5–15 → **0–5** |
+| A♣7♦2♠ **6♦** | "Top pair good kicker... between 25 and 50, and then on the river we decide if it makes sense to shove; on the turn it's still not aiming for everything, especially not when AT and AK are in the same group." | Top pair, good kicker (AK–AT): 50–100 → **25–50** |
+| A♣7♦2♠ **6♦** | "Ace King, Ace Queen, Ace Jack, but then Ace 10, Ace 9, Ace 8 will be with Ace 5, Ace 4, Ace 3." | Top pair split at the J: **AK–AJ 25–50**, **AT–A8, A5–A3 15–25** |
+
 - **Code:**
   - `scripts/analysis/flop-equity-groups.ts` writes `src/lib/drill/postflop/flop-groups.ts`. Reviewed boards are the `REVIEWED` list in it.
   - Readable reports per board are in `decisions/ranges/flop-equity/`.

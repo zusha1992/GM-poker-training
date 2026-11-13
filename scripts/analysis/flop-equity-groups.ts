@@ -160,12 +160,21 @@ const BOARD_NOTES: Record<string, Record<string, Bucket>> = {
   // Noam 2026-11-11 (9♦6♦2♥): the lower the top pair, the less it's worth; even a good kicker only 15–25.
   "962": { "Top pair, good kicker": "b15", "Top pair, weak kicker": "b5" },
   KQT: { "Two pair": "b25", Overpair: "b25", "Top pair, good kicker": "b15", "Top pair, weak kicker": "b5" },
+  // Turn review (Noam 2026-11-13), one turn at a time:
+  // A♣7♦2♠ 6♦: second pair is worth no more than 0–5: don't isolate it against better hands.
+  // Top pair, good kicker (AK–AT) 25–50, not 50–100: on the turn it isn't going for stacks yet,
+  // least of all with AT and AK in one group; the river decides whether to shove.
+  "A72-6d": { "Second pair": "b0", "Top pair, good kicker": "b25" },
 };
 
 /** The principles from Noam's review of A72, JT3 and K54 (rulebook section 0), as a draft for a new board. */
 /** Boards where bottom pair is its own group, apart from the small pocket pairs; the pocket pairs
  * from this rank up join it (Noam 2026-11-12, T♥8♥7♠: A7–75 with 66 at 0–5, 55–22 Pot is too big). */
 const BOTTOM_PAIR_APART: Record<string, number> = { T87: 6 };
+
+/** Where top pair splits into good and weak kicker, if not at the T. Noam 2026-11-13 (A♣7♦2♠ 6♦):
+ * AK, AQ, AJ together; AT goes down with A9–A3. */
+const GOOD_KICKER_FROM: Record<string, number> = { "A72-6d": 11 };
 
 /** A straight or a flush can already be made on this flop: three cards of one suit,
  * or three different ranks inside five (the ace counts low too). */
@@ -180,7 +189,20 @@ function straightOrFlushOnFlop(board: Card[]): boolean {
   return false;
 }
 
+/** A turn like A♣7♦2♠ 6♦ (Noam 2026-11-13: "very wet, brings in the flush draw and the straight draw"):
+ * it makes a flush possible, or it brings a flush draw (the flop had one card of its suit) and lands
+ * within two ranks of a flop card (the ace doesn't count: A-Q only gives a gutshot). */
+function wetTurn(board: Card[]): boolean {
+  if (board.length < 4) return false;
+  const [t, flop] = [board[3], board.slice(0, 3)];
+  if (board.filter((c) => c.s === t.s).length >= 3) return true;
+  const draw = flop.filter((c) => c.s === t.s).length === 1;
+  const near = t.r !== 14 && flop.some((c) => c.r !== 14 && Math.abs(c.r - t.r) <= 2);
+  return draw && near;
+}
+
 function principleGroups(name: string, board: Card[], hands: Hand[]): Group[] {
+  const wet4 = wetTurn(board);
   // A turn spot ("A72-Qh") starts from its flop's type; a turn that makes a straight or a flush possible makes it wet.
   let type = BOARD_TYPE[name.split("-")[0]] ?? "wet";
   if (board.length > 3 && straightOrFlushOnFlop(board) && !straightOrFlushOnFlop(board.slice(0, 3))) type = "wet";
@@ -217,8 +239,10 @@ function principleGroups(name: string, board: Card[], hands: Hand[]): Group[] {
     add("Top pair, good kicker", "b25", tp.filter((h) => !best.includes(kicker(h)) && kicker(h) >= 8));
     add("Top pair, weak kicker", "b15", tp.filter((h) => !best.includes(kicker(h)) && kicker(h) < 8));
   } else {
-    add("Top pair, good kicker", type === "dry" ? "b50" : "b25", tp.filter((h) => kicker(h) >= 10));
-    add("Top pair, weak kicker", "b15", tp.filter((h) => kicker(h) < 10));
+    // On a wet turn AK–AJ stay together and AT goes down with the weak kickers (Noam, A♣7♦2♠ 6♦).
+    const good = GOOD_KICKER_FROM[name] ?? (wet4 ? 11 : 10);
+    add("Top pair, good kicker", type === "dry" ? "b50" : "b25", tp.filter((h) => kicker(h) >= good));
+    add("Top pair, weak kicker", "b15", tp.filter((h) => kicker(h) < good));
   }
 
   // Pocket pairs between the top two cards: one group on a dry board (A72 KK–88); else
@@ -228,7 +252,8 @@ function principleGroups(name: string, board: Card[], hands: Hand[]): Group[] {
   const big = type === "dry" ? between : between.filter((h) => h.pairRank >= 10);
   const rest = type === "dry" ? [] : between.filter((h) => h.pairRank < 10);
   add(type === "dry" ? `Pocket pairs under the ${ch(top)}` : "Big pocket pairs", "b5", big);
-  add(rest.length ? "Medium pairs & second pair" : "Second pair", "b5", [...rest, ...second]);
+  // On a wet turn second pair is worth 0–5: don't isolate it against better hands (Noam, A♣7♦2♠ 6♦).
+  add(rest.length ? "Medium pairs & second pair" : "Second pair", wet4 ? "b0" : "b5", [...rest, ...second]);
   const joins = BOTTOM_PAIR_APART[name];
   if (joins !== undefined) {
     const small = of(["pp2", "pp3", "spp"]);
@@ -244,6 +269,9 @@ function principleGroups(name: string, board: Card[], hands: Hand[]): Group[] {
     add("Ace-high, good kicker", "b0", aceHigh.filter((h) => rv(h.key[1]) >= 10));
     add("Ace-high", "b0", aceHigh.filter((h) => rv(h.key[1]) < 10));
   }
+  // Noam 2026-11-13: on the turn one pair doesn't go for the whole stack yet. BB's calling range
+  // keeps getting stronger, and the river decides whether AK shoves. Sets and two pair are way ahead.
+  if (board.length > 3) for (const g of out) if (g.box === "b50" && /^(Overpair|Top pair)/.test(g.name ?? "")) g.box = "b25";
   const notes = BOARD_NOTES[name] ?? {};
   for (const g of out) if (g.name && notes[g.name]) g.box = notes[g.name];
   // Biggest box first (a stable sort keeps the order above inside a box).
