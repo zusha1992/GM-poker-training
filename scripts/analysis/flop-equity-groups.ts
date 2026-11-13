@@ -332,6 +332,31 @@ function principleGroups(name: string, board: Card[], hands: Hand[]): Group[] {
   // strong here; 50bb is never good for them: 15–25. Top pair, good kicker (AQ, KQ) 15–25 at most.
   if (wet4 && straightPossible(board) && !flushSuit(board))
     for (const g of out) if (g.box === "b25" && /^(Overpair|Top pair)/.test(g.name ?? "")) g.box = "b15";
+  // Noam 2026-11-13 (9♦6♦2♥ 2♣): "A9 cannot be together with T9, J9 and Q9; A9 and K9 can go
+  // together." On the turn, top pair at 25–50 keeps only the two best kickers; the other kickers
+  // from the J up go to 15–25, the rest to the weak kickers (5–15). Hands only move down.
+  const doubleFd = board.length === 4 && ["s", "h", "d", "c"].filter((x) => board.filter((c) => c.s === x).length === 2).length === 2;
+  if (board.length > 3 && !doubleFd) {
+    const tps = out.filter((g) => g.name?.startsWith("Top pair"));
+    const ks = [...new Set(tps.flatMap((g) => g.hands).map(kicker))].sort((a, b) => b - a).slice(0, 2);
+    const g25 = tps.filter((g) => g.box === "b25");
+    const movers = g25.flatMap((g) => g.hands).filter((h) => !ks.includes(kicker(h)));
+    if (movers.length) {
+      for (const g of g25) {
+        g.hands = g.hands.filter((h) => ks.includes(kicker(h)));
+        g.name = "Top pair, top kicker";
+        if (!g.hands.length) out.splice(out.indexOf(g), 1);
+      }
+      const into = (box: Bucket, label: string, hs: Hand[]) => {
+        if (!hs.length) return;
+        const g = out.find((x) => x.name?.startsWith("Top pair") && x.box === box);
+        if (g) g.hands.push(...hs);
+        else out.push({ name: label, box, hands: hs });
+      };
+      into("b15", "Top pair, good kicker", movers.filter((h) => kicker(h) >= 11));
+      into("b5", "Top pair, weak kicker", movers.filter((h) => kicker(h) < 11));
+    }
+  }
   const notes = BOARD_NOTES[name] ?? {};
   for (const g of out) if (g.name && notes[g.name]) g.box = notes[g.name];
   // Biggest box first (a stable sort keeps the order above inside a box).
@@ -545,7 +570,7 @@ const FORCE = process.argv.includes("--force");
 const args = process.argv.slice(2).filter((a) => a !== "--turn" && a !== "--force");
 /** Turns Noam has reviewed (2026-11-13): a general rule never changes them. Only his own note on
  * that turn does: rerun it with --force after adding the note to BOARD_NOTES. */
-const REVIEWED_TURNS = new Set(["A72-6d", "962-8d", "KQ4-8s", "QT7-Jh"]);
+const REVIEWED_TURNS = new Set(["A72-6d", "962-8d", "KQ4-8s", "QT7-Jh", "962-2c"]);
 let locked = 0;
 const flops = args.length ? args.map((a) => a.split("-")[0]) : BOARDS.map((b) => b.name);
 /** With --turn: every turn of the named flops ("A72"), or one turn ("A72-Qh"). */

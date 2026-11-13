@@ -105,6 +105,10 @@ Each note changes only its own turn. When Noam has finished, the notes that look
 - Top pair, good kicker: "maybe KQ and AQ could go to 15–25 but not more than that." AQ, KQ → **15–25**. Weak top pair 5–15.
 - Applied to the other turns that bring a flush draw with a straight already possible (886-7s, 986-7s, A72-5c, K54-3s): overpairs and top pair, good kicker → 15–25.
 
+**9♦6♦2♥ 2♣** (Noam, 2026-11-13, reviewed and locked). "A9 cannot be together with T9, J9 and Q9. Maybe A9 and K9 can go together, but Q9, J9 and T9 will go to different sizes for sure."
+- A9, K9 at **25–50**; Q9, J9 at **15–25**; T9 down with 98 and 97 at **5–15**. *(The boxes for Q9/J9 and T9 are my pick, following his split at the J on A♣7♦2♠ 6♦.)*
+- Applied to every other turn where top pair was at 25–50 (except the two-flush-draw turns, which have their own rule): only the two best kickers stay at 25–50. Other kickers from the J up go to 15–25, and the T and below go to the weak kickers at 5–15. Hands only ever move down.
+
 **Pot on screen** (Noam, 2026-11-13): the drill shows the pot under the board ("Pot 9.1bb, after a 33% flop bet and call, 95.7bb behind"), so the player can see each box against the pot.
 
 - Fix found on the way: a pair holding one card of the flush suit used to be filed as a draw, so it wasn't asked at all on these five turns. Now it is asked as the pair it is.
