@@ -2,7 +2,7 @@ import type { MatrixSnap } from "@/components/drill/postflop/LineMatrix";
 import { btnRangeCombos, card, type Card } from "./line-demo";
 import { FLOP_GROUPS, type FlopGroup } from "./flop-groups";
 import { TURN_GROUPS } from "./turn-groups";
-import { handKey, madeGroup } from "./hand-key";
+import { flushSuit, handKey, madeGroup } from "./hand-key";
 import { BOARDS, cardsToShow, priceGroupOf, realDraw, RUNOUTS, type Bucket, type PGroup } from "./price-hands";
 
 /** Flop drill (Noam & Uri 2026-11-10): the first of the three "How many bb"
@@ -69,6 +69,30 @@ export const TURN_SPOTS: { name: string; flop: string; turn: string }[] = BOARDS
 /** The spots of a street. */
 export const spotsOf = (street: Street) => (street === "flop" ? FLOP_BOARDS.map((b) => ({ name: b.name, flop: b.name })) : TURN_SPOTS);
 
+/** The cards on a group's fan. With a flush possible on the board the suits matter
+ * (Noam 2026-11-13): a flush-draw group shows a card of the suit, every other group shows real
+ * cards of its own without one, so "no flush draw" never looks like it has one. */
+function fanCards(g: FlopGroup, hands: string[], combos: Map<string, [Card, Card][]>, board: Card[]): [Card, Card][] {
+  const suit = flushSuit(board);
+  if (!suit) return cardsToShow("op", hands, combos, board);
+  const fd = g.hands.every((h) => h.endsWith("+fd"));
+  const seen = new Set<string>();
+  const out: [Card, Card][] = [];
+  for (const h of hands) {
+    if (seen.has(h.slice(0, 2))) continue;
+    seen.add(h.slice(0, 2));
+    const all = combos.get(h) ?? [];
+    const n = (c: [Card, Card]) => c.filter((x) => x.s === suit).length;
+    const ok = all.filter((c) => n(c) === (fd ? 1 : 0));
+    // Mixed suits where the hand has them, a different pair of suits from hand to hand.
+    const mixed = ok.filter((c) => c[0].s !== c[1].s);
+    const from = mixed.length ? mixed : ok;
+    const pick = from[out.length % Math.max(1, from.length)] ?? all[0];
+    if (pick) out.push(pick);
+  }
+  return out;
+}
+
 export function buildFlopSpot(name: string): FlopSpot {
   const cached = CACHE.get(name);
   if (cached) return cached;
@@ -123,7 +147,7 @@ export function buildFlopSpot(name: string): FlopSpot {
       color: GROUP_COLORS[i % GROUP_COLORS.length],
       partMark: "some",
       entries,
-      cards: cardsToShow("op", hands, made.get(g.id) ?? new Map(), board),
+      cards: fanCards(g, hands, made.get(g.id) ?? new Map(), board),
       pct: Math.round(((byGroup.get(g.id) ?? 0) / total) * 100),
       answer: { bucket: g.box, why: g.why },
       eq: g.eq,

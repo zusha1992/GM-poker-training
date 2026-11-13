@@ -111,6 +111,9 @@ Each note changes only its own turn. When Noam has finished, the notes that look
 
 **Pot on screen** (Noam, 2026-11-13): the drill shows the pot under the board ("Pot 9.1bb, after a 33% flop bet and call, 95.7bb behind"), so the player can see each box against the pot.
 
+- "Top pair needs to have the same thing, plus the flush draw or without the flush draw" (Noam, 2026-11-13). On these five turns top pair is split too: **with a flush draw 5–15**, without 0–5. *(5–15 is my pick: above top pair without, below overpairs with a flush draw.)*
+- The card fan follows the suits on these turns: a "with a flush draw" group shows a card of the suit, and every other group shows none.
+
 - Fix found on the way: a pair holding one card of the flush suit used to be filed as a draw, so it wasn't asked at all on these five turns. Now it is asked as the pair it is.
 
 | Turn | Note | Change |

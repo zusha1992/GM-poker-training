@@ -16,10 +16,11 @@ export function madeGroup(g: PGroup, hole: [Card, Card], board: Card[], cut: Par
 
 /** Noam 2026-11-13 (9♦6♦2♥ 8♦): when a flush is possible, an overpair holding one card of
  * the flush suit (a flush draw) is worth way more than one without; they are separate groups.
- * Such a combo's key is "AA+fd"; every other combo's key is its two ranks ("AA", "AK"). */
+ * Top pair too. Such a combo's key is "AA+fd"; every other combo's key is its two ranks ("AA", "AK"). */
 export function handKey(hand: string, cards: [Card, Card], g: PGroup, board: Card[]): string {
   const key = hand.slice(0, 2);
   const suit = flushSuit(board);
-  if (suit && g === "op" && cards.filter((c) => c.s === suit).length === 1) return `${key}+fd`;
+  // Noam 2026-11-13: the same for top pair ("top pair needs to have the same thing, with or without the flush draw").
+  if (suit && ["op", "tpgk", "tpmk", "tpwk"].includes(g) && cards.filter((c) => c.s === suit).length === 1) return `${key}+fd`;
   return key;
 }

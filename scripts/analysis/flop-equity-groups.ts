@@ -309,6 +309,15 @@ function principleGroups(name: string, board: Card[], hands: Hand[]): Group[] {
       tps[0].hands = tps.flatMap((g) => g.hands);
       for (const g of tps.slice(1)) out.splice(out.indexOf(g), 1);
     }
+    // Noam 2026-11-13: top pair split like the overpairs, with a flush draw (5–15) or without (0–5).
+    const tp = out.find((g) => g.name?.startsWith("Top pair"));
+    const withFd = tp?.hands.filter(fd) ?? [];
+    if (tp && withFd.length) {
+      tp.hands = tp.hands.filter((h) => !fd(h));
+      tp.name = "Top pair, no flush draw";
+      out.splice(out.indexOf(tp), 0, { name: "Top pair with a flush draw", box: "b5", hands: withFd });
+      if (!tp.hands.length) out.splice(out.indexOf(tp), 1);
+    }
   }
   // Noam 2026-11-13 (K♦Q♦4♠ 8♠, "double flush draw, extremely wet and dangerous"): only the
   // overpairs and top pair, top kicker want the bigger pot (25–50), together; the other good
