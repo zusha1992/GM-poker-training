@@ -290,6 +290,9 @@ function principleGroups(name: string, board: Card[], hands: Hand[]): Group[] {
   // Noam 2026-11-13: on the turn one pair doesn't go for the whole stack yet. BB's calling range
   // keeps getting stronger, and the river decides whether AK shoves. Sets and two pair are way ahead.
   if (board.length > 3) for (const g of out) if (g.box === "b50" && /^(Overpair|Top pair)/.test(g.name ?? "")) g.box = "b25";
+  // Noam 2026-11-13 (K♦Q♦4♠ 8♠): weak top pair on the turn wants no more than 15bb extra:
+  // don't isolate it against BB's strongest range.
+  if (board.length > 3) for (const g of out) if (g.name === "Top pair, weak kicker" && BOX_RANK[g.box] > BOX_RANK.b5) g.box = "b5";
   // Noam 2026-11-13 (9♦6♦2♥ 8♦): on a turn where a flush AND a straight are possible (BB called the flop),
   // two pair is worth only 15–25; top pair, even top kicker, and an overpair only 0–5;
   // an overpair with a flush draw is worth way more than one without (15–25).
@@ -307,6 +310,28 @@ function principleGroups(name: string, board: Card[], hands: Hand[]): Group[] {
       for (const g of tps.slice(1)) out.splice(out.indexOf(g), 1);
     }
   }
+  // Noam 2026-11-13 (K♦Q♦4♠ 8♠, "double flush draw, extremely wet and dangerous"): only the
+  // overpairs and top pair, top kicker want the bigger pot (25–50), together; the other good
+  // kickers (KJ, KT there) go down to 15–25.
+  if (board.length === 4 && ["s", "h", "d", "c"].filter((x) => board.filter((c) => c.s === x).length === 2).length === 2) {
+    const good = out.find((g) => g.name === "Top pair, good kicker" && g.box === "b25");
+    if (good) {
+      const best = Math.max(...good.hands.map(kicker));
+      const tk = good.hands.filter((h) => kicker(h) === best);
+      good.hands = good.hands.filter((h) => kicker(h) !== best);
+      good.box = "b15";
+      if (!good.hands.length) out.splice(out.indexOf(good), 1);
+      const op = out.find((g) => /^Overpair/.test(g.name ?? "") && g.box === "b25");
+      if (op) {
+        op.name = `${op.name} & top pair, top kicker`;
+        op.hands.push(...tk);
+      } else out.push({ name: "Top pair, top kicker", box: "b25", hands: tk });
+    }
+  }
+  // Noam 2026-11-13 (Q♥T♦7♠ J♥: a flush draw and straights already possible): AA and KK are not
+  // strong here; 50bb is never good for them: 15–25. Top pair, good kicker (AQ, KQ) 15–25 at most.
+  if (wet4 && straightPossible(board) && !flushSuit(board))
+    for (const g of out) if (g.box === "b25" && /^(Overpair|Top pair)/.test(g.name ?? "")) g.box = "b15";
   const notes = BOARD_NOTES[name] ?? {};
   for (const g of out) if (g.name && notes[g.name]) g.box = notes[g.name];
   // Biggest box first (a stable sort keeps the order above inside a box).
@@ -520,7 +545,7 @@ const FORCE = process.argv.includes("--force");
 const args = process.argv.slice(2).filter((a) => a !== "--turn" && a !== "--force");
 /** Turns Noam has reviewed (2026-11-13): a general rule never changes them. Only his own note on
  * that turn does: rerun it with --force after adding the note to BOARD_NOTES. */
-const REVIEWED_TURNS = new Set(["A72-6d", "962-8d"]);
+const REVIEWED_TURNS = new Set(["A72-6d", "962-8d", "KQ4-8s", "QT7-Jh"]);
 let locked = 0;
 const flops = args.length ? args.map((a) => a.split("-")[0]) : BOARDS.map((b) => b.name);
 /** With --turn: every turn of the named flops ("A72"), or one turn ("A72-Qh"). */

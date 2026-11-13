@@ -278,6 +278,13 @@ export function FlopScreen({ street = "flop" }: { street?: Street }) {
           </div>
 
           <BigBoard board={spot.board} dealt />
+          {/* Noam 2026-11-13: the pot in view, so the player sees each box against it. */}
+          <div className="flex flex-shrink-0 items-center justify-center gap-2 text-[13px]" data-testid="pot-line" style={{ color: "var(--muted)" }}>
+            <span className="rounded-full px-2.5 py-0.5 font-bold" style={{ color: "var(--gold)", border: "1px solid color-mix(in srgb, var(--gold) 45%, transparent)" }}>
+              Pot {spot.pot}bb
+            </span>
+            <span>{spot.street === "turn" ? "after a 33% flop bet and call" : "single-raised pot"} · {spot.behind}bb behind</span>
+          </div>
 
           <div ref={zoneRef} className="relative mt-auto flex-shrink-0" style={{ touchAction: "none", height: "clamp(236px, 37dvh, 310px)" }} data-testid="buckets">
             {inspecting && current ? (

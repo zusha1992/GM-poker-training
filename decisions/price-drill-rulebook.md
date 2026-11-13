@@ -93,6 +93,20 @@ Each note changes only its own turn. When Noam has finished, the notes that look
 - "The two pair... has to go down dramatically... between 15 and 25, and that's it." Two pair → **15–25**.
 - "Top pair... is not worth more than 0 to 5", and the same for top pair, top kicker "or something very strong one pair". Top pair (one group there), overpairs without a flush draw, and big pocket pairs → **0–5**.
 - "Over pair with the flush draw is worth way more than the over pairs without the flush... separate groups." Overpairs holding one card of the flush suit are their own group, at **15–25**. *(15–25 is my pick: way above 0–5, but not above two pair. Noam to confirm.)*
+**K♦Q♦4♠ 8♠** (Noam, 2026-11-13, reviewed and locked). "Double flush draw... extremely wet and dangerous board."
+- "Aces and Ace King want to go for bigger pots than Ace Jack and Ace 10." AA and AK are one group at **25–50**; KJ and KT at **15–25**.
+- "The weak top pair on the turn would not want to go more than 15 big blinds extra... we don't want to isolate ourselves versus big blind's strongest range." Weak top pair → **5–15**.
+- Applied to the other turns:
+  - On every turn with two flush draws (962-Qh, JT3-6c, T87-As), the overpairs and top pair, top kicker go together at 25–50, and the other good kickers go to 15–25.
+  - On every turn, weak top pair is capped at 5–15.
+
+**Q♥T♦7♠ J♥** (Noam, 2026-11-13, reviewed and locked). "A flush draw and a few possibilities of straights."
+- "Aces and kings are not a strong hand on this board... I don't think putting 50 big blinds in will ever be good for this hand." AA, KK → **15–25**.
+- Top pair, good kicker: "maybe KQ and AQ could go to 15–25 but not more than that." AQ, KQ → **15–25**. Weak top pair 5–15.
+- Applied to the other turns that bring a flush draw with a straight already possible (886-7s, 986-7s, A72-5c, K54-3s): overpairs and top pair, good kicker → 15–25.
+
+**Pot on screen** (Noam, 2026-11-13): the drill shows the pot under the board ("Pot 9.1bb, after a 33% flop bet and call, 95.7bb behind"), so the player can see each box against the pot.
+
 - Fix found on the way: a pair holding one card of the flush suit used to be filed as a draw, so it wasn't asked at all on these five turns. Now it is asked as the pair it is.
 
 | Turn | Note | Change |
