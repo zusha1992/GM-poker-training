@@ -89,6 +89,12 @@ Each note changes only its own turn. When Noam has finished, the notes that look
 - Second pair (or medium pairs & second pair) goes to **0–5**.
 - Top pair splits at the J: AK–AJ (or KA–KJ) are the good kickers, and the T goes down with the weak ones.
 
+**Turns where a flush AND a straight are possible** (Noam, 2026-11-13, on 9♦6♦2♥ 8♦; applied to all five: 962-8d, JT3-9s, T87-9h, A76-8h, KQ4-Ad). BB has called the flop, so:
+- "The two pair... has to go down dramatically... between 15 and 25, and that's it." Two pair → **15–25**.
+- "Top pair... is not worth more than 0 to 5", and the same for top pair, top kicker "or something very strong one pair". Top pair (one group there), overpairs without a flush draw, and big pocket pairs → **0–5**.
+- "Over pair with the flush draw is worth way more than the over pairs without the flush... separate groups." Overpairs holding one card of the flush suit are their own group, at **15–25**. *(15–25 is my pick: way above 0–5, but not above two pair. Noam to confirm.)*
+- Fix found on the way: a pair holding one card of the flush suit used to be filed as a draw, so it wasn't asked at all on these five turns. Now it is asked as the pair it is.
+
 | Turn | Note | Change |
 |---|---|---|
 | A♣7♦2♠ **6♦** | "Second pair is not worth more than five... we don't want to isolate our second pair against better hands." | Second pair (K7–75): 5–15 → **0–5** |

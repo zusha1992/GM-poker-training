@@ -2,6 +2,7 @@ import type { MatrixSnap } from "@/components/drill/postflop/LineMatrix";
 import { btnRangeCombos, card, type Card } from "./line-demo";
 import { FLOP_GROUPS, type FlopGroup } from "./flop-groups";
 import { TURN_GROUPS } from "./turn-groups";
+import { handKey, madeGroup } from "./hand-key";
 import { BOARDS, cardsToShow, priceGroupOf, realDraw, RUNOUTS, type Bucket, type PGroup } from "./price-hands";
 
 /** Flop drill (Noam & Uri 2026-11-10): the first of the three "How many bb"
@@ -87,8 +88,9 @@ export function buildFlopSpot(name: string): FlopSpot {
   const made = new Map<string, Map<string, [Card, Card][]>>();
   let total = 0;
   for (const c of combos) {
-    const asked = isAskedFlopHand(priceGroupOf(c.cards, board, cut), c.cards, board);
-    const id = (asked && groupOf.get(c.hand.slice(0, 2))) || REST;
+    const g = madeGroup(priceGroupOf(c.cards, board, cut), c.cards, board, cut);
+    const asked = isAskedFlopHand(g, c.cards, board);
+    const id = (asked && groupOf.get(handKey(c.hand, c.cards, g, board))) || REST;
     const cell = cells.get(c.hand) ?? {};
     cell[id] = (cell[id] ?? 0) + c.weight;
     cells.set(c.hand, cell);

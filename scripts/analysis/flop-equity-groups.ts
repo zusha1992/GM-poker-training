@@ -8,6 +8,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { score, bbCombos, type Combo } from "./price-equity";
 import { btnRangeCombos, card, type Card } from "../../src/lib/drill/postflop/line-demo";
+import { flushSuit, handKey, madeGroup } from "../../src/lib/drill/postflop/hand-key";
 import { BOARDS, priceGroupOf, realDraw, RUNOUTS, type Bucket, type PGroup } from "../../src/lib/drill/postflop/price-hands";
 
 const SAMPLES = Number(process.env.SAMPLES ?? 6000); // per hand and level: about ±0.7%
@@ -201,6 +202,17 @@ function wetTurn(board: Card[]): boolean {
   return draw && near;
 }
 
+/** Three different ranks inside five on the board (the ace counts low too): a straight is possible. */
+function straightPossible(board: Card[]): boolean {
+  const ranks = new Set(board.flatMap((c) => (c.r === 14 ? [14, 1] : [c.r])));
+  for (let lo = 1; lo <= 10; lo++) {
+    let n = 0;
+    for (let r = lo; r < lo + 5; r++) if (ranks.has(r)) n++;
+    if (n >= 3) return true;
+  }
+  return false;
+}
+
 function principleGroups(name: string, board: Card[], hands: Hand[]): Group[] {
   const wet4 = wetTurn(board);
   // A turn spot ("A72-Qh") starts from its flop's type; a turn that makes a straight or a flush possible makes it wet.
@@ -229,7 +241,13 @@ function principleGroups(name: string, board: Card[], hands: Hand[]): Group[] {
   // Trips on a paired board: by kicker.
   add("Trips, good kicker", "b50", of(["trips"], (h) => Math.max(rv(h.key[0]), rv(h.key[1])) >= 10 && h.key[0] !== h.key[1]));
   add("Trips, weak kicker", "b25", of(["trips"], (h) => Math.max(rv(h.key[0]), rv(h.key[1])) < 10));
-  add(of(["op"]).length > 1 ? "Overpairs" : "Overpair", "b50", of(["op"]));
+  // Noam 2026-11-13 (9♦6♦2♥ 8♦): with a flush on board, overpairs with a flush draw are their own group.
+  const fd = (h: Hand) => h.key.endsWith("+fd");
+  const ops = of(["op"]);
+  if (ops.some(fd)) {
+    add("Overpairs with a flush draw", "b50", ops.filter(fd));
+    add("Overpairs, no flush draw", "b50", ops.filter((h) => !fd(h)));
+  } else add(ops.length > 1 ? "Overpairs" : "Overpair", "b50", ops);
 
   // Top pair: dry and wet in two groups at the T kicker; in between in three (K54: AK+KQ / down to the 8 / the rest).
   const tp = of(["tpgk", "tpmk", "tpwk"]).sort((a, b) => kicker(b) - kicker(a));
@@ -272,6 +290,23 @@ function principleGroups(name: string, board: Card[], hands: Hand[]): Group[] {
   // Noam 2026-11-13: on the turn one pair doesn't go for the whole stack yet. BB's calling range
   // keeps getting stronger, and the river decides whether AK shoves. Sets and two pair are way ahead.
   if (board.length > 3) for (const g of out) if (g.box === "b50" && /^(Overpair|Top pair)/.test(g.name ?? "")) g.box = "b25";
+  // Noam 2026-11-13 (9♦6♦2♥ 8♦): on a turn where a flush AND a straight are possible (BB called the flop),
+  // two pair is worth only 15–25; top pair, even top kicker, and an overpair only 0–5;
+  // an overpair with a flush draw is worth way more than one without (15–25).
+  if (board.length > 3 && flushSuit(board) && straightPossible(board))
+    for (const g of out) {
+      if (g.name === "Two pair" || g.name === "Overpairs with a flush draw") g.box = "b15";
+      else if (/^(Overpair|Top pair|Big pocket pairs|Pocket pairs under)/.test(g.name ?? "")) g.box = "b0";
+    }
+  // All in one box there, top pair is one group.
+  if (board.length > 3 && flushSuit(board) && straightPossible(board)) {
+    const tps = out.filter((g) => g.name?.startsWith("Top pair"));
+    if (tps.length > 1) {
+      tps[0].name = "Top pair";
+      tps[0].hands = tps.flatMap((g) => g.hands);
+      for (const g of tps.slice(1)) out.splice(out.indexOf(g), 1);
+    }
+  }
   const notes = BOARD_NOTES[name] ?? {};
   for (const g of out) if (g.name && notes[g.name]) g.box = notes[g.name];
   // Biggest box first (a stable sort keeps the order above inside a box).
@@ -320,17 +355,18 @@ function solveBoard(flopName: string, turn?: number) {
   // most common group names the hand).
   const byHand = new Map<string, { combos: [Card, Card][]; weight: number; cats: Map<PGroup, number> }>();
   for (const c of btnRangeCombos(board).combos) {
-    let g = priceGroupOf(c.cards, board, cut);
+    let g = madeGroup(priceGroupOf(c.cards, board, cut), c.cards, board, cut);
     const ace = Math.max(c.cards[0].r, c.cards[1].r) === 14;
     // Noam 2026-11-11: ace-high with only a backdoor draw is ace-high; a real draw is not asked.
     if (g === "imp" && ace && !realDraw(c.cards, board)) g = "khnd";
     if (!MADE.has(g)) continue;
     if (g === "khnd" && !ace) continue;
-    const cur = byHand.get(rankKey(c.hand)) ?? { combos: [] as [Card, Card][], weight: 0, cats: new Map<PGroup, number>() };
+    const key = handKey(c.hand, c.cards, g, board);
+    const cur = byHand.get(key) ?? { combos: [] as [Card, Card][], weight: 0, cats: new Map<PGroup, number>() };
     cur.combos.push(c.cards);
     cur.weight += c.weight;
     cur.cats.set(g, (cur.cats.get(g) ?? 0) + c.weight);
-    byHand.set(rankKey(c.hand), cur);
+    byHand.set(key, cur);
   }
 
   const hands: Hand[] = [];
@@ -442,6 +478,15 @@ function solveBoard(flopName: string, turn?: number) {
   return { name, board, hands, reviewed: !!reviewed, groups: groups.map((g) => ({ ...g, hands: g.hands.sort((a, b) => at(b) - at(a) || b.eq[1] - a.eq[1]) })) };
 }
 
+/** " with a ♦" when every hand has the flush draw, " without a ♦" when the group splits off from them. */
+function fdText(keys: string[], board: Card[]): string {
+  const suit = flushSuit(board);
+  if (!suit) return "";
+  const sym = { s: "♠", h: "♥", d: "♦", c: "♣" }[suit];
+  if (keys.every((k) => k.endsWith("+fd"))) return ` with a ${sym}`;
+  return "";
+}
+
 /** "KK–99, A5, K7" — pocket pairs and same-high-card kickers as runs. */
 function labelOf(keys: string[]): string {
   const uniq = [...new Set(keys.map(rankKey))];
@@ -496,7 +541,7 @@ for (const [flopName, turn] of spots) {
   const groups = r.groups.map((g, i) => ({
     id: `g${i + 1}`,
     label: g.name ?? labelOf(g.hands.map((h) => h.key)),
-    handsLabel: labelOf(g.hands.map((h) => h.key)),
+    handsLabel: labelOf(g.hands.map((h) => h.key)) + fdText(g.hands.map((h) => h.key), r.board),
     hands: g.hands.map((h) => h.key),
     box: g.box,
     eq: avg(g).map((x) => Math.round(x * 1000) / 10),
