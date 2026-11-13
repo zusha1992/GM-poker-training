@@ -109,6 +109,9 @@ Each note changes only its own turn. When Noam has finished, the notes that look
 - A9, K9 at **25–50**; Q9, J9 at **15–25**; T9 down with 98 and 97 at **5–15**. *(The boxes for Q9/J9 and T9 are my pick, following his split at the J on A♣7♦2♠ 6♦.)*
 - Applied to every other turn where top pair was at 25–50 (except the two-flush-draw turns, which have their own rule): only the two best kickers stay at 25–50. Other kickers from the J up go to 15–25, and the T and below go to the weak kickers at 5–15. Hands only ever move down.
 
+**8♠8♦6♣ J♦** (Noam, 2026-11-13, reviewed and locked). "Nines and tens don't want to put in any more money: 0 to 5." (He wasn't fully sure, then: "Yeah, I think so.") TT, 99 → **0–5**.
+- Applied to the other turns where the turn is an overcard that turns the flop's overpairs into pocket pairs under it: 986-Kd (QQ–TT), 962-Qh (JJ, TT), T87-As (KK–JJ), all 5–15 → **0–5**.
+
 **Pot on screen** (Noam, 2026-11-13): the drill shows the pot under the board ("Pot 9.1bb, after a 33% flop bet and call, 95.7bb behind"), so the player can see each box against the pot.
 
 - "Top pair needs to have the same thing, plus the flush draw or without the flush draw" (Noam, 2026-11-13). On these five turns top pair is split too: **with a flush draw 5–15**, without 0–5. *(5–15 is my pick: above top pair without, below overpairs with a flush draw.)*

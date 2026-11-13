@@ -366,6 +366,20 @@ function principleGroups(name: string, board: Card[], hands: Hand[]): Group[] {
       into("b5", "Top pair, weak kicker", movers.filter((h) => kicker(h) < 11));
     }
   }
+  // Noam 2026-11-13 (8♠8♦6♣ J♦): TT and 99 don't want to put in any more money: 0–5. They were
+  // overpairs on the flop, and the turn overcard made them pocket pairs under it.
+  if (board.length > 3 && board[3].r > Math.max(...board.slice(0, 3).map((c) => c.r))) {
+    const passed = (h: Hand) => h.key[0] === h.key[1] && !h.key.includes("+") && rv(h.key[0]) > Math.max(...board.slice(0, 3).map((c) => c.r)) && rv(h.key[0]) < board[3].r;
+    for (const g of [...out]) {
+      const hs = g.hands.filter(passed);
+      if (!hs.length || g.box === "b0" || g.box === "big") continue;
+      if (hs.length === g.hands.length) g.box = "b0";
+      else {
+        g.hands = g.hands.filter((h) => !passed(h));
+        out.push({ name: `Pocket pairs under the ${ch(board[3].r)}`, box: "b0", hands: hs });
+      }
+    }
+  }
   const notes = BOARD_NOTES[name] ?? {};
   for (const g of out) if (g.name && notes[g.name]) g.box = notes[g.name];
   // Biggest box first (a stable sort keeps the order above inside a box).
@@ -579,7 +593,7 @@ const FORCE = process.argv.includes("--force");
 const args = process.argv.slice(2).filter((a) => a !== "--turn" && a !== "--force");
 /** Turns Noam has reviewed (2026-11-13): a general rule never changes them. Only his own note on
  * that turn does: rerun it with --force after adding the note to BOARD_NOTES. */
-const REVIEWED_TURNS = new Set(["A72-6d", "962-8d", "KQ4-8s", "QT7-Jh", "962-2c"]);
+const REVIEWED_TURNS = new Set(["A72-6d", "962-8d", "KQ4-8s", "QT7-Jh", "962-2c", "886-Jd"]);
 let locked = 0;
 const flops = args.length ? args.map((a) => a.split("-")[0]) : BOARDS.map((b) => b.name);
 /** With --turn: every turn of the named flops ("A72"), or one turn ("A72-Qh"). */
