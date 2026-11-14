@@ -148,7 +148,17 @@ Each note changes only its own turn. When Noam has finished, the notes that look
 
   The tests are the same as on the flop and turn: 50–100 (stacks) if L3 ≥ 50%, 25–50 if L2 ≥ 50%, 15–25 if L1 ≥ 60%, 5–15 if L1 ≥ 50%, 0–5 if L0 ≥ 50%, else Pot is too big. *(Why L3 is the all-in call: against everything BB brings to the river, AJ goes for stacks on A♣7♦2♠ Q♥ 9♣; against the hands that call a shove it doesn't.)*
 - **Groups:** the turn's groups by Noam's principles (sets, two pair, top pair by kicker, pairs by rank). The turn-only caps don't apply ("the river decides"): each hand's box is its own equity. A group whose hands land in different boxes splits; a lone hand joins its group's part one box away, or stays alone. Two groups of one kind side by side in one box merge ("Top pair"). On a flush river the flushes are named apart: "♣ flushes: KQ–K7".
-- **All 66 rivers are drafts**: nothing reviewed yet. Noam's notes go in `BOARD_NOTES` under the river's name, and the river gets locked (`REVIEWED_RIVERS`), as on the turn.
+- **River review, river by river:**
+  - **A♣7♦2♠ 5♣ 6♣** (Noam, 2026-11-14, reviewed and locked). "Top pair: not good to put more money in, 0–5 is good." Top pair (AK–AT were 50–100, A9–A3 Pot is too big) → **0–5**. "Same for two pair on that board: not good enough for stacks, not good enough for 50bb more; 15–25." Two pair → **15–25**. Noam called top pair going in on a flush-and-straight board "a very bad error". The first version had switched off the turn's caps on the river, so these hands were boxed by equity against BB's all-in callers alone.
+  - Applied to every river with a flush and a straight possible (32 rivers): top pair and overpairs at most **0–5**, two pair at most **15–25**, the same as the turn rule.
+  - From the T♥8♥7♠ 2♦ turn note (top pair no more than 25 with straights possible): on every river with a straight possible, top pair and overpairs are capped at **15–25** (11 more rivers had them at 25–50 or 50–100, e.g. K3 at 50–100 on 9♠8♦6♣ 2♥ K♣).
+  - **J♠T♠3♣ 2♥ 3♦** (Noam, 2026-11-14, reviewed and locked). "J9, J8 and J7 definitely want to check back and don't want to put in more money: 0–5 is the right answer." Top pair, weak kicker (J9–J7, were 25–50) → **0–5**.
+  - Applied to every river: top pair with a weak kicker is **0–5** on the river (on the turn it was capped at 5–15).
+  - Same river: "44–99: 0–5" (were Pot is too big). Applied to every river: **any pair checks back, so 0–5 at least, never Pot is too big**; only ace-high with no showdown value can be Pot is too big. (On this board second pair AT–T8 beats 99, so it moves to 0–5 too.)
+  - Same river: "AJ, KJ and QJ are worth 25–50, not the whole stack" (were 50–100). Applied to every **paired river** (BB can have trips and full houses): top pair is capped at **25–50**. Not to every river: the A72 rule (AK gets the stacks in by the river on a dry board) stands. Overpairs (AA–QQ at 50–100) not mentioned, so not changed.
+  - Same river: "No way AA, KK and QQ are worth the same pot size as AJ." Applied to every river: **an overpair is never in a lower box than top pair**.
+  - The caps (flush and straight → 0–5, straight → 15–25, paired → 25–50) cover every one-pair group, not just the ones named top pair or overpair. **A pair below top pair is never in a higher box than top pair** (9♠8♦6♣ 2♥ K♣ had QQ–TT and A9 at 50–100 over AK at 15–25: BB's all-in calls there are only a handful of hands).
+- **Every other river is still a draft.** Noam's notes go in `BOARD_NOTES` under the river's name, and the river gets locked (`REVIEWED_RIVERS`), as on the turn.
 
 ---
 
