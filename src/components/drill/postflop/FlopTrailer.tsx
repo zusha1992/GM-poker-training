@@ -28,10 +28,13 @@ const FLOP_T = { folds: 250, raise: 700, sbFold: 1100, call: 1350, sweep: 1850, 
 // Noam 2026-11-12, turn drill: then BTN bets the flop small, BB calls, the bets go in and the turn is dealt.
 const TURN_T = { folds: 250, raise: 700, sbFold: 1100, call: 1350, sweep: 1850, deal: 2150, flip: 2450, fbet: 3000, fcall: 3400, fsweep: 3850, tdeal: 4100, tflip: 4350, caption: 4900, out: 5300 };
 
-type Step = keyof typeof TURN_T;
+// Noam 2026-11-14, river drill: then BTN bets the turn (66% or an overbet), BB calls, and the river is dealt.
+const RIVER_T = { folds: 250, raise: 700, sbFold: 1100, call: 1350, sweep: 1850, deal: 2150, flip: 2450, fbet: 3000, fcall: 3400, fsweep: 3850, tdeal: 4100, tflip: 4350, tbet: 4850, tcall: 5250, tsweep: 5700, rdeal: 5950, rflip: 6200, caption: 6750, out: 7150 };
 
-export function FlopTrailer({ board, street = "flop", onDone }: { board: Card[]; street?: "flop" | "turn"; onDone: () => void }) {
-  const T: Partial<Record<Step, number>> = street === "turn" ? TURN_T : FLOP_T;
+type Step = keyof typeof RIVER_T;
+
+export function FlopTrailer({ board, street = "flop", turnBet = 6, onDone }: { board: Card[]; street?: "flop" | "turn" | "river"; turnBet?: number; onDone: () => void }) {
+  const T: Partial<Record<Step, number>> = street === "river" ? RIVER_T : street === "turn" ? TURN_T : FLOP_T;
   const ORDER = Object.keys(T) as Step[];
   const [step, setStep] = useState(-1);
   const done = useRef(false);
@@ -45,10 +48,11 @@ export function FlopTrailer({ board, street = "flop", onDone }: { board: Card[];
     const timers = ORDER.map((k, i) =>
       setTimeout(() => {
         setStep(i);
-        if (k === "raise" || k === "call" || k === "fbet" || k === "fcall") [0, 70, 140].forEach((d) => setTimeout(() => tone(1250 + d, 0.035, "triangle"), d));
-        if (k === "sweep" || k === "fsweep") [0, 60, 120, 180].forEach((d) => setTimeout(() => tone(1100 - d, 0.04, "triangle"), d));
+        if (k === "raise" || k === "call" || k === "fbet" || k === "fcall" || k === "tbet" || k === "tcall") [0, 70, 140].forEach((d) => setTimeout(() => tone(1250 + d, 0.035, "triangle"), d));
+        if (k === "sweep" || k === "fsweep" || k === "tsweep") [0, 60, 120, 180].forEach((d) => setTimeout(() => tone(1100 - d, 0.04, "triangle"), d));
         if (k === "flip") [0, 150, 300].forEach((d, n) => setTimeout(() => tone(523 + n * 131, 0.09), d));
         if (k === "tflip") tone(915, 0.1);
+        if (k === "rflip") tone(1046, 0.1);
         if (k === "caption") tone(784, 0.14);
       }, T[k]!),
     );
@@ -66,18 +70,22 @@ export function FlopTrailer({ board, street = "flop", onDone }: { board: Card[];
     ...(at("call") ? { BB: "Call" } : {}),
     ...(at("fbet") ? { BTN: "Bet 1.8" } : {}),
     ...(at("fcall") ? { BB: "Call 1.8" } : {}),
+    ...(at("tbet") ? { BTN: `Bet ${turnBet}` } : {}),
+    ...(at("tcall") ? { BB: `Call ${turnBet}` } : {}),
   };
+  const r1 = (x: number) => String(Math.round(x * 10) / 10);
   const stack: Record<Seat, string> = {
     UTG: "100",
     HJ: "100",
     CO: "100",
     SB: "99.5",
-    BB: at("fcall") ? "95.7" : at("call") ? "97.5" : "99",
-    BTN: at("fbet") ? "95.7" : at("raise") ? "97.5" : "100",
+    BB: at("tcall") ? r1(95.7 - turnBet) : at("fcall") ? "95.7" : at("call") ? "97.5" : "99",
+    BTN: at("tbet") ? r1(95.7 - turnBet) : at("fbet") ? "95.7" : at("raise") ? "97.5" : "100",
   };
   const swept = at("sweep");
   const fswept = at("fsweep");
-  const pot = at("fcall") ? "9.1" : at("fbet") ? "7.3" : swept ? "5.5" : at("call") ? "5.5" : at("raise") ? "4" : "1.5";
+  const tswept = at("tsweep");
+  const pot = at("tcall") ? r1(9.1 + 2 * turnBet) : at("tbet") ? r1(9.1 + turnBet) : at("fcall") ? "9.1" : at("fbet") ? "7.3" : swept ? "5.5" : at("call") ? "5.5" : at("raise") ? "4" : "1.5";
 
   return (
     <motion.div
@@ -93,7 +101,7 @@ export function FlopTrailer({ board, street = "flop", onDone }: { board: Card[];
           Single-raised pot
         </b>
         <span className="text-[13px] tracking-[0.12em] uppercase" style={{ color: "var(--muted)" }}>
-          {street === "turn" ? "Flop bet 1.8 · called" : "6-max · 100bb deep"}
+          {street === "river" ? `Flop bet 1.8 · turn bet ${turnBet} · called` : street === "turn" ? "Flop bet 1.8 · called" : "6-max · 100bb deep"}
         </span>
       </motion.div>
 
@@ -143,10 +151,18 @@ export function FlopTrailer({ board, street = "flop", onDone }: { board: Card[];
         <Bet seat="BTN" n={3} color="#F2564B" show={at("raise")} from swept={swept} />
         <Bet seat="BTN" n={2} color="#F2564B" show={at("fbet")} from swept={fswept} />
         <Bet seat="BB" n={2} color="#35C277" show={at("fcall")} from swept={fswept} />
+        <Bet seat="BTN" n={4} color="#F2564B" show={at("tbet")} from swept={tswept} />
+        <Bet seat="BB" n={4} color="#35C277" show={at("tcall")} from swept={tswept} />
 
         {/* The flop: three cards land face down, then turn over one by one; the turn after the flop bet and call. */}
         <div className="absolute flex gap-1.5" style={{ left: "50%", top: "53%", transform: "translate(-50%,-50%)" }}>
-          {board.map((c, i) => (i < 3 ? <TableCard key={i} card={c} i={i} landed={at("deal")} flipped={at("flip")} /> : <TableCard key={i} card={c} i={0} landed={at("tdeal")} flipped={at("tflip")} />))}
+          {board.map((c, i) =>
+            i < 3 ? (
+              <TableCard key={i} card={c} i={i} landed={at("deal")} flipped={at("flip")} />
+            ) : (
+              <TableCard key={i} card={c} i={0} landed={at(i === 3 ? "tdeal" : "rdeal")} flipped={at(i === 3 ? "tflip" : "rflip")} />
+            ),
+          )}
         </div>
 
         {(Object.keys(SEAT_AT) as Seat[]).map((s) => (

@@ -20,6 +20,8 @@ export function madeGroup(g: PGroup, hole: [Card, Card], board: Card[], cut: Par
 export function handKey(hand: string, cards: [Card, Card], g: PGroup, board: Card[]): string {
   const key = hand.slice(0, 2);
   const suit = flushSuit(board);
+  // River drill: no draws left. A flush is apart from the same two ranks without it ("AK+fl" vs "AK").
+  if (board.length === 5) return suit && (g === "flush" || g === "flushlo") ? `${key}+fl` : key;
   // Noam 2026-11-13: the same for top pair ("top pair needs to have the same thing, with or without the flush draw").
   if (suit && ["op", "tpgk", "tpmk", "tpwk"].includes(g) && cards.filter((c) => c.s === suit).length === 1) return `${key}+fd`;
   return key;

@@ -133,6 +133,23 @@ Each note changes only its own turn. When Noam has finished, the notes that look
   - Readable reports per board are in `decisions/ranges/flop-equity/`.
   - Feedback on a board changes only that board (section 3, "Board by board").
 
+### River drill, first version *(Noam, 2026-11-14: "the same as the flop and the turn ... BB's range is stronger on the river ... which hands want to go for stacks ... the river card changes the board or is a brick")*
+
+- **Spot:** BTN bets the flop small (1.8bb), BB calls; BTN bets the turn (66%, 6bb, or the overbet, 13.7bb, as the turn already had), BB calls. Each turn has two rivers, a brick and one that changes the board: 33 × 2 = 66 rivers ("A72-Qh-9c"). The pot is 21.1bb (89.7 behind) or 36.5bb (82 behind).
+- **Asked:** made hands, ace-high and better. There are no draws on the river; busted draws and trash aren't asked.
+- **The river ladder** (BB's ranges come from our river solves, `river-call-ranges.ts`):
+
+  | Level | BB range |
+  |---|---|
+  | L0 | BB after calling the turn bet |
+  | L1 | BB's calls of a 66% river bet |
+  | L2 | BB's top pair or better among those calls |
+  | L3 | BB's calls of an all-in: who pays off a shove |
+
+  The tests are the same as on the flop and turn: 50–100 (stacks) if L3 ≥ 50%, 25–50 if L2 ≥ 50%, 15–25 if L1 ≥ 60%, 5–15 if L1 ≥ 50%, 0–5 if L0 ≥ 50%, else Pot is too big. *(Why L3 is the all-in call: against everything BB brings to the river, AJ goes for stacks on A♣7♦2♠ Q♥ 9♣; against the hands that call a shove it doesn't.)*
+- **Groups:** the turn's groups by Noam's principles (sets, two pair, top pair by kicker, pairs by rank). The turn-only caps don't apply ("the river decides"): each hand's box is its own equity. A group whose hands land in different boxes splits; a lone hand joins its group's part one box away, or stays alone. Two groups of one kind side by side in one box merge ("Top pair"). On a flush river the flushes are named apart: "♣ flushes: KQ–K7".
+- **All 66 rivers are drafts**: nothing reviewed yet. Noam's notes go in `BOARD_NOTES` under the river's name, and the river gets locked (`REVIEWED_RIVERS`), as on the turn.
+
 ---
 
 ## 1. The spot and the question

@@ -2,6 +2,7 @@ import type { MatrixSnap } from "@/components/drill/postflop/LineMatrix";
 import { btnRangeCombos, card, type Card } from "./line-demo";
 import { FLOP_GROUPS, type FlopGroup } from "./flop-groups";
 import { TURN_GROUPS } from "./turn-groups";
+import { RIVER_GROUPS } from "./river-groups";
 import { flushSuit, handKey, madeGroup } from "./hand-key";
 import { BOARDS, cardsToShow, priceGroupOf, realDraw, RUNOUTS, type Bucket, type PGroup } from "./price-hands";
 
@@ -50,9 +51,10 @@ export type FlopPiece = {
   eq: number[];
 };
 
-export type Street = "flop" | "turn";
-/** `name`: the flop ("A72") or the turn spot ("A72-Qh"); `flop`: its flop. */
-export type FlopSpot = { name: string; flop: string; street: Street; board: Card[]; pot: number; behind: number; snap: MatrixSnap; pieces: FlopPiece[]; order: string[] };
+export type Street = "flop" | "turn" | "river";
+/** `name`: the flop ("A72"), the turn spot ("A72-Qh") or the river spot ("A72-Qh-9c"); `flop`: its flop.
+ * `turnBet`: BTN's turn bet in bb (river spots). */
+export type FlopSpot = { name: string; flop: string; street: Street; board: Card[]; pot: number; behind: number; turnBet?: number; snap: MatrixSnap; pieces: FlopPiece[]; order: string[] };
 
 const CACHE = new Map<string, FlopSpot>();
 
@@ -66,8 +68,13 @@ export const TURN_SPOTS: { name: string; flop: string; turn: string }[] = BOARDS
   b.turns.map((t) => ({ name: `${b.name}-${code(t.card)}`, flop: b.name, turn: t.card })).filter((t) => TURN_GROUPS[t.name]?.length),
 );
 
+/** River drill (Noam 2026-11-14): every turn's two rivers (a brick and one that changes the board), e.g. "A72-Qh-9c". */
+export const RIVER_SPOTS: { name: string; flop: string; turn: string; river: string }[] = BOARDS.flatMap((b) =>
+  b.turns.flatMap((t) => t.rivers.map((r) => ({ name: `${b.name}-${code(t.card)}-${code(r.card)}`, flop: b.name, turn: t.card, river: r.card }))),
+).filter((r) => RIVER_GROUPS[r.name]?.length);
+
 /** The spots of a street. */
-export const spotsOf = (street: Street) => (street === "flop" ? FLOP_BOARDS.map((b) => ({ name: b.name, flop: b.name })) : TURN_SPOTS);
+export const spotsOf = (street: Street) => (street === "flop" ? FLOP_BOARDS.map((b) => ({ name: b.name, flop: b.name })) : street === "turn" ? TURN_SPOTS : RIVER_SPOTS);
 
 /** The cards on a group's fan. With a flush possible on the board the suits matter
  * (Noam 2026-11-13): a flush-draw group shows a card of the suit, every other group shows real
@@ -96,13 +103,14 @@ function fanCards(g: FlopGroup, hands: string[], combos: Map<string, [Card, Card
 export function buildFlopSpot(name: string): FlopSpot {
   const cached = CACHE.get(name);
   if (cached) return cached;
-  const [flopName, turnCode] = name.split("-");
+  const [flopName, turnCode, riverCode] = name.split("-");
   const spec = BOARDS.find((b) => b.name === flopName)!;
   const turn = turnCode ? spec.turns.find((t) => code(t.card) === turnCode)! : undefined;
+  const river = turn && riverCode ? turn.rivers.find((r) => code(r.card) === riverCode)! : undefined;
   // On the turn a pair with a draw is still a pair (as in the generator).
-  const cut = turn ? { ...turn, pairDraws: false } : RUNOUTS.find((r) => r.board === flopName)!.streets[0];
-  const board = [...spec.flop, ...(turn ? [turn.card] : [])].map(card);
-  const groups: FlopGroup[] = turn ? TURN_GROUPS[name] : FLOP_GROUPS[name];
+  const cut = river ? { ...river, pairDraws: false } : turn ? { ...turn, pairDraws: false } : RUNOUTS.find((r) => r.board === flopName)!.streets[0];
+  const board = [...spec.flop, ...(turn ? [turn.card] : []), ...(river ? [river.card] : [])].map(card);
+  const groups: FlopGroup[] = river ? RIVER_GROUPS[name] : turn ? TURN_GROUPS[name] : FLOP_GROUPS[name];
   const groupOf = new Map<string, string>();
   for (const g of groups) for (const h of g.hands) groupOf.set(h, g.id);
 
@@ -139,7 +147,9 @@ export function buildFlopSpot(name: string): FlopSpot {
       key: g.id,
       shape: SHAPE_OF[g.box],
       label: g.label,
-      name: turn
+      name: river
+        ? `Equity: ${g.eq[3].toFixed(0)}% vs the hands that call an all-in · ${g.eq[2].toFixed(0)}% vs BB's top pair+ that calls · ${g.eq[1].toFixed(0)}% vs a river call · ${g.eq[0].toFixed(0)}% vs BB's turn calls`
+        : turn
         ? `Equity: ${g.eq[3].toFixed(0)}% vs BB's top pair+ · ${g.eq[2].toFixed(0)}% vs middle pair+ · ${g.eq[1].toFixed(0)}% vs a turn call · ${g.eq[0].toFixed(0)}% vs BB's flop calls`
         : `Equity: ${g.eq[3].toFixed(0)}% vs BB's top pair+ · ${g.eq[2].toFixed(0)}% vs middle pair+ · ${g.eq[1].toFixed(0)}% vs a flop call · ${g.eq[0].toFixed(0)}% vs all`,
       desc: g.handsLabel ?? g.label,
@@ -155,8 +165,15 @@ export function buildFlopSpot(name: string): FlopSpot {
   });
 
   // The flop bet is 1.8bb and called (as in the old full-hand drill): 9.1bb in the pot on the turn.
-  const money = turn ? { pot: 9.1, behind: 95.7 } : { pot: 5.5, behind: 97.5 };
-  const street: Street = turn ? "turn" : "flop";
+  // River: the turn bet was 66% (6bb) or an overbet (13.7bb), and called.
+  const money = river
+    ? turn!.bet === "overbet"
+      ? { pot: 36.5, behind: 82, turnBet: 13.7 }
+      : { pot: 21.1, behind: 89.7, turnBet: 6 }
+    : turn
+      ? { pot: 9.1, behind: 95.7 }
+      : { pot: 5.5, behind: 97.5 };
+  const street: Street = river ? "river" : turn ? "turn" : "flop";
   const spot: FlopSpot = { name, flop: flopName, street, board, ...money, snap: { street, cells, basis, total }, pieces, order: [...groups.map((g) => g.id), REST] };
   CACHE.set(name, spot);
   return spot;

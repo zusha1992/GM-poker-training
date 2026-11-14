@@ -42,6 +42,8 @@ function combosOf(spec: string, dead: Card[]): Combo[] {
 /** Monte Carlo equity of BTN's hand vs a weighted BB range (BB's combo picked by weight). */
 function equity(hero: [Card, Card], board: Card[], range: Combo[], iters: number): number {
   const live = range.filter((c) => !c.cards.some((x) => hero.some((h) => same(h, x))));
+  // The hand blocks every combo of a tiny range (a river all-in call): no answer at this level.
+  if (!live.length) return NaN;
   const cum: number[] = [];
   let tot = 0;
   for (const c of live) cum.push((tot += c.w));
@@ -292,20 +294,20 @@ function principleGroups(name: string, board: Card[], hands: Hand[]): Group[] {
   }
   // Noam 2026-11-13: on the turn one pair doesn't go for the whole stack yet. BB's calling range
   // keeps getting stronger, and the river decides whether AK shoves. Sets and two pair are way ahead.
-  if (board.length > 3) for (const g of out) if (g.box === "b50" && /^(Overpair|Top pair)/.test(g.name ?? "")) g.box = "b25";
+  if (board.length === 4) for (const g of out) if (g.box === "b50" && /^(Overpair|Top pair)/.test(g.name ?? "")) g.box = "b25";
   // Noam 2026-11-13 (K♦Q♦4♠ 8♠): weak top pair on the turn wants no more than 15bb extra:
   // don't isolate it against BB's strongest range.
-  if (board.length > 3) for (const g of out) if (g.name === "Top pair, weak kicker" && BOX_RANK[g.box] > BOX_RANK.b5) g.box = "b5";
+  if (board.length === 4) for (const g of out) if (g.name === "Top pair, weak kicker" && BOX_RANK[g.box] > BOX_RANK.b5) g.box = "b5";
   // Noam 2026-11-13 (9♦6♦2♥ 8♦): on a turn where a flush AND a straight are possible (BB called the flop),
   // two pair is worth only 15–25; top pair, even top kicker, and an overpair only 0–5;
   // an overpair with a flush draw is worth way more than one without (15–25).
-  if (board.length > 3 && flushSuit(board) && straightPossible(board))
+  if (board.length === 4 && flushSuit(board) && straightPossible(board))
     for (const g of out) {
       if (g.name === "Two pair" || g.name === "Overpairs with a flush draw") g.box = "b15";
       else if (/^(Overpair|Top pair|Big pocket pairs|Pocket pairs under)/.test(g.name ?? "")) g.box = "b0";
     }
   // All in one box there, top pair is one group.
-  if (board.length > 3 && flushSuit(board) && straightPossible(board)) {
+  if (board.length === 4 && flushSuit(board) && straightPossible(board)) {
     const tps = out.filter((g) => g.name?.startsWith("Top pair"));
     if (tps.length > 1) {
       tps[0].name = "Top pair";
@@ -342,13 +344,13 @@ function principleGroups(name: string, board: Card[], hands: Hand[]): Group[] {
   }
   // Noam 2026-11-13 (Q♥T♦7♠ J♥: a flush draw and straights already possible): AA and KK are not
   // strong here; 50bb is never good for them: 15–25. Top pair, good kicker (AQ, KQ) 15–25 at most.
-  if (wet4 && straightPossible(board) && !flushSuit(board))
+  if (board.length === 4 && wet4 && straightPossible(board) && !flushSuit(board))
     for (const g of out) if (g.box === "b25" && /^(Overpair|Top pair)/.test(g.name ?? "")) g.box = "b15";
   // Noam 2026-11-13 (9♦6♦2♥ 2♣): "A9 cannot be together with T9, J9 and Q9; A9 and K9 can go
   // together." On the turn, top pair at 25–50 keeps only the two best kickers; the other kickers
   // from the J up go to 15–25, the rest to the weak kickers (5–15). Hands only move down.
   const doubleFd = board.length === 4 && ["s", "h", "d", "c"].filter((x) => board.filter((c) => c.s === x).length === 2).length === 2;
-  if (board.length > 3 && !doubleFd) {
+  if (board.length === 4 && !doubleFd) {
     const tps = out.filter((g) => g.name?.startsWith("Top pair"));
     const ks = [...new Set(tps.flatMap((g) => g.hands).map(kicker))].sort((a, b) => b - a).slice(0, 2);
     const g25 = tps.filter((g) => g.box === "b25");
@@ -371,11 +373,11 @@ function principleGroups(name: string, board: Card[], hands: Hand[]): Group[] {
   }
   // Noam 2026-11-14 (T♥8♥7♠ 2♦): with a straight possible on the turn, top pair (even top kicker)
   // is worth no more than 15–25.
-  if (board.length > 3 && straightPossible(board))
+  if (board.length === 4 && straightPossible(board))
     for (const g of out) if (g.box === "b25" && g.name?.startsWith("Top pair")) g.box = "b15";
   // Noam 2026-11-13 (8♠8♦6♣ J♦): TT and 99 don't want to put in any more money: 0–5. They were
   // overpairs on the flop, and the turn overcard made them pocket pairs under it.
-  if (board.length > 3 && board[3].r > Math.max(...board.slice(0, 3).map((c) => c.r))) {
+  if (board.length === 4 && board[3].r > Math.max(...board.slice(0, 3).map((c) => c.r))) {
     const passed = (h: Hand) => h.key[0] === h.key[1] && !h.key.includes("+") && rv(h.key[0]) > Math.max(...board.slice(0, 3).map((c) => c.r)) && rv(h.key[0]) < board[3].r;
     for (const g of [...out]) {
       const hs = g.hands.filter(passed);
@@ -415,21 +417,80 @@ const rankKey = (k: string) => k.slice(0, 2);
 /** "Q♥" → "Qh", as in the solver's file names. */
 const code = (c: string) => c[0] + ({ "♠": "s", "♥": "h", "♦": "d", "♣": "c" } as Record<string, string>)[c[1]];
 
+/** River drill (Noam 2026-11-14): the turn's groups, but every box comes from equity against BB's
+ * river ranges, which are much stronger after two calls: a hand goes for stacks only if it beats
+ * BB's top pair or better. A group whose hands land in different boxes splits by box; a part of
+ * one hand joins its nearest part. Noam's notes on a river (BOARD_NOTES) still decide over equity. */
+function riverBoxes(groups: Group[], notes: Record<string, Bucket>): Group[] {
+  const w = (hs: Hand[]) => hs.reduce((s, h) => s + h.weight, 0);
+  const one = (p: { hands: Hand[] }) => new Set(p.hands.map((h) => rankKey(h.key))).size === 1;
+  const boxes = (Object.keys(BOX_RANK) as Bucket[]).sort((a, b) => BOX_RANK[b] - BOX_RANK[a]);
+  // Each group split by its hands' own boxes; `src` = the group it came from.
+  let parts = groups.flatMap((g, src) => boxes.map((box) => ({ name: g.name, src, box, hands: g.hands.filter((h) => h.box === box) })).filter((p) => p.hands.length));
+  for (let k = 0; k < parts.length; k++) {
+    const p = parts[k];
+    if (!one(p) || parts.length < 2) continue;
+    // A lone hand joins the part of its own group one box away (the bigger part's box wins);
+    // further away, it stays a group of its own (AK alone at 50–100 is a real answer).
+    const into = parts.find((q) => q !== p && q.src === p.src && Math.abs(BOX_RANK[q.box] - BOX_RANK[p.box]) === 1);
+    if (!into) continue;
+    if (w(p.hands) > w(into.hands)) into.box = p.box;
+    into.hands.push(...p.hands);
+    parts = parts.filter((q) => q !== p);
+    k = -1;
+  }
+  // A strong group's parts are named by what they hold ("Sets" at 0–5 when the straight came in).
+  const strong = /^(Full houses|Flushes|Straights|Sets|Trips)/;
+  const kindsOf = (hs: Hand[]) => {
+    const has = (f: (h: Hand) => boolean) => hs.some(f);
+    const pocket = (h: Hand) => h.key[0] === h.key[1];
+    const ks = [
+      has((h) => h.cat === "boat") && "full houses",
+      has((h) => h.cat === "flush" || h.cat === "flushlo") && "flushes",
+      has((h) => h.cat === "straight") && "straights",
+      has((h) => h.cat === "twopair" && pocket(h)) && "sets",
+      has((h) => h.cat === "trips") && "trips",
+      has((h) => h.cat === "twopair" && !pocket(h)) && "two pair",
+    ].filter(Boolean) as string[];
+    const t = ks.length > 2 ? `${ks.slice(0, -1).join(", ")} & ${ks[ks.length - 1]}` : ks.join(" & ");
+    return t.replace(/^./, (c) => c.toUpperCase());
+  };
+  for (const p of parts) if (p.name && strong.test(p.name) && kindsOf(p.hands)) p.name = kindsOf(p.hands);
+  const out = parts.map((p) => ({ name: p.name, box: p.name && notes[p.name] ? notes[p.name] : p.box, hands: p.hands })).sort((a, b) => BOX_RANK[b.box] - BOX_RANK[a.box]);
+  // Side by side in one box, two groups of one kind are one group ("Top pair, good kicker" + "Top pair, weak kicker").
+  const kind = (n?: string) => n?.split(",")[0];
+  for (let i = out.length - 1; i > 0; i--) {
+    if (out[i].box !== out[i - 1].box || !kind(out[i].name) || kind(out[i].name) !== kind(out[i - 1].name)) continue;
+    out[i - 1].hands.push(...out[i].hands);
+    if (out[i].name !== out[i - 1].name) out[i - 1].name = kind(out[i].name);
+    out.splice(i, 1);
+  }
+  return out;
+}
+
 /** Turn drill (Noam 2026-11-12): the same ladder one street later. BTN bet the flop small
  * and BB called; L0 is BB's range after that call, L1 BB after calling a turn bet (solver). */
-function solveBoard(flopName: string, turn?: number) {
+function solveBoard(flopName: string, turn?: number, river?: number) {
   const spec = BOARDS.find((b) => b.name === flopName)!;
   const t = turn === undefined ? undefined : spec.turns[turn];
-  const name = t ? `${flopName}-${code(t.card)}` : flopName;
+  const r = t && river !== undefined ? t.rivers[river] : undefined;
+  const name = t ? `${flopName}-${code(t.card)}${r ? `-${code(r.card)}` : ""}` : flopName;
   // On the turn a pair with a draw is still a pair: the drill asks what the made hand is worth.
-  const cut = t ? { ...t, pairDraws: false } : RUNOUTS.find((r) => r.board === flopName)!.streets[0];
-  const board = [...spec.flop, ...(t ? [t.card] : [])].map(card);
+  const cut = r ? { ...r, pairDraws: false } : t ? { ...t, pairDraws: false } : RUNOUTS.find((x) => x.board === flopName)!.streets[0];
+  const board = [...spec.flop, ...(t ? [t.card] : []), ...(r ? [r.card] : [])].map(card);
   const top = Math.max(...board.map((c) => c.r));
   const dir = `decisions/ranges/solver/${flopName}`;
-  const whole = t ? combosOf(readFileSync(`${dir}/bb-turn.txt`, "utf8"), board) : bbCombos(board);
-  const called = combosOf(readFileSync(t ? `${dir}/bb-river-${code(t.card)}.txt` : `${dir}/bb-turn.txt`, "utf8"), board);
+  // River drill (Noam 2026-11-14): L0 = BB after calling the turn bet, L1 = BB after calling a river bet (river-call-ranges.ts).
+  const whole = r ? combosOf(readFileSync(`${dir}/bb-river-${code(t!.card)}.txt`, "utf8"), board) : t ? combosOf(readFileSync(`${dir}/bb-turn.txt`, "utf8"), board) : bbCombos(board);
+  const called = combosOf(readFileSync(r ? `${dir}/bb-call-${code(t!.card)}-${code(r.card)}.txt` : t ? `${dir}/bb-river-${code(t.card)}.txt` : `${dir}/bb-turn.txt`, "utf8"), board);
   const bbGroup = (c: Combo) => priceGroupOf(c.cards, board, cut);
-  const levels = [whole, called, whole.filter((c) => L2_GROUPS.has(bbGroup(c))), whole.filter((c) => L3_GROUPS.has(bbGroup(c)))];
+  // River (Noam 2026-11-14, "which hands want to go for stacks"): L2 = BB's top pair or better among the
+  // calls of a 66% bet, L3 = BB's calls of an all-in (solver): stacks only if it beats who pays off a shove.
+  const levels = r
+    ? [whole, called, called.filter((c) => L3_GROUPS.has(bbGroup(c))), combosOf(readFileSync(`${dir}/bb-allin-${code(t!.card)}-${code(r.card)}.txt`, "utf8"), board)]
+    : [whole, called, whole.filter((c) => L2_GROUPS.has(bbGroup(c))), whole.filter((c) => L3_GROUPS.has(bbGroup(c)))];
+  // A level with no hands (e.g. BB calls the river only with ace-high) is tested like the level under it.
+  for (let i = 1; i < levels.length; i++) if (!levels[i].length) levels[i] = levels[i - 1];
 
   // Every made BTN combo, by hand: A7s and A7o are one hand for the player (its
   // most common group names the hand).
@@ -453,7 +514,12 @@ function solveBoard(flopName: string, turn?: number) {
   for (const [key, v] of byHand) {
     const cat = [...v.cats].sort((a, b) => b[1] - a[1])[0][0];
     const per = Math.ceil(SAMPLES / v.combos.length);
-    const eq = levels.map((range) => v.combos.reduce((s, cards) => s + equity(cards, board, range, per), 0) / v.combos.length);
+    // Combos that block the whole range don't count; a hand with none left takes the level below.
+    const eq: number[] = [];
+    for (const [l, range] of levels.entries()) {
+      const xs = v.combos.map((cards) => equity(cards, board, range, per)).filter((x) => !Number.isNaN(x));
+      eq.push(xs.length ? xs.reduce((s, x) => s + x, 0) / xs.length : eq[l - 1]);
+    }
     const r1 = rv(key[0]), r2 = rv(key[1]);
     const pairRank = r1 === r2 ? r1 : board.some((b) => b.r === r1) ? r1 : board.some((b) => b.r === r2) ? r2 : 0;
     hands.push({ key, cat, pairRank, eq, box: boxOf(eq), weight: v.weight });
@@ -546,6 +612,7 @@ function solveBoard(flopName: string, turn?: number) {
 
   const reviewed = t ? undefined : REVIEWED[name];
   if (!reviewed) groups = principleGroups(name, board, hands);
+  if (r) groups = riverBoxes(groups, BOARD_NOTES[name] ?? {});
   if (reviewed) {
     const byKey = new Map(hands.map((h) => [h.key, h]));
     const listed = new Set(reviewed.flatMap((g) => g.hands));
@@ -565,6 +632,15 @@ function fdText(keys: string[], board: Card[]): string {
   const sym = { s: "♠", h: "♥", d: "♦", c: "♣" }[suit];
   if (keys.every((k) => k.endsWith("+fd"))) return ` with a ${sym}`;
   return "";
+}
+
+/** The hands line. On the river the flushes are named apart: "AA, 88 · ♦ flushes: AK–A9". */
+function handsText(keys: string[], board: Card[]): string {
+  const fl = keys.filter((k) => k.endsWith("+fl"));
+  if (!fl.length) return labelOf(keys) + fdText(keys, board);
+  const sym = { s: "♠", h: "♥", d: "♦", c: "♣" }[flushSuit(board)!];
+  const rest = keys.filter((k) => !k.endsWith("+fl"));
+  return [rest.length ? labelOf(rest) : "", `${sym} flushes: ${labelOf(fl)}`].filter(Boolean).join(" · ");
 }
 
 /** "KK–99, A5, K7" — pocket pairs and same-high-card kickers as runs. */
@@ -591,60 +667,78 @@ function labelOf(keys: string[]): string {
 /** A reviewed group's box is Noam's: the reason just shows its equity. */
 function whyReviewed(box: Bucket, eq: number[], source: string, street = "flop"): string {
   const p = (x: number) => `${Math.round(x * 100)}%`;
-  const all = street === "turn" ? "BB's range after the flop call" : "BB's whole range";
+  const all = street === "river" ? "BB's range after the turn call" : street === "turn" ? "BB's range after the flop call" : "BB's whole range";
+  if (street === "river") return `${BOX_TEXT[box]} (${source}). Wins ${p(eq[3])} against the hands that call an all-in, ${p(eq[2])} against BB's top pair or better that calls a 66% bet, ${p(eq[1])} against all of BB's 66% calls, ${p(eq[0])} against BB's range after the turn call.`;
   return `${BOX_TEXT[box]} (${source}). Wins ${p(eq[3])} against BB's top pair or better, ${p(eq[1])} against the hands that call a ${street} bet, ${p(eq[0])} against ${all}.`;
 }
 
-const TURN = process.argv.includes("--turn");
+const RIVER = process.argv.includes("--river");
+const TURN = process.argv.includes("--turn") || RIVER;
 const FORCE = process.argv.includes("--force");
-const args = process.argv.slice(2).filter((a) => a !== "--turn" && a !== "--force");
+const args = process.argv.slice(2).filter((a) => a !== "--turn" && a !== "--river" && a !== "--force");
 /** Turns Noam has reviewed (2026-11-13): a general rule never changes them. Only his own note on
  * that turn does: rerun it with --force after adding the note to BOARD_NOTES. */
+/** Rivers Noam has reviewed: the same lock. */
+const REVIEWED_RIVERS = new Set<string>([]);
 const REVIEWED_TURNS = new Set(["A72-6d", "962-8d", "KQ4-8s", "QT7-Jh", "962-2c", "886-Jd", "T87-2d"]);
 let locked = 0;
 const flops = args.length ? args.map((a) => a.split("-")[0]) : BOARDS.map((b) => b.name);
 /** With --turn: every turn of the named flops ("A72"), or one turn ("A72-Qh"). */
-const spots: [string, number | undefined][] = TURN
+/** With --river: every river of the named flops ("A72"), turns ("A72-Qh") or one river ("A72-Qh-9c"). */
+type SpotRef = [string, number | undefined, number | undefined];
+const spots: SpotRef[] = TURN
   ? (args.length ? args : flops).flatMap((a) => {
       const flop = a.split("-")[0];
       const turns = BOARDS.find((b) => b.name === flop)!.turns;
-      return turns.map((tt, i): [string, number] => [flop, i]).filter(([, i]) => !a.includes("-") || a === `${flop}-${code(turns[i].card)}`);
+      return turns
+        .flatMap((tt, i): SpotRef[] => (RIVER ? tt.rivers.map((x, j): SpotRef => [flop, i, j]) : [[flop, i, undefined]]))
+        .filter(([, i, j]) => {
+          const nm = `${flop}-${code(turns[i!].card)}${j === undefined ? "" : `-${code(turns[i!].rivers[j].card)}`}`;
+          return !a.includes("-") || nm === a || nm.startsWith(`${a}-`);
+        });
     })
-  : flops.map((n): [string, undefined] => [n, undefined]);
-const DIR = TURN ? "decisions/ranges/turn-equity" : "decisions/ranges/flop-equity";
-const STREET = TURN ? "turn" : "flop";
-const levelText = TURN ? ["BB after calling the flop", "BB after calling a turn bet", "BB's middle pair or better", "BB's top pair or better"] : LEVEL_TEXT;
+  : flops.map((n): SpotRef => [n, undefined, undefined]);
+const DIR = RIVER ? "decisions/ranges/river-equity" : TURN ? "decisions/ranges/turn-equity" : "decisions/ranges/flop-equity";
+const STREET = RIVER ? "river" : TURN ? "turn" : "flop";
+const levelText = RIVER
+  ? ["BB after calling the turn", "BB's calls of a 66% river bet", "BB's top pair or better among those calls", "BB's calls of an all-in"]
+  : TURN
+    ? ["BB after calling the flop", "BB after calling a turn bet", "BB's middle pair or better", "BB's top pair or better"]
+    : LEVEL_TEXT;
 const out: string[] = [];
 const done: string[] = [];
 mkdirSync(DIR, { recursive: true });
-for (const [flopName, turn] of spots) {
-  const spotName = turn === undefined ? flopName : `${flopName}-${code(BOARDS.find((b) => b.name === flopName)!.turns[turn].card)}`;
-  if (TURN && REVIEWED_TURNS.has(spotName) && !FORCE) {
+for (const [flopName, turn, river] of spots) {
+  const tt = turn === undefined ? undefined : BOARDS.find((b) => b.name === flopName)!.turns[turn];
+  const spotName = tt ? `${flopName}-${code(tt.card)}${river === undefined ? "" : `-${code(tt.rivers[river].card)}`}` : flopName;
+  if (TURN && (RIVER ? REVIEWED_RIVERS : REVIEWED_TURNS).has(spotName) && !FORCE) {
     console.log(`${spotName}: reviewed by Noam, left as it is (--force to change it)`);
     locked++;
     continue;
   }
   const t0 = Date.now();
-  const r = solveBoard(flopName, turn);
+  const r = solveBoard(flopName, turn, river);
   const name = r.name;
   done.push(name);
   const avg = (g: Group) => [0, 1, 2, 3].map((l) => g.hands.reduce((s, h) => s + h.eq[l] * h.weight, 0) / g.hands.reduce((s, h) => s + h.weight, 0));
   const groups = r.groups.map((g, i) => ({
     id: `g${i + 1}`,
     label: g.name ?? labelOf(g.hands.map((h) => h.key)),
-    handsLabel: labelOf(g.hands.map((h) => h.key)) + fdText(g.hands.map((h) => h.key), r.board),
+    handsLabel: handsText(g.hands.map((h) => h.key), r.board),
     hands: g.hands.map((h) => h.key),
     box: g.box,
     eq: avg(g).map((x) => Math.round(x * 1000) / 10),
-    why: whyReviewed(g.box, avg(g), r.reviewed ? "Noam's review" : TURN ? "draft from Noam's flop principles" : "draft from Noam's principles", STREET),
+    why: whyReviewed(g.box, avg(g), r.reviewed ? "Noam's review" : RIVER ? "draft: equity against BB's river ranges" : TURN ? "draft from Noam's flop principles" : "draft from Noam's principles", STREET),
   }));
   out.push(`  ${JSON.stringify(name)}: ${JSON.stringify(groups)},`);
 
   const md = [
     `# ${name} ${STREET} (${r.board.map((c) => ch(c.r) + { s: "♠", h: "♥", d: "♦", c: "♣" }[c.s]).join(" ")}): equity groups`,
     "",
-    `Generated ${new Date().toISOString().slice(0, 10)} by scripts/analysis/flop-equity-groups.ts${TURN ? " --turn" : ""} (${SAMPLES} samples per hand and level).`,
-    TURN
+    `Generated ${new Date().toISOString().slice(0, 10)} by scripts/analysis/flop-equity-groups.ts${RIVER ? " --river" : TURN ? " --turn" : ""} (${SAMPLES} samples per hand and level).`,
+    RIVER
+      ? "BTN opens, BB calls; BTN bets the flop small and bets the turn, BB calls both. Made hands only (ace-high and better). Equity of each BTN hand against:"
+      : TURN
       ? "BTN opens, BB calls; BTN bets the flop small, BB calls. Made hands only (ace-high and better, no draws). Equity of each BTN hand against:"
       : "BTN opens, BB calls. Made hands only (ace-high and better, no draws). Equity of each BTN hand against:",
     levelText.map((t, i) => `L${i} = ${t}`).join(" · ") + ".",
@@ -667,7 +761,7 @@ for (const [flopName, turn] of spots) {
 }
 
 // With boards named, only their lines change; the other boards stay as generated.
-const FILE = TURN ? "src/lib/drill/postflop/turn-groups.ts" : "src/lib/drill/postflop/flop-groups.ts";
+const FILE = RIVER ? "src/lib/drill/postflop/river-groups.ts" : TURN ? "src/lib/drill/postflop/turn-groups.ts" : "src/lib/drill/postflop/flop-groups.ts";
 if ((args.length || locked) && existsSync(FILE)) {
   let text = readFileSync(FILE, "utf8");
   for (const [i, name] of done.entries()) {
@@ -676,6 +770,22 @@ if ((args.length || locked) && existsSync(FILE)) {
     text = text.replace(re, () => out[i]);
   }
   writeFileSync(FILE, text);
+} else if (RIVER) {
+  writeFileSync(
+    FILE,
+    [
+      "// Generated by scripts/analysis/flop-equity-groups.ts --river — do not edit by hand.",
+      "// River drill (Noam 2026-11-14): BTN bet the flop and the turn, BB called both; BTN's made hands on each",
+      "// river, grouped by Noam's principles and boxed by equity against BB's river ranges. Reports: decisions/ranges/river-equity/.",
+      'import type { FlopGroup } from "./flop-groups";',
+      "",
+      "/** By spot, e.g. \"A72-Qh-9c\". eq = the group's equity (%) vs BB after the turn call, BB's 66% river calls, the top pair+ of those, BB's all-in calls. */",
+      "export const RIVER_GROUPS: Record<string, FlopGroup[]> = {",
+      ...out,
+      "};",
+      "",
+    ].join("\n"),
+  );
 } else if (TURN) {
   writeFileSync(
     FILE,
