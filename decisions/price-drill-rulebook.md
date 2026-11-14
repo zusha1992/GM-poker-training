@@ -112,6 +112,9 @@ Each note changes only its own turn. When Noam has finished, the notes that look
 **8♠8♦6♣ J♦** (Noam, 2026-11-13, reviewed and locked). "Nines and tens don't want to put in any more money: 0 to 5." (He wasn't fully sure, then: "Yeah, I think so.") TT, 99 → **0–5**.
 - Applied to the other turns where the turn is an overcard that turns the flop's overpairs into pocket pairs under it: 986-Kd (QQ–TT), 962-Qh (JJ, TT), T87-As (KK–JJ), all 5–15 → **0–5**.
 
+**T♥8♥7♠ 2♦** (Noam, 2026-11-14, from his phone, reviewed and locked). "AT, KT, top pair top kicker and king kicker, is not worth more than 25 more big blinds on a board where there are straights." Top pair, top kicker (AT, KT) 25–50 → **15–25**.
+- Applied to the other turns: with a straight possible on the 4-card board, top pair at 25–50 → **15–25** (overpairs not touched). Changed: 986-2h (A9, K9), 986-Kd (AK, KQ), KQT-3s and KQT-7c (AK, KJ), T87-As (AK).
+
 **Pot on screen** (Noam, 2026-11-13): the drill shows the pot under the board ("Pot 9.1bb, after a 33% flop bet and call, 95.7bb behind"), so the player can see each box against the pot.
 
 - "Top pair needs to have the same thing, plus the flush draw or without the flush draw" (Noam, 2026-11-13). On these five turns top pair is split too: **with a flush draw 5–15**, without 0–5. *(5–15 is my pick: above top pair without, below overpairs with a flush draw.)*

@@ -166,6 +166,9 @@ const BOARD_NOTES: Record<string, Record<string, Bucket>> = {
   // Top pair, good kicker (AK–AT) 25–50, not 50–100: on the turn it isn't going for stacks yet,
   // least of all with AT and AK in one group; the river decides whether to shove.
   "A72-6d": { "Second pair": "b0", "Top pair, good kicker": "b25" },
+  // Noam 2026-11-14 (T♥8♥7♠ 2♦): top pair, top kicker (AT, KT) is worth no more than 25bb
+  // on a board where straights are possible: 15–25.
+  "T87-2d": { "Top pair, top kicker": "b15" },
 };
 
 /** The principles from Noam's review of A72, JT3 and K54 (rulebook section 0), as a draft for a new board. */
@@ -366,6 +369,10 @@ function principleGroups(name: string, board: Card[], hands: Hand[]): Group[] {
       into("b5", "Top pair, weak kicker", movers.filter((h) => kicker(h) < 11));
     }
   }
+  // Noam 2026-11-14 (T♥8♥7♠ 2♦): with a straight possible on the turn, top pair (even top kicker)
+  // is worth no more than 15–25.
+  if (board.length > 3 && straightPossible(board))
+    for (const g of out) if (g.box === "b25" && g.name?.startsWith("Top pair")) g.box = "b15";
   // Noam 2026-11-13 (8♠8♦6♣ J♦): TT and 99 don't want to put in any more money: 0–5. They were
   // overpairs on the flop, and the turn overcard made them pocket pairs under it.
   if (board.length > 3 && board[3].r > Math.max(...board.slice(0, 3).map((c) => c.r))) {
@@ -593,7 +600,7 @@ const FORCE = process.argv.includes("--force");
 const args = process.argv.slice(2).filter((a) => a !== "--turn" && a !== "--force");
 /** Turns Noam has reviewed (2026-11-13): a general rule never changes them. Only his own note on
  * that turn does: rerun it with --force after adding the note to BOARD_NOTES. */
-const REVIEWED_TURNS = new Set(["A72-6d", "962-8d", "KQ4-8s", "QT7-Jh", "962-2c", "886-Jd"]);
+const REVIEWED_TURNS = new Set(["A72-6d", "962-8d", "KQ4-8s", "QT7-Jh", "962-2c", "886-Jd", "T87-2d"]);
 let locked = 0;
 const flops = args.length ? args.map((a) => a.split("-")[0]) : BOARDS.map((b) => b.name);
 /** With --turn: every turn of the named flops ("A72"), or one turn ("A72-Qh"). */
