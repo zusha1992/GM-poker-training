@@ -179,6 +179,7 @@ const BOARD_NOTES: Record<string, Record<string, Bucket>> = {
   // 99–44: 0–5 (they check back).
   // AJ, KJ, QJ: 25–50, not the whole stack.
   "JT3-2h-3d": { "Top pair, weak kicker": "b0", "Small pairs": "b0", "Top pair, good kicker": "b25" },
+  "KQ4-8s-Td": { "Flushes": "b50", "Straights": "b25", "Sets": "b15" },
 };
 
 /** The principles from Noam's review of A72, JT3 and K54 (rulebook section 0), as a draft for a new board. */
@@ -429,7 +430,7 @@ const code = (c: string) => c[0] + ({ "♠": "s", "♥": "h", "♦": "d", "♣":
  * river ranges, which are much stronger after two calls: a hand goes for stacks only if it beats
  * BB's top pair or better. A group whose hands land in different boxes splits by box; a part of
  * one hand joins its nearest part. Noam's notes on a river (BOARD_NOTES) still decide over equity. */
-function riverBoxes(groups: Group[], notes: Record<string, Bucket>, board: Card[]): Group[] {
+function riverBoxes(groups: Group[], notes: Record<string, Bucket>, board: Card[], highSpr: boolean): Group[] {
   const w = (hs: Hand[]) => hs.reduce((s, h) => s + h.weight, 0);
   const one = (p: { hands: Hand[] }) => new Set(p.hands.map((h) => rankKey(h.key))).size === 1;
   const boxes = (Object.keys(BOX_RANK) as Bucket[]).sort((a, b) => BOX_RANK[b] - BOX_RANK[a]);
@@ -473,8 +474,42 @@ function riverBoxes(groups: Group[], notes: Record<string, Bucket>, board: Card[
   // The caps below are for one pair, whatever the group's name (QQ–TT and second pair too).
   const onePair = (p: { hands: Hand[] }) => p.hands.every((h) => ONE_PAIR.has(h.cat));
   for (const p of parts) if (wetRiver && onePair(p) && BOX_RANK[p.box] > BOX_RANK.b0) p.box = "b0";
+  // Noam 2026-11-14 (K♦Q♦4♠ 8♠ T♦): with a flush and straights possible, flushes, straights and sets are
+  // "completely different hand strengths": bet and get raised, a straight or a set has to fold. Three groups:
+  // flushes (and full houses) keep their box, straights go no higher than 25–50, sets and trips 15–25.
+  // Noam 2026-11-14 (K♠5♦4♣ 3♠ 9♦), SPR: after a 66% turn bet the river SPR is about 4 (21bb in the pot, 90
+  // behind). Big SPR, deep: only premium hands shove; the lower the SPR, the more mediocre hands go in.
+  // So on the 66% line, on a straight river, straights and sets are apart too: sets no higher than 25–50.
+  const straightRiver = straightPossible(board);
+  if (wetRiver || (highSpr && straightRiver)) {
+    const pocket = (h: Hand) => h.key[0] === h.key[1];
+    const tiers: [(h: Hand) => boolean, Bucket | undefined][] = wetRiver
+      ? [
+          [(h) => h.cat === "boat" || h.cat === "flush" || h.cat === "flushlo", undefined],
+          [(h) => h.cat === "straight", "b25"],
+          [(h) => h.cat === "trips" || (h.cat === "twopair" && pocket(h)), "b15"],
+        ]
+      : [
+          [(h) => h.cat === "boat" || h.cat === "flush" || h.cat === "flushlo" || h.cat === "straight", undefined],
+          [(h) => h.cat === "trips" || (h.cat === "twopair" && pocket(h)), "b25"],
+        ];
+    parts = parts.flatMap((p) => {
+      if (!p.name || !strong.test(p.name)) return [p];
+      const rest = p.hands.filter((h) => !tiers.some(([f]) => f(h)));
+      const split = tiers.map(([f, cap]) => {
+        const hs = p.hands.filter(f);
+        const box = cap && BOX_RANK[p.box] > BOX_RANK[cap] ? cap : p.box;
+        return { ...p, box, hands: hs, name: kindsOf(hs) };
+      });
+      return [...split, ...(rest.length ? [{ ...p, hands: rest, name: kindsOf(rest) }] : [])].filter((q) => q.hands.length);
+    });
+  }
   // Noam 2026-11-14 (A♣7♦2♠ 5♣ 6♣): two pair isn't good enough for stacks, or for 50bb more: 15–25.
   for (const p of parts) if (wetRiver && p.name === "Two pair" && BOX_RANK[p.box] > BOX_RANK.b15) p.box = "b15";
+  // SPR (Noam, K♠5♦4♣ 3♠ 9♦): on the 66% line two pair on a straight river is no more than 15–25,
+  // and one pair never shoves: "I'm not going to shove aces here, I'm only going to get called by better."
+  for (const p of parts) if (highSpr && straightRiver && p.name?.startsWith("Two pair") && BOX_RANK[p.box] > BOX_RANK.b15) p.box = "b15";
+  for (const p of parts) if (highSpr && onePair(p) && BOX_RANK[p.box] > BOX_RANK.b25) p.box = "b25";
   // Noam 2026-11-14 (J♠T♠3♣ 2♥ 3♦): J9, J8, J7 "definitely want to check back and don't want to put
   // in more money": top pair with a weak kicker is 0–5 on the river.
   for (const p of parts) if (p.name === "Top pair, weak kicker" && BOX_RANK[p.box] > BOX_RANK.b0) p.box = "b0";
@@ -650,7 +685,8 @@ function solveBoard(flopName: string, turn?: number, river?: number) {
 
   const reviewed = t ? undefined : REVIEWED[name];
   if (!reviewed) groups = principleGroups(name, board, hands);
-  if (r) groups = riverBoxes(groups, BOARD_NOTES[name] ?? {}, board);
+  // SPR: about 4.3 on the river after a 66% turn bet, about 2.2 after an overbet.
+  if (r) groups = riverBoxes(groups, BOARD_NOTES[name] ?? {}, board, t!.bet !== "overbet");
   if (reviewed) {
     const byKey = new Map(hands.map((h) => [h.key, h]));
     const listed = new Set(reviewed.flatMap((g) => g.hands));
@@ -717,7 +753,7 @@ const args = process.argv.slice(2).filter((a) => a !== "--turn" && a !== "--rive
 /** Turns Noam has reviewed (2026-11-13): a general rule never changes them. Only his own note on
  * that turn does: rerun it with --force after adding the note to BOARD_NOTES. */
 /** Rivers Noam has reviewed: the same lock. */
-const REVIEWED_RIVERS = new Set<string>(["A72-5c-6c", "JT3-2h-3d"]);
+const REVIEWED_RIVERS = new Set<string>(["A72-5c-6c", "JT3-2h-3d", "KQ4-8s-Td", "KQ4-Ad-7c", "K54-3s-9d"]);
 const REVIEWED_TURNS = new Set(["A72-6d", "962-8d", "KQ4-8s", "QT7-Jh", "962-2c", "886-Jd", "T87-2d"]);
 let locked = 0;
 const flops = args.length ? args.map((a) => a.split("-")[0]) : BOARDS.map((b) => b.name);
