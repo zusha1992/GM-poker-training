@@ -468,11 +468,57 @@ function riverBoxes(groups: Group[], notes: Record<string, Bucket>, board: Card[
     return t.replace(/^./, (c) => c.toUpperCase());
   };
   for (const p of parts) if (p.name && strong.test(p.name) && kindsOf(p.hands)) p.name = kindsOf(p.hands);
+  // Noam 2026-11-16 (8♠8♦6♣ J♦ 9♦): on a paired board, 96, 97, 95, T9 are the same two pair (nines and the
+  // board's eights): one group per card paired, "Jx" one group, "9x" one group. A card below the board's
+  // pair (6x there) "has no meaning" and stays with the small pairs. Within a card, hands whose kicker plays
+  // (AJ over J7 when the board's next card is a T) split only if their boxes differ (J♠T♠3♣ 2♥ 3♦).
+  const pairish = new Set<(typeof parts)[number]>();
+  const boardRanks = board.map((c) => c.r);
+  const pairRanks = new Set(boardRanks.filter((r, i) => boardRanks.indexOf(r) !== i));
+  if (pairRanks.size) {
+    // Below the board's pair a card "has no meaning", unless every card is below it (8♠8♦6♣ 2♥ 5♠: 6x is the top pair there).
+    const low = boardRanks.some((r) => !pairRanks.has(r) && r > Math.min(...pairRanks)) ? Math.min(...pairRanks) : 0;
+    const singles = [...new Set(boardRanks.filter((r) => !pairRanks.has(r)))].sort((a, b) => b - a);
+    const holeOf = (h: Hand) => [rv(h.key[0]), rv(h.key[1])];
+    const prOf = (h: Hand) => {
+      const [a, b] = holeOf(h);
+      if (a === b || pairRanks.has(a) || pairRanks.has(b) || !(ONE_PAIR.has(h.cat) || h.cat === "twopair")) return 0;
+      return Math.max(...[a, b].filter((r) => singles.includes(r) && r > low), 0);
+    };
+    const boxOfHand = new Map<Hand, Bucket>();
+    for (const p of parts) for (const h of p.hands) boxOfHand.set(h, p.box);
+    const majority = (hs: Hand[]) => {
+      const wt = new Map<Bucket, number>();
+      for (const h of hs) wt.set(boxOfHand.get(h)!, (wt.get(boxOfHand.get(h)!) ?? 0) + h.weight);
+      return [...wt].sort((a, b) => b[1] - a[1] || BOX_RANK[b[0]] - BOX_RANK[a[0]])[0][0];
+    };
+    const moved = parts.flatMap((p) => p.hands).filter((h) => prOf(h));
+    if (moved.length) {
+      const movedSet = new Set(moved);
+      parts = parts.map((p) => ({ ...p, hands: p.hands.filter((h) => !movedSet.has(h)) })).filter((p) => p.hands.length);
+      const ORD = ["Top pair", "Second pair", "Third pair", "Fourth pair"];
+      for (const pr of [...new Set(moved.map(prOf))].sort((a, b) => b - a)) {
+        const hs = moved.filter((h) => prOf(h) === pr);
+        const next = Math.max(0, ...singles.filter((r) => r !== pr));
+        const plays = (h: Hand) => holeOf(h).some((r) => r !== pr && (r > next || singles.includes(r)));
+        const good = hs.filter(plays), weak = hs.filter((h) => !plays(h));
+        const name = ORD[singles.indexOf(pr)] ?? "Pairs";
+        const split = good.length && weak.length && majority(good) !== majority(weak);
+        const groups = split ? [[good, `${name}, good kicker`], [weak, `${name}, weak kicker`]] as const : [[hs, name]] as const;
+        for (const [g, n] of groups) {
+          const part = { name: n, src: -1, box: majority(g), hands: g };
+          pairish.add(part);
+          parts.push(part);
+        }
+      }
+    }
+  }
   // Noam 2026-11-14 (A♣7♦2♠ 5♣ 6♣): top pair isn't good to put more money in: 0–5. With a flush and a
   // straight possible on the river, one pair (top pair, an overpair) wants no more than 0–5.
   const wetRiver = !!flushSuit(board) && straightPossible(board);
-  // The caps below are for one pair, whatever the group's name (QQ–TT and second pair too).
-  const onePair = (p: { hands: Hand[] }) => p.hands.every((h) => ONE_PAIR.has(h.cat));
+  // The caps below are for one pair, whatever the group's name (QQ–TT and second pair too). On a paired
+  // board, a pair made with the board's pair counts as one pair (the groups above).
+  const onePair = (p: { hands: Hand[] }) => pairish.has(p as (typeof parts)[number]) || p.hands.every((h) => ONE_PAIR.has(h.cat));
   for (const p of parts) if (wetRiver && onePair(p) && BOX_RANK[p.box] > BOX_RANK.b0) p.box = "b0";
   // Noam 2026-11-14 (K♦Q♦4♠ 8♠ T♦): with a flush and straights possible, flushes, straights and sets are
   // "completely different hand strengths": bet and get raised, a straight or a set has to fold. Three groups:
@@ -529,7 +575,11 @@ function riverBoxes(groups: Group[], notes: Record<string, Bucket>, board: Card[
   // never sits in a lower box than top pair.
   const tpTop = Math.max(-1, ...parts.filter((p) => p.name?.startsWith("Top pair")).map((p) => BOX_RANK[p.box]));
   for (const p of parts) if (/^Overpair/.test(p.name ?? "") && BOX_RANK[p.box] < tpTop) p.box = boxes.find((b) => BOX_RANK[b] === tpTop)!;
-  const out = parts.map((p) => ({ name: p.name, box: p.name && notes[p.name] ? notes[p.name] : p.box, hands: p.hands })).sort((a, b) => BOX_RANK[b.box] - BOX_RANK[a.box]);
+  // In one box, the stronger group first (by its equity against BB after the turn call).
+  const avg = (hs: Hand[]) => hs.reduce((s, h) => s + h.eq[0] * h.weight, 0) / w(hs);
+  const out = parts
+    .map((p) => ({ name: p.name, box: p.name && notes[p.name] ? notes[p.name] : p.box, hands: p.hands }))
+    .sort((a, b) => BOX_RANK[b.box] - BOX_RANK[a.box] || (pairRanks.size ? avg(b.hands) - avg(a.hands) : 0));
   // Side by side in one box, two groups of one kind are one group ("Top pair, good kicker" + "Top pair, weak kicker").
   const kind = (n?: string) => n?.split(",")[0];
   for (let i = out.length - 1; i > 0; i--) {
@@ -753,7 +803,7 @@ const args = process.argv.slice(2).filter((a) => a !== "--turn" && a !== "--rive
 /** Turns Noam has reviewed (2026-11-13): a general rule never changes them. Only his own note on
  * that turn does: rerun it with --force after adding the note to BOARD_NOTES. */
 /** Rivers Noam has reviewed: the same lock. */
-const REVIEWED_RIVERS = new Set<string>(["A72-5c-6c", "JT3-2h-3d", "KQ4-8s-Td", "KQ4-Ad-7c", "K54-3s-9d"]);
+const REVIEWED_RIVERS = new Set<string>(["A72-5c-6c", "JT3-2h-3d", "KQ4-8s-Td", "KQ4-Ad-7c", "K54-3s-9d", "886-Jd-9d"]);
 const REVIEWED_TURNS = new Set(["A72-6d", "962-8d", "KQ4-8s", "QT7-Jh", "962-2c", "886-Jd", "T87-2d"]);
 let locked = 0;
 const flops = args.length ? args.map((a) => a.split("-")[0]) : BOARDS.map((b) => b.name);

@@ -1,6 +1,8 @@
 import { getDb } from "@/db";
 import { drillFeedback } from "@/db/schema";
 import { asc, eq } from "drizzle-orm";
+import { getCloudflareContext } from "@opennextjs/cloudflare";
+import { noteToGroup } from "@/lib/telegram";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -54,6 +56,9 @@ export async function POST(request: Request) {
   };
 
   await db.insert(drillFeedback).values(row);
+  // A copy goes to the Telegram group (Noam 2026-11-16), after the response.
+  const { ctx } = await getCloudflareContext({ async: true });
+  ctx.waitUntil(noteToGroup(row));
 
   return Response.json(row);
 }

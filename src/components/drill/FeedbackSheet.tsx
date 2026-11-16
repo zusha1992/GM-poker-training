@@ -214,6 +214,9 @@ export function FeedbackSheet({ open, onClose, drillTag, drillLabel, pageUrl, co
           >
             Send
           </button>
+          <p className="m-0 text-center text-[12px]" style={{ color: "var(--muted)" }}>
+            Also posted to the GM Poker Training group on Telegram, with a link to this spot.
+          </p>
         </div>
       </div>
     </Sheet>
