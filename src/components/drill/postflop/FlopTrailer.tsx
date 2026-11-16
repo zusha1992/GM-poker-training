@@ -4,12 +4,16 @@ import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { SpadeMark } from "@/components/SpadeMark";
 import { rankChar, type Card } from "@/lib/drill/postflop/line-demo";
+import { actLong, lineFor, type StreetLine } from "@/lib/drill/postflop/lines";
+import { potsOf } from "@/lib/drill/postflop/lines";
 import { tone } from "@/lib/drill/sound";
 import { SUIT_COLOR, SUIT_GLYPH } from "./drill-ui";
+import { LineBar } from "./LineBar";
 
-/** The story so far, on its own screen before every flop (Noam 2026-11-11):
- * a 6-max table, the folds, BTN raises, SB folds, BB calls, the bets go into
- * the pot and the flop is dealt and turned over. Then the drill. A tap skips. */
+/** The story so far, on its own screen before every spot (Noam 2026-11-11): a 6-max table, the folds,
+ * BTN raises, SB folds, BB calls, the bets go into the pot and the flop is dealt and turned over.
+ * Noam 2026-11-16: the line very clear, each bet and the pot. Every action of the line comes one at a
+ * time, announced big; the pot grows; a line bar fills in at the bottom. A tap skips. */
 
 type Seat = "UTG" | "HJ" | "CO" | "BTN" | "SB" | "BB";
 
@@ -22,20 +26,46 @@ const betAt = (s: Seat): [number, number] => {
   return [x + (50 - x) * 0.4, y + (50 - y) * 0.4];
 };
 
-/** The timeline, ms from the start. */
-// Noam 2026-11-11: shorter, and a quick hand-over to the drill.
-const FLOP_T = { folds: 250, raise: 700, sbFold: 1100, call: 1350, sweep: 1850, deal: 2150, flip: 2450, caption: 3050, out: 3450 };
-// Noam 2026-11-12, turn drill: then BTN bets the flop small, BB calls, the bets go in and the turn is dealt.
-const TURN_T = { folds: 250, raise: 700, sbFold: 1100, call: 1350, sweep: 1850, deal: 2150, flip: 2450, fbet: 3000, fcall: 3400, fsweep: 3850, tdeal: 4100, tflip: 4350, caption: 4900, out: 5300 };
+type Ev =
+  | { k: "folds" | "raise" | "sbFold" | "call" | "sweep" | "deal" | "flip" | "caption" | "out" }
+  | { k: "act"; si: number; ai: number }
+  | { k: "ssweep" | "sdeal" | "sflip"; si: number };
 
-// Noam 2026-11-14, river drill: then BTN bets the turn (66% or an overbet), BB calls, and the river is dealt.
-const RIVER_T = { folds: 250, raise: 700, sbFold: 1100, call: 1350, sweep: 1850, deal: 2150, flip: 2450, fbet: 3000, fcall: 3400, fsweep: 3850, tdeal: 4100, tflip: 4350, tbet: 4850, tcall: 5250, tsweep: 5700, rdeal: 5950, rflip: 6200, caption: 6750, out: 7150 };
+/** The timeline, ms from the start: preflop and the flop, then each action of the line, the bets swept in
+ * and the next card dealt. */
+function timeline(line: StreetLine[]): { ev: Ev; at: number }[] {
+  const out: { ev: Ev; at: number }[] = [
+    { ev: { k: "folds" }, at: 250 },
+    { ev: { k: "raise" }, at: 700 },
+    { ev: { k: "sbFold" }, at: 1100 },
+    { ev: { k: "call" }, at: 1350 },
+    { ev: { k: "sweep" }, at: 1850 },
+    { ev: { k: "deal" }, at: 2150 },
+    { ev: { k: "flip" }, at: 2450 },
+  ];
+  let t = 3150;
+  line.forEach((s, si) => {
+    s.acts.forEach((_, ai) => {
+      out.push({ ev: { k: "act", si, ai }, at: t });
+      t += 850;
+    });
+    out.push({ ev: { k: "ssweep", si }, at: t });
+    out.push({ ev: { k: "sdeal", si }, at: t + 300 });
+    out.push({ ev: { k: "sflip", si }, at: t + 550 });
+    t += 1250;
+  });
+  out.push({ ev: { k: "caption" }, at: t }, { ev: { k: "out" }, at: t + (line.length ? 1500 : 400) });
+  return out;
+}
 
-type Step = keyof typeof RIVER_T;
+const STREET_NAME = ["Turn", "River"];
+const cardText = (c: Card) => `${rankChar(c.r)}${SUIT_GLYPH[c.s]}`;
+const r1 = (x: number) => String(Math.round(x * 10) / 10);
 
-export function FlopTrailer({ board, street = "flop", turnBet = 6, onDone }: { board: Card[]; street?: "flop" | "turn" | "river"; turnBet?: number; onDone: () => void }) {
-  const T: Partial<Record<Step, number>> = street === "river" ? RIVER_T : street === "turn" ? TURN_T : FLOP_T;
-  const ORDER = Object.keys(T) as Step[];
+export function FlopTrailer({ board, street = "flop", turnBet = 6, line: lineProp, onDone }: { board: Card[]; street?: "flop" | "turn" | "river"; turnBet?: number; line?: StreetLine[]; onDone: () => void }) {
+  // Noam 2026-11-16: a spot can come with its own line (turn 75 / 150 / 200%, checks).
+  const line = lineProp ?? lineFor(street, turnBet);
+  const TL = timeline(line);
   const [step, setStep] = useState(-1);
   const done = useRef(false);
   const finish = () => {
@@ -45,51 +75,79 @@ export function FlopTrailer({ board, street = "flop", turnBet = 6, onDone }: { b
   };
 
   useEffect(() => {
-    const timers = ORDER.map((k, i) =>
+    const chips = () => [0, 70, 140].forEach((d) => setTimeout(() => tone(1250 + d, 0.035, "triangle"), d));
+    const timers = TL.map(({ ev, at }, i) =>
       setTimeout(() => {
         setStep(i);
-        if (k === "raise" || k === "call" || k === "fbet" || k === "fcall" || k === "tbet" || k === "tcall") [0, 70, 140].forEach((d) => setTimeout(() => tone(1250 + d, 0.035, "triangle"), d));
-        if (k === "sweep" || k === "fsweep" || k === "tsweep") [0, 60, 120, 180].forEach((d) => setTimeout(() => tone(1100 - d, 0.04, "triangle"), d));
-        if (k === "flip") [0, 150, 300].forEach((d, n) => setTimeout(() => tone(523 + n * 131, 0.09), d));
-        if (k === "tflip") tone(915, 0.1);
-        if (k === "rflip") tone(1046, 0.1);
-        if (k === "caption") tone(784, 0.14);
-      }, T[k]!),
+        if (ev.k === "raise" || ev.k === "call") chips();
+        if (ev.k === "act") {
+          if (line[ev.si].acts[ev.ai].act === "check") [0, 120].forEach((d) => setTimeout(() => tone(330, 0.05, "triangle"), d));
+          else chips();
+        }
+        if (ev.k === "sweep" || ev.k === "ssweep") [0, 60, 120, 180].forEach((d) => setTimeout(() => tone(1100 - d, 0.04, "triangle"), d));
+        if (ev.k === "flip") [0, 150, 300].forEach((d, n) => setTimeout(() => tone(523 + n * 131, 0.09), d));
+        if (ev.k === "sflip") tone(915 + ev.si * 131, 0.1);
+        if (ev.k === "caption") tone(784, 0.14);
+      }, at),
     );
-    timers.push(setTimeout(finish, T.out! + 160));
+    timers.push(setTimeout(finish, TL[TL.length - 1].at + 160));
     return () => timers.forEach(clearTimeout);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const at = (k: Step) => ORDER.includes(k) && step >= ORDER.indexOf(k);
-  const folded: Record<Seat, boolean> = { UTG: at("folds"), HJ: at("folds"), CO: at("folds"), SB: at("sbFold"), BTN: false, BB: false };
+  const past = TL.slice(0, step + 1).map((x) => x.ev);
+  const at = (k: Ev["k"], si?: number) => past.some((e) => e.k === k && (si === undefined || ("si" in e && e.si === si)));
+  const actsDone = past.filter((e): e is Extract<Ev, { k: "act" }> => e.k === "act");
+  const actOf = (e: { si: number; ai: number }) => line[e.si].acts[e.ai];
+  const { before } = potsOf(line);
+
+  // The street being played: its actions sit by the seats until its bets are swept.
+  const cur = actsDone.length ? actsDone[actsDone.length - 1].si : -1;
+  const curOpen = cur >= 0 && !at("ssweep", cur);
   const action: Partial<Record<Seat, string>> = {
     ...(at("folds") ? { UTG: "Fold", HJ: "Fold", CO: "Fold" } : {}),
-    ...(at("raise") ? { BTN: "Raise 2.5" } : {}),
+    ...(at("raise") && !at("sweep") ? { BTN: "Raise 2.5" } : {}),
     ...(at("sbFold") ? { SB: "Fold" } : {}),
-    ...(at("call") ? { BB: "Call" } : {}),
-    ...(at("fbet") ? { BTN: "Bet 1.8" } : {}),
-    ...(at("fcall") ? { BB: "Call 1.8" } : {}),
-    ...(at("tbet") ? { BTN: `Bet ${turnBet}` } : {}),
-    ...(at("tcall") ? { BB: `Call ${turnBet}` } : {}),
+    ...(at("call") && !at("sweep") ? { BB: "Call" } : {}),
   };
-  const r1 = (x: number) => String(Math.round(x * 10) / 10);
+  if (curOpen)
+    for (const e of actsDone.filter((x) => x.si === cur)) {
+      const a = actOf(e);
+      action[a.who] = a.act === "bet" ? `Bet ${a.bb}` : a.act === "call" ? `Call ${a.bb}` : "Check";
+    }
+  const folded: Record<Seat, boolean> = { UTG: at("folds"), HJ: at("folds"), CO: at("folds"), SB: at("sbFold"), BTN: false, BB: false };
+  const put = (who: "BTN" | "BB") => actsDone.reduce((s, e) => (actOf(e).who === who ? s + (actOf(e).bb ?? 0) : s), 0);
   const stack: Record<Seat, string> = {
     UTG: "100",
     HJ: "100",
     CO: "100",
     SB: "99.5",
-    BB: at("tcall") ? r1(95.7 - turnBet) : at("fcall") ? "95.7" : at("call") ? "97.5" : "99",
-    BTN: at("tbet") ? r1(95.7 - turnBet) : at("fbet") ? "95.7" : at("raise") ? "97.5" : "100",
+    BB: at("call") ? r1(97.5 - put("BB")) : "99",
+    BTN: at("raise") ? r1(97.5 - put("BTN")) : "100",
   };
   const swept = at("sweep");
-  const fswept = at("fsweep");
-  const tswept = at("tsweep");
-  const pot = at("tcall") ? r1(9.1 + 2 * turnBet) : at("tbet") ? r1(9.1 + turnBet) : at("fcall") ? "9.1" : at("fbet") ? "7.3" : swept ? "5.5" : at("call") ? "5.5" : at("raise") ? "4" : "1.5";
+  const pot = r1(at("call") ? 5.5 + put("BTN") + put("BB") : at("raise") ? 4 : 1.5);
+
+  // The big line in the middle: the last thing that happened.
+  const lastEv = [...past].reverse().find((e) => e.k === "sflip" || e.k === "act" || e.k === "flip" || e.k === "call" || e.k === "raise");
+  const lastAct = lastEv?.k === "act" ? actOf(lastEv) : undefined;
+  const headline =
+    lastEv?.k === "sflip"
+      ? `${STREET_NAME[lastEv.si]}: ${cardText(board[3 + lastEv.si])}`
+      : lastEv?.k === "act"
+        ? actLong(lastAct!, before[lastEv.si][lastEv.ai])
+        : lastEv?.k === "flip"
+          ? `Flop: ${board.slice(0, 3).map(cardText).join(" ")}`
+          : lastEv?.k === "call"
+            ? "BB calls"
+            : lastEv?.k === "raise"
+              ? "BTN raises 2.5bb"
+              : "";
+  const headColor = lastAct?.act === "bet" ? "var(--raise)" : lastAct?.act === "call" || lastEv?.k === "call" ? "var(--call)" : lastEv?.k === "raise" ? "var(--raise)" : "var(--foreground)";
 
   return (
     <motion.div
-      className="royal relative mx-auto flex h-dvh w-full max-w-[460px] flex-col items-center overflow-hidden px-4 py-5"
+      className="royal relative mx-auto flex h-dvh w-full max-w-[460px] flex-col items-center overflow-hidden px-4 py-4"
       style={{ background: "radial-gradient(120% 60% at 50% 45%, #182C47 0%, var(--background) 70%)", color: "var(--foreground)" }}
       animate={at("out") ? { opacity: 0, scale: 1.04 } : { opacity: 1, scale: 1 }}
       transition={{ duration: 0.16, ease: "easeIn" }}
@@ -97,16 +155,36 @@ export function FlopTrailer({ board, street = "flop", turnBet = 6, onDone }: { b
       data-testid="trailer"
     >
       <motion.div className="flex flex-col items-center gap-1 text-center" initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-        <b className="font-[family-name:var(--font-brand)] text-[24px] font-bold tracking-[0.05em]" style={{ color: "var(--gold)" }}>
+        <b className="font-[family-name:var(--font-brand)] text-[22px] font-bold tracking-[0.05em]" style={{ color: "var(--gold)" }}>
           Single-raised pot
         </b>
-        <span className="text-[13px] tracking-[0.12em] uppercase" style={{ color: "var(--muted)" }}>
-          {street === "river" ? `Flop bet 1.8 · turn bet ${turnBet} · called` : street === "turn" ? "Flop bet 1.8 · called" : "6-max · 100bb deep"}
+        <span className="text-[12px] tracking-[0.12em] uppercase" style={{ color: "var(--muted)" }}>
+          6-max · 100bb deep · BTN vs BB
         </span>
       </motion.div>
 
+      {/* What just happened, big. */}
+      <div className="flex h-[46px] items-center justify-center">
+        <AnimatePresence mode="wait">
+          {headline && (
+            <motion.b
+              key={headline}
+              className="rounded-[10px] px-3 py-1 text-center font-[family-name:var(--font-display)] text-[19px] font-bold"
+              style={{ color: headColor, background: "rgba(0,0,0,.35)" }}
+              initial={{ opacity: 0, y: 8, scale: 0.92 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -6 }}
+              transition={{ duration: 0.2 }}
+              data-testid="trailer-headline"
+            >
+              {headline}
+            </motion.b>
+          )}
+        </AnimatePresence>
+      </div>
+
       {/* The table. */}
-      <div className="relative my-auto aspect-[3/4] w-full max-w-[380px]">
+      <div className="relative my-auto aspect-[3/4] w-full max-w-[350px]">
         <motion.div
           className="absolute rounded-[50%]"
           style={{
@@ -123,7 +201,7 @@ export function FlopTrailer({ board, street = "flop", turnBet = 6, onDone }: { b
           <SpadeMark piece="king" color="var(--ivory)" size={46} />
         </div>
 
-        {/* Pot. */}
+        {/* Pot: big, and it grows with each bet. */}
         <motion.div
           className="absolute flex flex-col items-center gap-1"
           style={{ left: `${POT_AT[0]}%`, top: `${POT_AT[1]}%`, transform: "translate(-50%,-50%)" }}
@@ -134,9 +212,9 @@ export function FlopTrailer({ board, street = "flop", turnBet = 6, onDone }: { b
           <AnimatePresence>{swept && <Chips key="pot" n={5} color="#C9A55A" />}</AnimatePresence>
           <motion.span
             key={pot}
-            className="rounded-full px-2.5 py-0.5 font-[family-name:var(--font-display)] text-[14px] font-bold"
-            style={{ background: "rgba(0,0,0,.45)", color: "var(--gold)", border: "1px solid #C9A55A88" }}
-            initial={{ scale: 1.3 }}
+            className="rounded-full px-3 py-0.5 font-[family-name:var(--font-display)] text-[18px] font-bold"
+            style={{ background: "rgba(0,0,0,.55)", color: "var(--gold)", border: "1.5px solid #C9A55A" }}
+            initial={{ scale: 1.35 }}
             animate={{ scale: 1 }}
             data-testid="trailer-pot"
           >
@@ -144,23 +222,24 @@ export function FlopTrailer({ board, street = "flop", turnBet = 6, onDone }: { b
           </motion.span>
         </motion.div>
 
-        {/* The bets: blinds first, then BTN's raise and BB's call; swept into the pot. */}
+        {/* The bets: blinds, BTN's raise and BB's call, then each bet and call of the line, swept in after its street. */}
         <Bet seat="SB" n={1} color="#9DB4C4" show from={false} swept={swept} />
         <Bet seat="BB" n={1} color="#9DB4C4" show from={false} swept={swept} />
         <Bet seat="BB" n={3} color="#35C277" show={at("call")} from swept={swept} />
         <Bet seat="BTN" n={3} color="#F2564B" show={at("raise")} from swept={swept} />
-        <Bet seat="BTN" n={2} color="#F2564B" show={at("fbet")} from swept={fswept} />
-        <Bet seat="BB" n={2} color="#35C277" show={at("fcall")} from swept={fswept} />
-        <Bet seat="BTN" n={4} color="#F2564B" show={at("tbet")} from swept={tswept} />
-        <Bet seat="BB" n={4} color="#35C277" show={at("tcall")} from swept={tswept} />
+        {actsDone.map((e) => {
+          const a = actOf(e);
+          if (!a.bb) return null;
+          return <Bet key={`${e.si}-${e.ai}`} seat={a.who} n={Math.min(5, 1 + Math.round(a.bb / 4))} color={a.act === "bet" ? "#F2564B" : "#35C277"} show from swept={at("ssweep", e.si)} />;
+        })}
 
-        {/* The flop: three cards land face down, then turn over one by one; the turn after the flop bet and call. */}
+        {/* The flop lands face down and turns over; each later card after its street's bets go in. */}
         <div className="absolute flex gap-1.5" style={{ left: "50%", top: "53%", transform: "translate(-50%,-50%)" }}>
           {board.map((c, i) =>
             i < 3 ? (
               <TableCard key={i} card={c} i={i} landed={at("deal")} flipped={at("flip")} />
             ) : (
-              <TableCard key={i} card={c} i={0} landed={at(i === 3 ? "tdeal" : "rdeal")} flipped={at(i === 3 ? "tflip" : "rflip")} />
+              <TableCard key={i} card={c} i={0} landed={at("sdeal", i - 3)} flipped={at("sflip", i - 3)} />
             ),
           )}
         </div>
@@ -170,11 +249,18 @@ export function FlopTrailer({ board, street = "flop", turnBet = 6, onDone }: { b
         ))}
       </div>
 
-      <div className="flex h-[64px] flex-col items-center justify-center gap-2">
+      {/* The line so far, filling in. */}
+      {line.length > 0 && (
+        <div className="w-full pb-1">
+          <LineBar line={line} upTo={actsDone.length} />
+        </div>
+      )}
+
+      <div className="flex h-[50px] flex-col items-center justify-center gap-1.5">
         <AnimatePresence>
           {at("caption") && (
             <motion.b
-              className="font-[family-name:var(--font-brand)] text-[19px] font-bold"
+              className="font-[family-name:var(--font-brand)] text-[18px] font-bold"
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.35 }}
@@ -194,7 +280,7 @@ export function FlopTrailer({ board, street = "flop", turnBet = 6, onDone }: { b
 
 function SeatBadge({ seat, folded, action, stack, hero }: { seat: Seat; folded: boolean; action?: string; stack: string; hero: boolean }) {
   const [x, y] = SEAT_AT[seat];
-  const color = action?.startsWith("Raise") || action?.startsWith("Bet") ? "var(--raise)" : action?.startsWith("Call") ? "var(--call)" : "var(--muted)";
+  const color = action?.startsWith("Raise") || action?.startsWith("Bet") ? "var(--raise)" : action?.startsWith("Call") ? "var(--call)" : action === "Check" ? "var(--foreground)" : "var(--muted)";
   return (
     <motion.div
       className="absolute flex flex-col items-center"
@@ -222,8 +308,8 @@ function SeatBadge({ seat, folded, action, stack, hero }: { seat: Seat; folded: 
         {action && (
           <motion.span
             key={action}
-            className="mt-1 rounded-full px-2 py-px font-[family-name:var(--font-display)] text-[11.5px] font-bold"
-            style={{ color, background: "rgba(0,0,0,.55)", border: `1px solid ${color}` }}
+            className="mt-1 rounded-full px-2 py-px font-[family-name:var(--font-display)] text-[12.5px] font-bold"
+            style={{ color, background: "rgba(0,0,0,.6)", border: `1px solid ${color}` }}
             initial={{ opacity: 0, y: -6, scale: 0.7 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             transition={{ type: "spring", stiffness: 500, damping: 22 }}
@@ -270,7 +356,7 @@ function Chips({ n, color }: { n: number; color: string }) {
   );
 }
 
-/** A flop card: flies in face down from the dealer, then turns over. */
+/** A board card: flies in face down from the dealer, then turns over. */
 function TableCard({ card, i, landed, flipped }: { card: Card; i: number; landed: boolean; flipped: boolean }) {
   const w = 46, h = 64;
   const color = SUIT_COLOR[card.s];

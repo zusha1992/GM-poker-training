@@ -1,0 +1,384 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Flop From Above</title>
+<style>
+  :root { --bg: #0b1220; --line: #24324a; --gold: #c9a55a; --ivory: #f3ead7; --muted: #8e9bb0; --raise: #f2564b; --call: #35c277; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: #05080f; color: var(--ivory); font-family: system-ui, -apple-system, "Segoe UI", sans-serif; overflow: hidden; }
+  .phone { width: min(100vw, 430px); height: 100dvh; margin: 0 auto; display: flex; flex-direction: column; background: var(--bg); cursor: pointer; }
+  .bar { display: flex; align-items: center; gap: 10px; padding: 10px 14px; }
+  .avatar { width: 38px; height: 38px; border-radius: 8px; display: grid; place-items: center; font-size: 22px; border: 1px solid var(--line); }
+  .who { flex: 1; min-width: 0; }
+  .who b { display: block; font-size: 15px; }
+  .who span { display: block; font-size: 12px; color: var(--muted); height: 16px; transition: color .3s; }
+  .clock { min-width: 86px; text-align: right; padding: 6px 10px; border-radius: 8px; font-variant-numeric: tabular-nums; font-weight: 800; font-size: 18px; background: #1a2638; color: var(--muted); transition: background .3s, color .3s; }
+  .clock.active { background: var(--ivory); color: #111; }
+  #barBB .avatar { background: radial-gradient(circle at 50% 45%, #8b8f98 0 30%, #6b2433 32% 100%); }
+  #barBTN .avatar { background: radial-gradient(circle at 50% 45%, #1a1a1f 0 30%, #26406a 32% 100%); border-color: var(--gold); }
+  #barBTN .who b { color: var(--gold); }
+  .stage { flex: 1; min-height: 0; }
+  svg { display: block; width: 100%; height: 100%; }
+  .caption { height: 64px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  .caption b { font-size: 19px; opacity: 0; transform: translateY(6px); transition: opacity .3s, transform .3s; }
+  .caption b.on { opacity: 1; transform: none; }
+  .caption small { margin-top: 4px; font-size: 12.5px; color: var(--muted); opacity: 0; transition: opacity .3s; }
+  .caption small.on { opacity: 1; }
+  .hint { text-align: center; font-size: 11px; color: #4a5568; padding-bottom: 8px; }
+  .t { transition: transform .7s cubic-bezier(.45,.05,.25,1), opacity .45s; }
+  .fast { transition: transform .18s ease-in-out; }
+  .breathe { animation: breathe 4s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+  @keyframes breathe { 50% { transform: scale(1.018); } }
+  .think { opacity: 0; transition: opacity .3s; } .think.on { opacity: 1; }
+  .think circle { opacity: .2; animation: dot 1.1s infinite; } .think circle:nth-child(2) { animation-delay: .22s; } .think circle:nth-child(3) { animation-delay: .44s; }
+  @keyframes dot { 50% { opacity: 1; } }
+</style>
+</head>
+<body>
+<div class="phone" id="phone">
+  <div class="bar" id="barBB">
+    <div class="avatar"></div>
+    <div class="who"><b>BB</b><span id="bbAct">Called preflop</span></div>
+    <div class="clock" id="bbClock">97.5</div>
+  </div>
+
+  <div class="stage">
+    <svg viewBox="0 0 390 520" preserveAspectRatio="xMidYMid meet" role="img" aria-label="A poker table seen from above: BB at the top, BTN at the bottom. BB checks, BTN bets, BB calls.">
+      <defs>
+        <radialGradient id="felt" cx="50%" cy="50%" r="62%"><stop offset="0" stop-color="#1d4fa6" /><stop offset=".6" stop-color="#103171" /><stop offset="1" stop-color="#081a40" /></radialGradient>
+        <linearGradient id="rail" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3a3f4a" /><stop offset=".5" stop-color="#16191f" /><stop offset="1" stop-color="#2a2e36" /></linearGradient>
+        <pattern id="slot" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="3" height="6" fill="#ffffff" opacity=".04" /></pattern>
+        <radialGradient id="lamp" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#ffe3a6" stop-opacity=".16" /><stop offset="1" stop-color="#ffe3a6" stop-opacity="0" /></radialGradient>
+        <radialGradient id="room" cx="50%" cy="50%" r="70%"><stop offset="0" stop-color="#151e2e" /><stop offset="1" stop-color="#070b13" /></radialGradient>
+        <pattern id="chess" width="20" height="20" patternUnits="userSpaceOnUse"><rect width="10" height="10" fill="#fff" opacity=".045" /><rect x="10" y="10" width="10" height="10" fill="#fff" opacity=".045" /></pattern>
+        <radialGradient id="jacketBB" cx="50%" cy="35%" r="65%"><stop offset="0" stop-color="#6b2433" /><stop offset="1" stop-color="#2a0d14" /></radialGradient>
+        <radialGradient id="jacketBTN" cx="50%" cy="65%" r="65%"><stop offset="0" stop-color="#26406a" /><stop offset="1" stop-color="#0b1424" /></radialGradient>
+        <radialGradient id="hatBB" cx="45%" cy="40%" r="60%"><stop offset="0" stop-color="#8b8f98" /><stop offset="1" stop-color="#3d4048" /></radialGradient>
+        <radialGradient id="hatBTN" cx="45%" cy="60%" r="60%"><stop offset="0" stop-color="#2b2b30" /><stop offset="1" stop-color="#0c0c10" /></radialGradient>
+        <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="2" stdDeviation="2.5" flood-color="#000" flood-opacity=".6" /></filter>
+        <symbol id="back" viewBox="0 0 20 28"><rect width="20" height="28" rx="2.5" fill="#1b2e48" stroke="#c9a55a" stroke-width="1.2" /><path d="M10 7 l4 7 l-4 7 l-4 -7 z" fill="#c9a55a" opacity=".75" /></symbol>
+      </defs>
+
+      <rect width="390" height="520" fill="url(#room)" />
+
+      <!-- The table from above. -->
+      <!-- A long "stadium" table for two: dark leather rail, deep blue felt, a thin glowing line inside. -->
+      <rect x="44" y="66" width="302" height="388" rx="151" fill="url(#rail)" filter="url(#shadow)" />
+      <rect x="44" y="66" width="302" height="388" rx="151" fill="none" stroke="#4a505c" stroke-width="1" />
+      <rect x="58" y="80" width="274" height="360" rx="137" fill="url(#felt)" />
+      <rect x="58" y="80" width="274" height="360" rx="137" fill="none" stroke="#00000088" stroke-width="3" />
+      <rect x="84" y="106" width="222" height="308" rx="111" fill="none" stroke="#4d8dff" stroke-width="1.3" opacity=".45" />
+      <circle cx="195" cy="260" r="170" fill="url(#lamp)" opacity=".5" />
+      <!-- Five card places in the middle: the flop, the turn, the river. -->
+      <g id="slots"></g>
+
+      <g id="stacks"></g>
+      <g id="pot"></g>
+      <g id="cards"></g>
+      <g id="bets"></g>
+      <!-- The pot pill. -->
+      <g transform="translate(195 226)">
+        <rect x="-30" y="-11" width="60" height="22" rx="11" fill="#f5f2ea" />
+        <circle cx="-17" cy="0" r="6.5" fill="#e3b33c" stroke="#a87b16" /><circle cx="-17" cy="0" r="3" fill="none" stroke="#fff6" />
+        <text x="7" y="5" text-anchor="middle" font-size="13" font-weight="800" fill="#111" id="potText">5.5</text>
+      </g>
+      <text x="195" y="304" text-anchor="middle" font-size="9" fill="#9fb7e6" opacity=".6" letter-spacing=".06em">NL · 100bb deep · BTN vs BB</text>
+      <!-- Action bubbles. -->
+      <g id="bubbles"></g>
+
+      <!-- The players (arms drawn by the script, under the shoulders). -->
+      <g id="arms"></g>
+
+      <g class="breathe">
+        <ellipse cx="195" cy="36" rx="50" ry="21" fill="url(#jacketBB)" stroke="#00000066" />
+        <path d="M185 18 l10 14 l10 -14" fill="none" stroke="#e7d8c8" stroke-width="2" opacity=".55" />
+        <circle cx="195" cy="34" r="19" fill="url(#hatBB)" stroke="#202228" />
+        <circle cx="195" cy="34" r="11" fill="#55595f" stroke="#b9c2d0" stroke-width="1.6" />
+      </g>
+      <g class="think" id="bbThink"><circle cx="232" cy="20" r="2.5" fill="#f3ead7" /><circle cx="241" cy="16" r="2.5" fill="#f3ead7" /><circle cx="250" cy="12" r="2.5" fill="#f3ead7" /></g>
+
+      <g class="breathe" style="animation-delay:-1.6s">
+        <ellipse cx="195" cy="484" rx="50" ry="21" fill="url(#jacketBTN)" stroke="#00000066" />
+        <path d="M185 502 l10 -14 l10 14" fill="none" stroke="#f3ead7" stroke-width="2" opacity=".5" />
+        <circle cx="195" cy="486" r="19" fill="url(#hatBTN)" stroke="#000" />
+        <circle cx="195" cy="486" r="11" fill="#1a1a1f" stroke="#c9a55a" stroke-width="1.8" />
+      </g>
+    </svg>
+  </div>
+
+  <div class="caption"><b id="cap"></b><small id="sub"></small></div>
+
+  <div class="bar" id="barBTN">
+    <div class="avatar"></div>
+    <div class="who"><b>BTN · You</b><span id="btnAct">Raised 2.5 preflop</span></div>
+    <div class="clock" id="btnClock">97.5</div>
+  </div>
+  <div class="hint">Scene test · not in the app · tap to replay</div>
+</div>
+
+<script>
+  const $ = (id) => document.getElementById(id);
+  const NS = "http://www.w3.org/2000/svg";
+  const el = (tag, attrs, parent) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); parent && parent.appendChild(e); return e; };
+
+  let ac;
+  const tone = (f, d = 0.06, type = "sine", v = 0.07) => {
+    try {
+      ac = ac || new (window.AudioContext || window.webkitAudioContext)();
+      const o = ac.createOscillator(), g = ac.createGain();
+      o.type = type; o.frequency.value = f; g.gain.value = v;
+      g.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + d);
+      o.connect(g).connect(ac.destination); o.start(); o.stop(ac.currentTime + d);
+    } catch (e) {}
+  };
+  const chipsSound = () => [0, 55, 110, 165].forEach((d) => setTimeout(() => tone(1350 + d, 0.03, "triangle", 0.05), d));
+  const knock = () => tone(120, 0.08, "square", 0.1);
+
+  // Chips from above: discs with edge spots, offset a little to look stacked.
+  function chips(parent, x, y, n, color, cls = "t") {
+    const g = el("g", { class: cls, style: `transform: translate(${x}px, ${y}px)` }, parent);
+    for (let i = 0; i < n; i++) {
+      const c = el("g", { transform: `translate(${(i % 2) * 1.5} ${-i * 1.6})` }, g);
+      el("circle", { r: 8, fill: color, stroke: "#0b1220", "stroke-width": ".8" }, c);
+      el("circle", { r: 8, fill: "none", stroke: "#ffffffcc", "stroke-width": 2, "stroke-dasharray": "3 3.3" }, c);
+      el("circle", { r: 4, fill: "none", stroke: "#ffffff66", "stroke-width": ".8" }, c);
+    }
+    return g;
+  }
+
+  // ---- The players: one hand on the cards, one hand for the chips. ----
+  // An arm is a sleeve from the shoulder to the wrist, then a hand (palm, thumb, four fingers) facing `dir`.
+  function makeArm(p, sleeve, cuff, skin) {
+    const g = el("g", {}, $("arms"));
+    const path = el("path", { stroke: sleeve, "stroke-width": 11, "stroke-linecap": "round", fill: "none" }, g);
+    const cuffEl = el("circle", { r: 5.6, fill: cuff }, g);
+    const hand = el("g", {}, g);
+    el("ellipse", { cx: 0, cy: 0, rx: 6.2, ry: 7, fill: skin, stroke: "#00000055", "stroke-width": ".6" }, hand);
+    for (const fx of [-3.6, -1.2, 1.2, 3.6]) el("ellipse", { cx: fx, cy: 6.6, rx: 1.25, ry: 2.6, fill: skin, stroke: "#00000044", "stroke-width": ".4" }, hand);
+    el("ellipse", { cx: -6.4, cy: 1.5, rx: 1.6, ry: 2.8, fill: skin, transform: "rotate(30 -6.4 1.5)", stroke: "#00000044", "stroke-width": ".4" }, hand);
+    const arm = { ...p, g, path, cuffEl, hand, at: { ...p.rest }, carry: null };
+    draw(arm);
+    return arm;
+  }
+  function draw(a) {
+    const { x, y } = a.at, [sx, sy] = a.shoulder;
+    const mx = (sx + x) / 2 + a.elbow, my = (sy + y) / 2;
+    const wx = x - Math.sin(a.dirRad) * 7, wy = y - Math.cos(a.dirRad) * 7;
+    a.path.setAttribute("d", `M${sx} ${sy} Q${mx} ${my} ${wx} ${wy}`);
+    a.cuffEl.setAttribute("cx", wx); a.cuffEl.setAttribute("cy", wy);
+    a.hand.setAttribute("transform", `translate(${x} ${y}) rotate(${a.dirDeg})`);
+    if (a.carry) a.carry.style.transform = `translate(${x}px, ${y + a.carryDy}px)`;
+  }
+  // Move a hand to a point over `ms`, smoothly; resolves when it gets there.
+  function move(a, to, ms) {
+    return new Promise((res) => {
+      const from = { ...a.at }, t0 = performance.now();
+      const ease = (t) => (t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2);
+      const step = (now) => {
+        const t = Math.min(1, (now - t0) / ms), e = ease(t);
+        a.at = { x: from.x + (to.x - from.x) * e, y: from.y + (to.y - from.y) * e };
+        draw(a);
+        if (t < 1 && !stopped) requestAnimationFrame(step); else res();
+      };
+      requestAnimationFrame(step);
+    });
+  }
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+
+  let stopped = false, A = {};
+  function setupPlayers() {
+    $("arms").innerHTML = "";
+    // BB, at the top, faces down the table (dir 0 = fingers toward the bottom).
+    A.bbCards = makeArm({ shoulder: [176, 48], rest: { x: 184, y: 108 }, elbow: -14, dirDeg: 0, dirRad: 0 }, "#4f1a26", "#e7d8c8", "#8a5a3c");
+    A.bbChips = makeArm({ shoulder: [216, 48], rest: { x: 232, y: 96 }, elbow: 16, dirDeg: -10, dirRad: 0 }, "#4f1a26", "#e7d8c8", "#8a5a3c");
+    // BTN, at the bottom, faces up the table.
+    A.btnCards = makeArm({ shoulder: [214, 472], rest: { x: 206, y: 412 }, elbow: 14, dirDeg: 180, dirRad: Math.PI }, "#1d3254", "#f3ead7", "#d9b08c");
+    A.btnChips = makeArm({ shoulder: [174, 472], rest: { x: 158, y: 424 }, elbow: -16, dirDeg: 170, dirRad: Math.PI }, "#1d3254", "#f3ead7", "#d9b08c");
+  }
+  // The cards under the card hand, with the chess piece on them.
+  function holeCards() {
+    const g = $("cards");
+    const put = (x, y, rot, piece, fill) => {
+      const h = el("g", { transform: `translate(${x} ${y}) rotate(${rot})` }, g);
+      el("use", { href: "#back", x: -15, y: -10, width: 14, height: 20, transform: "rotate(-10)" }, h);
+      el("use", { href: "#back", x: 0, y: -10, width: 14, height: 20, transform: "rotate(10)" }, h);
+    };
+    put(184, 110, 180, "♛", "#b9c2d0");
+    put(206, 410, 0, "♚", "#c9a55a");
+  }
+
+  const FLOP = [["A", "♣", "#2f9e57"], ["7", "♦", "#3b6fd8"], ["2", "♠", "#3a3f4a"]];
+  const SLOT_X = [131, 163, 195, 227, 259];
+  function slots() {
+    const g = $("slots"); g.innerHTML = "";
+    for (const x of SLOT_X) {
+      el("rect", { x: x - 13.5, y: 250, width: 27, height: 36, rx: 3, fill: "url(#slot)" }, g);
+      el("rect", { x: x - 13.5, y: 250, width: 27, height: 36, rx: 3, fill: "#ffffff06", stroke: "#9fb7e633", "stroke-width": 1 }, g);
+    }
+  }
+  // An action bubble by a player ("Check", "Bet 1.8", "Call").
+  function bubble(who, text, color) {
+    const g = $("bubbles");
+    g.querySelectorAll(`[data-who="${who}"]`).forEach((b) => b.remove());
+    if (!text) return;
+    const [x, y] = who === "bb" ? [112, 150] : [278, 372];
+    const b = el("g", { "data-who": who, transform: `translate(${x} ${y})`, class: "t", style: "opacity: 0" }, g);
+    const w = text.length * 7.4 + 22;
+    el("rect", { x: -w / 2, y: -13, width: w, height: 26, rx: 9, fill: "#0b2a5a", stroke: color, "stroke-width": 1.4 }, b);
+    el("text", { y: 5, "text-anchor": "middle", "font-size": 13, "font-weight": 800, fill: color }, b).textContent = text;
+    requestAnimationFrame(() => (b.style.opacity = 1));
+  }
+  // The amount under a bet, as a small white pill.
+  function amount(x, y, text) {
+    const g = el("g", { transform: `translate(${x} ${y})` }, $("bets"));
+    el("rect", { x: -13, y: -7, width: 26, height: 14, rx: 7, fill: "#f5f2ea" }, g);
+    el("text", { y: 4, "text-anchor": "middle", "font-size": 9.5, "font-weight": 800, fill: "#111" }, g).textContent = text;
+    return g;
+  }
+  function deal() {
+    const g = el("g", {}, $("cards"));
+    FLOP.forEach(([r, s, c], i) => {
+      const x = SLOT_X[i];
+      const card = el("g", { class: "t", style: "transform: translate(195px, 260px) rotate(-30deg) scale(.4)", opacity: 0 }, g);
+      const back = el("use", { href: "#back", x: -13, y: -18, width: 26, height: 36, class: "fast", style: "transform-box: fill-box; transform-origin: center" }, card);
+      const face = el("g", { class: "fast", style: "transform-box: fill-box; transform-origin: center; transform: scaleX(0)" }, card);
+      el("rect", { x: -13, y: -18, width: 26, height: 36, rx: 3, fill: c, stroke: "#ffffff66" }, face);
+      el("text", { y: 1, "text-anchor": "middle", "font-size": 15, "font-weight": 800, fill: "#fff" }, face).textContent = r;
+      el("text", { y: 14, "text-anchor": "middle", "font-size": 11, fill: "#fff" }, face).textContent = s;
+      setTimeout(() => { card.setAttribute("opacity", 1); card.style.transform = `translate(${x}px, 268px) rotate(0deg) scale(.96)`; tone(900, 0.025, "triangle", 0.035); }, 60 + i * 170);
+      setTimeout(() => { back.style.transform = "scaleX(0)"; setTimeout(() => { face.style.transform = "scaleX(1)"; tone(520 + i * 130, 0.08); }, 180); }, 1000 + i * 280);
+    });
+  }
+
+  // Reach to the stack, take chips, put them in front, come back.
+  async function betWith(a, stackAt, spot, color, n) {
+    await move(a, { x: stackAt.x, y: stackAt.y + a.reachDy }, 420);
+    a.carry = chips($("bets"), stackAt.x, stackAt.y, n, color, "");
+    a.carryDy = -a.reachDy;
+    tone(1500, 0.025, "triangle", 0.05);
+    await move(a, { x: spot.x, y: spot.y - a.carryDy }, 620);
+    const placed = a.carry; a.carry = null;
+    chipsSound();
+    await wait(150);
+    await move(a, a.rest, 480);
+    return placed;
+  }
+  async function tap(a) {
+    for (let i = 0; i < 2; i++) {
+      await move(a, { x: a.rest.x, y: a.rest.y + a.tapDy }, 110);
+      knock();
+      await move(a, a.rest, 120);
+    }
+  }
+
+  const cap = (t, sub = "", color = "var(--ivory)") => {
+    const c = $("cap"), s = $("sub"); c.classList.remove("on"); s.classList.remove("on");
+    setTimeout(() => { c.textContent = t; c.style.color = color; c.classList.toggle("on", !!t); s.textContent = sub; s.classList.toggle("on", !!sub); }, 160);
+  };
+  const turnTo = (who) => { $("bbClock").classList.toggle("active", who === "bb"); $("btnClock").classList.toggle("active", who === "btn"); };
+  const act = (id, text, color) => { $(id).textContent = text; $(id).style.color = color || "var(--muted)"; };
+
+  // One card into a slot: flies in face down, then turns over.
+  function dealCard(slot, [r, su, c], delay = 0) {
+    const g = el("g", {}, $("cards"));
+    const card = el("g", { class: "t", style: "transform: translate(195px, 260px) rotate(-30deg) scale(.4)", opacity: 0 }, g);
+    const back = el("use", { href: "#back", x: -13, y: -18, width: 26, height: 36, class: "fast", style: "transform-box: fill-box; transform-origin: center" }, card);
+    const face = el("g", { class: "fast", style: "transform-box: fill-box; transform-origin: center; transform: scaleX(0)" }, card);
+    el("rect", { x: -13, y: -18, width: 26, height: 36, rx: 3, fill: c, stroke: "#ffffff66" }, face);
+    el("text", { y: 1, "text-anchor": "middle", "font-size": 15, "font-weight": 800, fill: "#fff" }, face).textContent = r;
+    el("text", { y: 14, "text-anchor": "middle", "font-size": 11, fill: "#fff" }, face).textContent = su;
+    setTimeout(() => { card.setAttribute("opacity", 1); card.style.transform = `translate(${SLOT_X[slot]}px, 268px) rotate(0deg) scale(.96)`; tone(900, 0.025, "triangle", 0.035); }, 60 + delay);
+    setTimeout(() => { back.style.transform = "scaleX(0)"; setTimeout(() => { face.style.transform = "scaleX(1)"; tone(520 + slot * 130, 0.08); }, 180); }, 900 + delay);
+  }
+  const TURN = ["Q", "♥", "#d64545"];
+
+  // Bet spots and amount pills, in front of each player.
+  const SPOT = { bb: { x: 178, y: 188 }, btn: { x: 214, y: 336 } };
+  const PILL = { bb: { x: 178, y: 170 }, btn: { x: 214, y: 352 } };
+  const STACK = { bb: { x: 262, y: 104 }, btn: { x: 130, y: 418 } };
+  const COLOR = { bb: "#35c277", btn: "#f2564b" };
+
+  let run = 0;
+  async function play() {
+    const me = ++run;
+    stopped = true; await wait(30); stopped = false;
+    const live = () => me === run;
+    ["stacks", "pot", "cards", "bets", "bubbles"].forEach((i) => ($(i).innerHTML = ""));
+    slots();
+    turnTo(null); cap(""); $("bbThink").classList.remove("on");
+    setupPlayers(); holeCards();
+    A.bbChips.reachDy = -6; A.bbChips.tapDy = 6;
+    A.btnChips.reachDy = 6; A.btnChips.tapDy = -6;
+    chips($("stacks"), 262, 100, 6, "#35c277"); chips($("stacks"), 280, 112, 4, "#9db4c4");
+    chips($("stacks"), 128, 424, 6, "#f2564b"); chips($("stacks"), 110, 412, 4, "#9db4c4");
+
+    // State: what each player has in front of them this street, and the pot (bets included).
+    let pot = 1.5, stack = { bb: 99, btn: 100 };
+    const onTable = { bb: [], btn: [] };
+    const pill = { bb: null, btn: null };
+    const r1 = (x) => String(Math.round(x * 10) / 10);
+    const show = () => { $("potText").textContent = r1(pot); $("bbClock").textContent = r1(stack.bb); $("btnClock").textContent = r1(stack.btn); };
+    const setPill = (who, text) => { pill[who]?.remove(); pill[who] = text ? amount(PILL[who].x, PILL[who].y, text) : null; };
+    async function put(who, add, total) {
+      const a = who === "bb" ? A.bbChips : A.btnChips;
+      onTable[who].push(await betWith(a, STACK[who], SPOT[who], COLOR[who], add >= 2 ? 3 : 2));
+      stack[who] -= add; pot += add; show(); setPill(who, total);
+    }
+    async function sweep() {
+      setPill("bb", ""); setPill("btn", ""); bubble("bb", ""); bubble("btn", ""); turnTo(null);
+      for (const g of [...onTable.bb, ...onTable.btn]) { g.setAttribute("class", "t"); requestAnimationFrame(() => { g.style.transform = "translate(195px, 204px)"; g.style.opacity = 0; }); }
+      onTable.bb = []; onTable.btn = [];
+      [0, 60, 120, 180].forEach((d) => setTimeout(() => tone(1100 - d, 0.035, "triangle", 0.05), d));
+      await wait(700);
+      $("pot").innerHTML = ""; chips($("pot"), 195, 204, 3, "#c9a55a");
+    }
+    const step = async (ms) => { await wait(ms); if (!live()) throw 0; };
+
+    try {
+      // ---- Preflop: BB has posted the blind (SB's 0.5 is in the middle; it folded). ----
+      chips($("pot"), 195, 204, 1, "#9db4c4");
+      onTable.bb.push(chips($("bets"), SPOT.bb.x, SPOT.bb.y, 1, "#9db4c4")); setPill("bb", "1");
+      act("bbAct", "Big blind 1"); act("btnAct", "");
+      show(); cap("Preflop", "Everyone folds to the button");
+      await step(1500);
+      turnTo("btn"); await step(500);
+      cap("BTN raises to 2.5bb", "", "var(--raise)"); bubble("btn", "Raise 2.5", "#ff6b61"); act("btnAct", "Raises 2.5", "var(--raise)");
+      await put("btn", 2.5, "2.5"); await step(500);
+      turnTo("bb"); $("bbThink").classList.add("on"); cap("BB thinks…", "", "var(--muted)"); await step(1300);
+      $("bbThink").classList.remove("on");
+      cap("BB calls", "1.5bb more", "var(--call)"); bubble("bb", "Call", "#4fd88d"); act("bbAct", "Calls 2.5", "var(--call)");
+      await put("bb", 1.5, "2.5"); await step(700);
+      await sweep(); await step(300);
+
+      // ---- Flop: BB checks, BTN bets a third of the pot, BB calls. ----
+      FLOP.forEach((c, i) => dealCard(i, c, i * 170));
+      cap("The flop", `Pot ${r1(pot)}bb · ${r1(stack.btn)}bb behind`); await step(2300);
+      turnTo("bb"); await step(500);
+      cap("BB checks"); act("bbAct", "Checks", "var(--ivory)"); bubble("bb", "Check", "#f3ead7");
+      await tap(A.bbChips); await step(800);
+      turnTo("btn"); await step(400);
+      cap("BTN bets 1.8bb", "33% of the pot", "var(--raise)"); bubble("bb", ""); bubble("btn", "Bet 1.8", "#ff6b61"); act("btnAct", "Bets 1.8 · 33%", "var(--raise)");
+      await put("btn", 1.8, "1.8"); await step(500);
+      turnTo("bb"); $("bbThink").classList.add("on"); cap("BB thinks…", "", "var(--muted)"); await step(1600);
+      $("bbThink").classList.remove("on");
+      cap("BB calls 1.8bb", "", "var(--call)"); bubble("bb", "Call", "#4fd88d"); act("bbAct", "Calls 1.8", "var(--call)");
+      await put("bb", 1.8, "1.8"); await step(700);
+      await sweep(); await step(300);
+
+      // ---- The turn, then the decision. ----
+      dealCard(3, TURN);
+      cap("The turn", `Q♥ · Pot ${r1(pot)}bb · ${r1(stack.btn)}bb behind`); await step(1900);
+      act("bbAct", ""); act("btnAct", "");
+      turnTo("btn");
+      cap("Your decision", "Your made hands: how many bb?", "var(--gold)");
+    } catch (e) {
+      // replayed: this run stops
+    }
+  }
+  $("phone").onclick = () => play();
+  play();
+</script>
+</body>
+</html>

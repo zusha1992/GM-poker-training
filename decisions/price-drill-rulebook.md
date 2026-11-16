@@ -166,6 +166,20 @@ Each note changes only its own turn. When Noam has finished, the notes that look
   - **SPR rule, applied to every river on the 66% line (SPR about 4.3):** one pair (overpairs included) never goes over **25–50**. On a straight river, straights and sets are separate groups, sets at most **25–50** and two pair at most **15–25**. On the overbet line (SPR about 2.2) these don't apply: more hands can get it in. That's why J♠T♠3♣ 2♥ 3♦ (overbet line) keeps AA–QQ at 50–100.
   - **8♠8♦6♣ J♦ 9♦** (Noam, 2026-11-16, reviewed and locked). "When there's a pair on the board, don't separate 96 from 97, 95 or T9: they're the same kind of two pair because there are two eights on the board. Jx in one group, 9x all in one group. The 6 has no meaning when there are two eights on the board." Groups: Top pair (AJ, KJ, QJ, JT, J9, J7), Second pair (A9, K9, Q9, T9, 97, 96), and 6x stays with the small pairs.
   - Applied to every **paired river**: one group per card paired (Top pair, Second pair, …), whatever the second card, and a two pair made with the board's pair counts as that one pair. A card below the board's pair stays with the small pairs. Inside one card, hands whose kicker plays split only if their boxes differ (J♠T♠3♣ 2♥ 3♦ keeps AJ/KJ/QJ 25–50 over J9–J7 0–5). In one box, groups are listed strongest first.
+  - **J♠T♠3♣ 6♣ 3♦** (Noam, 2026-11-16, notes from the app, reviewed and locked; 66% turn line). "Overpairs are worth a stack" (AA–QQ were 25–50) → **50–100**. "When a lot of draws missed, ace-high can show down" (was Pot is too big) → **0–5**.
+  - Applied to every river where **no flush and no straight is possible** (the draws missed): ace-high is **0–5**, not Pot is too big; and overpairs aren't held back by the SPR rule (on the 66% line they can still be 50–100). The SPR rule still caps one pair on rivers where a straight or a flush is possible (K♠5♦4♣ 3♠ 9♦: "not going to shove aces here").
+- **Lines** (Noam, 2026-11-16): "what a hand is worth depends on the line". Six lines, first on A-7-2 only (every turn and river):
+
+  | Key | Line | River pot | Behind | SPR |
+  |---|---|---|---|---|
+  | b75 | flop 33% call, turn 75% (6.8) call | 22.7 | 88.9 | 3.9 |
+  | b150 | flop 33% call, turn 150% (13.7) call | 36.5 | 82 | 2.2 |
+  | b200 | flop 33% call, turn 200% (18.2) call | 45.5 | 77.5 | 1.7 |
+  | bx | flop 33% call, turn check check | 9.1 | 95.7 | 10.5 |
+  | x75 | flop check check, turn 75% (4.1) call | 13.7 | 93.4 | 6.8 |
+  | xx | flop and turn check check | 5.5 | 97.5 | 17.7 |
+
+  66% is gone (merged into 75%, Noam: "75 is good"). BB's range after each line comes from our solver (`scripts/analysis/solve-lines.ts`, `decisions/ranges/solver/A72/lines/`); the boxes come from equity against it (`flop-equity-groups.ts --river --line <key>`, `src/lib/drill/postflop/river-line-groups.json`). Noam's river notes stay on the line they were made on (66% → b75, overbet → b150). The SPR rule uses each line's SPR (over 3 = high). The "top pair weak kicker = 0–5" note came from a line where BTN bet the turn; after a turn checked through (bx, xx) the equity decides (A8–A5 15–25 on A-7-2-Q-9). **To review:** on b200 BB's calls are so strong that AK has 44% against them and lands at 0–5, against the SPR principle (low SPR = shove more).
 - **Every other river is still a draft.** Noam's notes go in `BOARD_NOTES` under the river's name, and the river gets locked (`REVIEWED_RIVERS`), as on the turn.
 
 ---

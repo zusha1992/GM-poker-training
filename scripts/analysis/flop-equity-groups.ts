@@ -180,6 +180,7 @@ const BOARD_NOTES: Record<string, Record<string, Bucket>> = {
   // AJ, KJ, QJ: 25–50, not the whole stack.
   "JT3-2h-3d": { "Top pair, weak kicker": "b0", "Small pairs": "b0", "Top pair, good kicker": "b25" },
   "KQ4-8s-Td": { "Flushes": "b50", "Straights": "b25", "Sets": "b15" },
+  "JT3-6c-3d": { "Overpairs": "b50", "Ace-high": "b0" },
 };
 
 /** The principles from Noam's review of A72, JT3 and K54 (rulebook section 0), as a draft for a new board. */
@@ -430,13 +431,17 @@ const code = (c: string) => c[0] + ({ "♠": "s", "♥": "h", "♦": "d", "♣":
  * river ranges, which are much stronger after two calls: a hand goes for stacks only if it beats
  * BB's top pair or better. A group whose hands land in different boxes splits by box; a part of
  * one hand joins its nearest part. Noam's notes on a river (BOARD_NOTES) still decide over equity. */
-function riverBoxes(groups: Group[], notes: Record<string, Bucket>, board: Card[], highSpr: boolean): Group[] {
+function riverBoxes(groups: Group[], notes: Record<string, Bucket>, board: Card[], highSpr: boolean, turnChecked = false): Group[] {
   const w = (hs: Hand[]) => hs.reduce((s, h) => s + h.weight, 0);
   const one = (p: { hands: Hand[] }) => new Set(p.hands.map((h) => rankKey(h.key))).size === 1;
   const boxes = (Object.keys(BOX_RANK) as Bucket[]).sort((a, b) => BOX_RANK[b] - BOX_RANK[a]);
   // Noam 2026-11-14 (J♠T♠3♣ 2♥ 3♦): 99–44 check back, 0–5. On the river any pair checks back:
   // 0–5 at least, never Pot is too big (only ace-high with no showdown value is).
   for (const g of groups) for (const h of g.hands) if (h.box === "big" && h.cat !== "aho" && h.cat !== "khnd") h.box = "b0";
+  // Noam 2026-11-16 (J♠T♠3♣ 6♣ 3♦): "when a lot of draws missed, ace-high can show down". On a river where
+  // no flush and no straight is possible, BB has busted draws: ace-high is 0–5, not Pot is too big.
+  const brickRiver = !flushSuit(board) && !straightPossible(board);
+  for (const g of groups) for (const h of g.hands) if (brickRiver && h.box === "big" && h.cat === "aho") h.box = "b0";
   // Each group split by its hands' own boxes; `src` = the group it came from.
   let parts = groups.flatMap((g, src) => boxes.map((box) => ({ name: g.name, src, box, hands: g.hands.filter((h) => h.box === box) })).filter((p) => p.hands.length));
   for (let k = 0; k < parts.length; k++) {
@@ -555,10 +560,14 @@ function riverBoxes(groups: Group[], notes: Record<string, Bucket>, board: Card[
   // SPR (Noam, K♠5♦4♣ 3♠ 9♦): on the 66% line two pair on a straight river is no more than 15–25,
   // and one pair never shoves: "I'm not going to shove aces here, I'm only going to get called by better."
   for (const p of parts) if (highSpr && straightRiver && p.name?.startsWith("Two pair") && BOX_RANK[p.box] > BOX_RANK.b15) p.box = "b15";
-  for (const p of parts) if (highSpr && onePair(p) && BOX_RANK[p.box] > BOX_RANK.b25) p.box = "b25";
+  // Noam 2026-11-16 (J♠T♠3♣ 6♣ 3♦): "overpairs are worth a stack" there: when the draws missed (no flush,
+  // no straight possible), overpairs aren't held back by the SPR.
+  for (const p of parts) if (highSpr && onePair(p) && !(brickRiver && /^Overpair/.test(p.name ?? "")) && BOX_RANK[p.box] > BOX_RANK.b25) p.box = "b25";
   // Noam 2026-11-14 (J♠T♠3♣ 2♥ 3♦): J9, J8, J7 "definitely want to check back and don't want to put
   // in more money": top pair with a weak kicker is 0–5 on the river.
-  for (const p of parts) if (p.name === "Top pair, weak kicker" && BOX_RANK[p.box] > BOX_RANK.b0) p.box = "b0";
+  // Lines (2026-11-16): that note came from a line where BTN bet the turn and BB called; after a turn checked
+  // through BB still has its weak hands, and the equity decides (A5 is thin value there).
+  for (const p of parts) if (!turnChecked && p.name === "Top pair, weak kicker" && BOX_RANK[p.box] > BOX_RANK.b0) p.box = "b0";
   // Noam 2026-11-14 (J♠T♠3♣ 2♥ 3♦): AJ, KJ, QJ are worth 25–50, not the whole stack. On a paired
   // river (BB can have trips and full houses), top pair is capped at 25–50.
   const paired = new Set(board.map((c) => c.r)).size < board.length;
@@ -602,7 +611,8 @@ function solveBoard(flopName: string, turn?: number, river?: number) {
   const cut = r ? { ...r, pairDraws: false } : t ? { ...t, pairDraws: false } : RUNOUTS.find((x) => x.board === flopName)!.streets[0];
   const board = [...spec.flop, ...(t ? [t.card] : []), ...(r ? [r.card] : [])].map(card);
   const top = Math.max(...board.map((c) => c.r));
-  const dir = `decisions/ranges/solver/${flopName}`;
+  // --line (Noam 2026-11-16): BB's river ranges after that line (solve-lines.ts).
+  const dir = `decisions/ranges/solver/${flopName}${LINE && r ? `/lines/${LINE}` : ""}`;
   // River drill (Noam 2026-11-14): L0 = BB after calling the turn bet, L1 = BB after calling a river bet (river-call-ranges.ts).
   const whole = r ? combosOf(readFileSync(`${dir}/bb-river-${code(t!.card)}.txt`, "utf8"), board) : t ? combosOf(readFileSync(`${dir}/bb-turn.txt`, "utf8"), board) : bbCombos(board);
   const called = combosOf(readFileSync(r ? `${dir}/bb-call-${code(t!.card)}-${code(r.card)}.txt` : t ? `${dir}/bb-river-${code(t.card)}.txt` : `${dir}/bb-turn.txt`, "utf8"), board);
@@ -736,7 +746,10 @@ function solveBoard(flopName: string, turn?: number, river?: number) {
   const reviewed = t ? undefined : REVIEWED[name];
   if (!reviewed) groups = principleGroups(name, board, hands);
   // SPR: about 4.3 on the river after a 66% turn bet, about 2.2 after an overbet.
-  if (r) groups = riverBoxes(groups, BOARD_NOTES[name] ?? {}, board, t!.bet !== "overbet");
+  // Noam's notes belong to the line they were made on: the 66% turn (now 75%) or the 150% overbet.
+  const reviewedLine = t?.bet === "overbet" ? "b150" : "b75";
+  const notes = !LINE || LINE === reviewedLine ? (BOARD_NOTES[name] ?? {}) : {};
+  if (r) groups = riverBoxes(groups, notes, board, LINE ? (LINE_SPR[LINE] ?? 4) > 3 : t!.bet !== "overbet", LINE === "bx" || LINE === "xx");
   if (reviewed) {
     const byKey = new Map(hands.map((h) => [h.key, h]));
     const listed = new Set(reviewed.flatMap((g) => g.hands));
@@ -797,13 +810,17 @@ function whyReviewed(box: Bucket, eq: number[], source: string, street = "flop")
 }
 
 const RIVER = process.argv.includes("--river");
+/** --line <key> (Noam 2026-11-16): the river after one of the 6 lines (lines.ts, solve-lines.ts). */
+const LINE = process.argv.includes("--line") ? process.argv[process.argv.indexOf("--line") + 1] : undefined;
+/** River SPR after each line: big SPR (over 3) = only premium hands shove. */
+const LINE_SPR: Record<string, number> = { b75: 3.9, b150: 2.3, b200: 1.7, bx: 10.5, x75: 6.8, xx: 17.7 };
 const TURN = process.argv.includes("--turn") || RIVER;
 const FORCE = process.argv.includes("--force");
-const args = process.argv.slice(2).filter((a) => a !== "--turn" && a !== "--river" && a !== "--force");
+const args = process.argv.slice(2).filter((a, i, all) => a !== "--turn" && a !== "--river" && a !== "--force" && a !== "--line" && all[i - 1] !== "--line");
 /** Turns Noam has reviewed (2026-11-13): a general rule never changes them. Only his own note on
  * that turn does: rerun it with --force after adding the note to BOARD_NOTES. */
 /** Rivers Noam has reviewed: the same lock. */
-const REVIEWED_RIVERS = new Set<string>(["A72-5c-6c", "JT3-2h-3d", "KQ4-8s-Td", "KQ4-Ad-7c", "K54-3s-9d", "886-Jd-9d"]);
+const REVIEWED_RIVERS = new Set<string>(["A72-5c-6c", "JT3-2h-3d", "KQ4-8s-Td", "KQ4-Ad-7c", "K54-3s-9d", "886-Jd-9d", "JT3-6c-3d"]);
 const REVIEWED_TURNS = new Set(["A72-6d", "962-8d", "KQ4-8s", "QT7-Jh", "962-2c", "886-Jd", "T87-2d"]);
 let locked = 0;
 const flops = args.length ? args.map((a) => a.split("-")[0]) : BOARDS.map((b) => b.name);
@@ -822,7 +839,7 @@ const spots: SpotRef[] = TURN
         });
     })
   : flops.map((n): SpotRef => [n, undefined, undefined]);
-const DIR = RIVER ? "decisions/ranges/river-equity" : TURN ? "decisions/ranges/turn-equity" : "decisions/ranges/flop-equity";
+const DIR = LINE ? "decisions/ranges/river-equity-lines" : RIVER ? "decisions/ranges/river-equity" : TURN ? "decisions/ranges/turn-equity" : "decisions/ranges/flop-equity";
 const STREET = RIVER ? "river" : TURN ? "turn" : "flop";
 const levelText = RIVER
   ? ["BB after calling the turn", "BB's calls of a 66% river bet", "BB's top pair or better among those calls", "BB's calls of an all-in"]
@@ -835,14 +852,15 @@ mkdirSync(DIR, { recursive: true });
 for (const [flopName, turn, river] of spots) {
   const tt = turn === undefined ? undefined : BOARDS.find((b) => b.name === flopName)!.turns[turn];
   const spotName = tt ? `${flopName}-${code(tt.card)}${river === undefined ? "" : `-${code(tt.rivers[river].card)}`}` : flopName;
-  if (TURN && (RIVER ? REVIEWED_RIVERS : REVIEWED_TURNS).has(spotName) && !FORCE) {
+  // A line's spots are always generated: Noam's notes are applied on the line he reviewed.
+  if (TURN && !LINE && (RIVER ? REVIEWED_RIVERS : REVIEWED_TURNS).has(spotName) && !FORCE) {
     console.log(`${spotName}: reviewed by Noam, left as it is (--force to change it)`);
     locked++;
     continue;
   }
   const t0 = Date.now();
   const r = solveBoard(flopName, turn, river);
-  const name = r.name;
+  const name = LINE ? `${r.name}@${LINE}` : r.name;
   done.push(name);
   const avg = (g: Group) => [0, 1, 2, 3].map((l) => g.hands.reduce((s, h) => s + h.eq[l] * h.weight, 0) / g.hands.reduce((s, h) => s + h.weight, 0));
   const groups = r.groups.map((g, i) => ({
@@ -884,6 +902,17 @@ for (const [flopName, turn, river] of spots) {
   for (const g of groups) console.log(`  ${g.id} ${BOX_TEXT[g.box].padEnd(14)} ${g.label} (${g.handsLabel})`);
 }
 
+// --line: every line's rivers in one JSON file, "A72-Qh-9c@b75" → groups; a run replaces only its own spots.
+if (LINE) {
+  const JSON_FILE = "src/lib/drill/postflop/river-line-groups.json";
+  const all: Record<string, unknown> = existsSync(JSON_FILE) ? JSON.parse(readFileSync(JSON_FILE, "utf8")) : {};
+  for (const [i, name] of done.entries()) all[name] = JSON.parse(out[i].slice(out[i].indexOf(": ") + 2, -1));
+  const sorted = Object.fromEntries(Object.keys(all).sort().map((k) => [k, all[k]]));
+  const body = Object.entries(sorted).map(([k, v]) => `  ${JSON.stringify(k)}: ${JSON.stringify(v)}`);
+  writeFileSync(JSON_FILE, ["{", body.join(",\n"), "}", ""].join("\n"));
+  console.log(`${done.length} spots written to ${JSON_FILE}`);
+  process.exit(0);
+}
 // With boards named, only their lines change; the other boards stay as generated.
 const FILE = RIVER ? "src/lib/drill/postflop/river-groups.ts" : TURN ? "src/lib/drill/postflop/turn-groups.ts" : "src/lib/drill/postflop/flop-groups.ts";
 if ((args.length || locked) && existsSync(FILE)) {

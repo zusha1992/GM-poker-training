@@ -1,7 +1,7 @@
 // BB's range on the next street from a TexasSolver result, in the drill's line:
 // BB checks, BTN bets the drill's size, BB calls. Weight of each hand =
 // its weight in the solve × how often it checks × how often it calls (its combos averaged).
-// Usage: npx tsx scripts/analysis/solver-range.ts <result.json> <input.txt> <BTN bet in bb> <out.txt>
+// Usage: npx tsx scripts/analysis/solver-range.ts <result.json> <input.txt> <BTN bet in bb, or "check"> <out.txt>
 import { readFileSync, writeFileSync } from "node:fs";
 
 const [file, input, betArg, out] = process.argv.slice(2);
@@ -21,9 +21,11 @@ const probOf = (node: { strategy: { actions: string[]; strategy: Record<string, 
 };
 const check = probOf(tree, "CHECK");
 const ipNode = tree.childrens.CHECK;
+// "check" (lines, Noam 2026-11-16): BB checks and BTN checks back; BB keeps every hand it checks.
+const CHECK_BACK = betArg === "check";
 const bets = Object.keys(ipNode.childrens).filter((a) => a.startsWith("BET"));
-const bet = bets.sort((a, b) => Math.abs(Number(a.split(" ")[1]) - Number(betArg)) - Math.abs(Number(b.split(" ")[1]) - Number(betArg)))[0];
-const call = probOf(ipNode.childrens[bet], "CALL");
+const bet = CHECK_BACK ? "CHECK" : bets.sort((a, b) => Math.abs(Number(a.split(" ")[1]) - Number(betArg)) - Math.abs(Number(b.split(" ")[1]) - Number(betArg)))[0];
+const call = CHECK_BACK ? () => 1 : probOf(ipNode.childrens[bet], "CALL");
 
 const RANKS = "AKQJT98765432";
 const classOf = (c: string) => {
@@ -41,4 +43,4 @@ const range = [...sum]
   .filter(([, w]) => w > 0.02)
   .map(([k, w]) => `${k}:${w.toFixed(2)}`);
 writeFileSync(out, range.join(","));
-console.log(`BTN bets ${bet}: BB continues with ${range.length} hands (was ${prior.size})`);
+console.log(`BTN ${CHECK_BACK ? "checks back" : `bets ${bet}`}: BB continues with ${range.length} hands (was ${prior.size})`);

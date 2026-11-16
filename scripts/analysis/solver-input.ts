@@ -4,7 +4,7 @@
 // continuing on the earlier streets (estimate, see price-equity.ts).
 // Usage: npx tsx scripts/analysis/solver-input.ts <board e.g. Ac,7d,2s,Qh,9c> <pot> <stack> <out.txt> <result.json> [bb-range.txt]
 // bb-range.txt: BB's range from the earlier street's solve (solver-range.ts), instead of the estimate.
-// Env: DUMP=2 also dumps the next street (for solver-ev.ts); ACC=accuracy in % (default 0.5).
+// Env: DUMP=2 also dumps the next street (for solver-ev.ts); ACC=accuracy in % (default 0.5); IP_SIZES=BTN's bet sizes on this street.
 // A flop solve uses one bet size on the turn and river: only BB's flop calls and BTN's flop bets are read from it.
 import { readFileSync, writeFileSync } from "node:fs";
 import { card } from "../../src/lib/drill/postflop/line-demo";
@@ -60,7 +60,9 @@ for (const s of ["flop", "turn", "river"].slice(["flop", "turn", "river"].indexO
   lines.push(`set_bet_sizes oop,${s},allin`);
   if (!later) lines.push(`set_bet_sizes oop,${s},raise,75`, `set_bet_sizes ip,${s},raise,75`);
   if (s !== "flop" && !later) lines.push(`set_bet_sizes oop,${s},bet,66`);
-  lines.push(`set_bet_sizes ip,${s},bet,${s === "flop" ? "33,75" : later ? "66" : s === "turn" ? "66,150" : "66,125"}`, `set_bet_sizes ip,${s},allin`);
+  // Env IP_SIZES (lines, Noam 2026-11-16): BTN's bet sizes on the solved street, e.g. "75,150,200".
+  const first = s === street && process.env.IP_SIZES;
+  lines.push(`set_bet_sizes ip,${s},bet,${first ? process.env.IP_SIZES : s === "flop" ? "33,75" : later ? "66" : s === "turn" ? "66,150" : "66,125"}`, `set_bet_sizes ip,${s},allin`);
 }
 lines.push("set_allin_threshold 0.67", "build_tree", "set_thread_num 4", `set_accuracy ${Number(process.env.ACC ?? 0.5).toFixed(2)}`, "set_max_iteration 200", "set_print_interval 10",
   // solver-ev.ts needs every river card in the dump, so no suit isomorphism when dumping the river.
