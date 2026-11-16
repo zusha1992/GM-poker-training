@@ -33,18 +33,32 @@ export async function sendToGroup(html: string, buttons: { text: string; url: st
   }
 }
 
-/** "📝 Noam · River · 8♠ 8♦ 6♣ J♦ 9♦ · Second pair" + the note + [Open this spot]. */
+/** A note, one thing per line (Noam 2026-11-16: easier to read on the phone):
+ *  📝 Noam
+ *  River: how many big blinds
+ *  🃏 8♠ 8♦ 6♣ J♦ 9♦
+ *  🎯 Second pair (A9, K9, Q9)
+ *  📦 App: 0–5 · Tried: 15–25 (wrong)
+ *
+ *  the note                                              [Open this spot] */
 export function noteToGroup(row: Pick<FeedbackRow, "id" | "drill" | "drillLabel" | "pageUrl" | "author" | "message" | "parentId"> & { context?: string | null }) {
-  let where = row.drillLabel || row.drill;
+  let c: { drill?: string; spot?: string; focus?: string; app?: string; player?: string } = {};
   try {
-    const c = row.context ? (JSON.parse(row.context) as { spot?: string; focus?: string }) : {};
-    if (c.spot) where = `${row.drillLabel?.split(" · ")[0] ?? ""} · ${c.spot}`.replace(/^ · /, "");
-    if (c.focus) where += ` · ${c.focus}`;
+    c = row.context ? JSON.parse(row.context) : {};
   } catch {
     // Older notes have no context.
   }
-  const head = row.parentId ? "↩️" : "📝";
-  const html = `${head} <b>${esc(row.author)}</b> · ${esc(where)}\n\n${esc(row.message)}`;
+  const [cards, ...rest] = (c.spot ?? "").split(" · ");
+  const lines = [
+    `${row.parentId ? "↩️ Reply from" : "📝"} <b>${esc(row.author)}</b>`,
+    `<i>${esc(c.drill ?? (row.drillLabel || row.drill))}${rest.length ? ` · ${esc(rest.join(" · "))}` : ""}</i>`,
+    cards ? `🃏 <b>${esc(cards)}</b>` : "",
+    c.focus ? `🎯 ${esc(c.focus)}` : "",
+    c.app || c.player ? `📦 ${[c.app && `App: ${c.app}`, c.player && `Tried: ${c.player}`].filter(Boolean).map((x) => esc(x as string)).join(" · ")}` : "",
+    "",
+    esc(row.message),
+  ];
+  const html = lines.filter((l, i) => l !== "" || i === 5).join("\n");
   // The note's id rides in the link: a reply to this message in Telegram is saved under the same note.
   const link = feedbackLink(row);
   return sendToGroup(html, [{ text: "Open this spot", url: `${SITE}${link}${link.includes("?") ? "&" : "?"}note=${row.parentId ?? row.id}` }]);
