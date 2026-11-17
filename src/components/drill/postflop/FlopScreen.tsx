@@ -187,6 +187,7 @@ export function FlopScreen({ street = "flop" }: { street?: Street }) {
     }, 380);
   }
 
+  const lineFlops = [...new Set(RIVER_LINE_SPOTS.map((x) => x.flop))];
   const spotLine = spot.line ? lineOfKey(spot.line) : lineFor(spot.street, spot.turnBet);
   if (phase !== "intro" && trailer) return <FlopTrailer key={seq} board={spot.board} street={street} turnBet={spot.turnBet} line={spotLine} onDone={endTrailer} />;
 
@@ -212,11 +213,11 @@ export function FlopScreen({ street = "flop" }: { street?: Street }) {
           {street === "river" && RIVER_LINE_SPOTS.length > 0 && (
             <div className="grid grid-cols-2 gap-1.5" role="radiogroup" aria-label="Line" data-testid="line-picker">
               <b className="col-span-2 font-[family-name:var(--font-display)] text-[13px] tracking-[0.06em] uppercase" style={{ color: "var(--muted)" }}>
-                Line · new, A-7-2 only for now
+                {lineFlops.length < FLOP_BOARDS.length ? `Line · so far on ${lineFlops.length} of ${FLOP_BOARDS.length} flops` : "Line"}
               </b>
               {[
                 { key: null as LineKey | "all" | null, title: "Classic", sub: "All boards · turn 66% or 150%", wide: false },
-                { key: "all" as LineKey | "all" | null, title: "Mix the 6 lines", sub: "A-7-2 · a random line each time", wide: false },
+                { key: "all" as LineKey | "all" | null, title: "Mix the 6 lines", sub: "A random line each time", wide: false },
                 ...LINE_KEYS.map((k) => ({ key: k as LineKey | "all" | null, title: LINE_TITLE[k], sub: LINE_SUB[k], wide: false })),
               ].map((o) => {
                 const on = linePick === o.key;
@@ -230,7 +231,7 @@ export function FlopScreen({ street = "flop" }: { street?: Street }) {
                     style={{ borderColor: on ? "var(--mix)" : "var(--line)", background: on ? "var(--panel-2)" : "var(--panel)" }}
                     onClick={() => {
                       setLinePick(o.key);
-                      if (o.key) setPicked(null);
+                      if (o.key && picked && !lineFlops.includes(picked)) setPicked(null);
                     }}
                     data-testid={`line-${o.key ?? "classic"}`}
                   >
@@ -245,12 +246,12 @@ export function FlopScreen({ street = "flop" }: { street?: Street }) {
               })}
             </div>
           )}
-          {!(street === "river" && linePick) && (
+          {(
           <div className="grid grid-cols-2 gap-1.5" role="radiogroup" aria-label="Board" data-testid="board-picker">
             <b className="col-span-2 font-[family-name:var(--font-display)] text-[13px] tracking-[0.06em] uppercase" style={{ color: "var(--muted)" }}>
               {street === "river" ? `Flop · ${FLOP_BOARDS.length} flops, 3 turns × 2 rivers each` : street === "turn" ? `Flop · ${FLOP_BOARDS.length} flops, 3 turns each` : `Board · ${FLOP_BOARDS.length} flops`}
             </b>
-            {[{ key: null as string | null, title: "Mix them all", sub: street === "river" ? "A random flop, turn and river each time" : street === "turn" ? "A random flop and turn each time" : "A random flop each time" }, ...FLOP_BOARDS.map((b) => ({ key: b.name as string | null, title: b.flop.join(" "), sub: b.blurb }))].map((o) => {
+            {[{ key: null as string | null, title: "Mix them all", sub: street === "river" ? "A random flop, turn and river each time" : street === "turn" ? "A random flop and turn each time" : "A random flop each time" }, ...FLOP_BOARDS.filter((b) => !(street === "river" && linePick) || lineFlops.includes(b.name)).map((b) => ({ key: b.name as string | null, title: b.flop.join(" "), sub: b.blurb }))].map((o) => {
               const on = picked === o.key;
               return (
                 <button
