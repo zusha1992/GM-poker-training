@@ -94,6 +94,18 @@ const LEVEL_TEXT = ["BB's whole range", "BB after calling a flop bet", "BB's mid
 /** Boards Noam has reviewed: his groups and boxes replace the computed ones (the
  * equity is still computed, to show). Every made hand must be listed. */
 /** `name`: the group's name in words, shown under the cards (Noam 2026-11-11). */
+/** Noam's reviews of one line's river ("A72-Qh-9c@xx"). Hands by rank ("KK", "AK" = suited and offsuit);
+ * a hand not listed keeps the group the rules gave it. */
+const LINE_REVIEWED: Record<string, { name: string; hands: string[]; box: Bucket }[]> = {
+  // Noam 2026-11-17, flop and turn checked through: nobody showed aggression on a dry board, so any ace
+  // is worth 15–25, KK–TT and the queens 5–15, the 9s and below still something (0–5).
+  "A72-Qh-9c@xx": [
+    { name: "Top pair", box: "b15", hands: ["AK", "AJ", "AT", "A8", "A6", "A5", "A4", "A3"] },
+    { name: "Pocket pairs under the A", box: "b5", hands: ["KK", "JJ", "TT"] },
+    { name: "Second pair", box: "b5", hands: ["KQ", "QJ", "QT", "Q8", "Q6", "Q5"] },
+  ],
+};
+
 const REVIEWED: Record<string, { name?: string; hands: string[]; box: Bucket }[]> = {
   // Noam 2026-11-11: two pair with the sets (dry board); top pair in two groups,
   // AT and up / A9 and down at 15–25; all 7x one group at 5–15; the weakest pairs together at 0–5.
@@ -750,6 +762,17 @@ function solveBoard(flopName: string, turn?: number, river?: number) {
   const reviewedLine = t?.bet === "overbet" ? "b150" : "b75";
   const notes = !LINE || LINE === reviewedLine ? (BOARD_NOTES[name] ?? {}) : {};
   if (r) groups = riverBoxes(groups, notes, board, LINE ? (LINE_SPR[LINE] ?? 4) > 3 : t!.bet !== "overbet", LINE === "bx" || LINE === "xx");
+  const lineReview = LINE ? LINE_REVIEWED[`${name}@${LINE}`] : undefined;
+  if (lineReview) {
+    const taken = new Set(lineReview.flatMap((g) => g.hands));
+    const mine = (h: Hand) => taken.has(rankKey(h.key));
+    const all = groups.flatMap((g) => g.hands);
+    const bad = [...taken].filter((k) => !all.some((h) => rankKey(h.key) === k));
+    if (bad.length) throw new Error(`${name}@${LINE} review: not made hands ${bad.join(" ")}`);
+    const rest = groups.map((g) => ({ ...g, hands: g.hands.filter((h) => !mine(h)) })).filter((g) => g.hands.length);
+    groups = [...rest, ...lineReview.map((g) => ({ name: g.name, box: g.box, hands: all.filter((h) => g.hands.includes(rankKey(h.key))) }))];
+    groups.sort((a, b) => BOX_RANK[b.box] - BOX_RANK[a.box]);
+  }
   if (reviewed) {
     const byKey = new Map(hands.map((h) => [h.key, h]));
     const listed = new Set(reviewed.flatMap((g) => g.hands));
@@ -759,7 +782,7 @@ function solveBoard(flopName: string, turn?: number, river?: number) {
     groups = reviewed.map((g) => ({ box: g.box, name: g.name, hands: g.hands.map((k) => byKey.get(k)!) }));
   }
 
-  return { name, board, hands, reviewed: !!reviewed, groups: groups.map((g) => ({ ...g, hands: g.hands.sort((a, b) => at(b) - at(a) || b.eq[1] - a.eq[1]) })) };
+  return { name, board, hands, reviewed: !!reviewed || !!lineReview, groups: groups.map((g) => ({ ...g, hands: g.hands.sort((a, b) => at(b) - at(a) || b.eq[1] - a.eq[1]) })) };
 }
 
 /** " with a ♦" when every hand has the flush draw, " without a ♦" when the group splits off from them. */

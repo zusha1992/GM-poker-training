@@ -180,6 +180,7 @@ Each note changes only its own turn. When Noam has finished, the notes that look
   | xx | flop and turn check check | 5.5 | 97.5 | 17.7 |
 
   66% is gone (merged into 75%, Noam: "75 is good"). BB's range after each line comes from our solver (`scripts/analysis/solve-lines.ts`, `decisions/ranges/solver/A72/lines/`); the boxes come from equity against it (`flop-equity-groups.ts --river --line <key>`, `src/lib/drill/postflop/river-line-groups.json`). Noam's river notes stay on the line they were made on (66% → b75, overbet → b150). The SPR rule uses each line's SPR (over 3 = high). The "top pair weak kicker = 0–5" note came from a line where BTN bet the turn; after a turn checked through (bx, xx) the equity decides (A8–A5 15–25 on A-7-2-Q-9). **To review:** on b200 BB's calls are so strong that AK has 44% against them and lands at 0–5, against the SPR principle (low SPR = shove more).
+  - **A-7-2-Q-9, checked to the river (xx)** (Noam, 2026-11-17, this spot only): "nobody showed aggression, very dry board, no straights no flush". Any ace (AK–A3) 15–25; KK, JJ, TT and the queens (KQ–Q5) 5–15; 88 and below, 9s and 7s 0–5, "definitely worth something". Sets and two pair unchanged.
 - **Every other river is still a draft.** Noam's notes go in `BOARD_NOTES` under the river's name, and the river gets locked (`REVIEWED_RIVERS`), as on the turn.
 
 ---
