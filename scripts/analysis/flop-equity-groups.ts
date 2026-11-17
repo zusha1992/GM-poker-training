@@ -104,6 +104,8 @@ const LINE_REVIEWED: Record<string, { name: string; hands: string[]; box: Bucket
     { name: "Pocket pairs under the A", box: "b5", hands: ["KK", "JJ", "TT"] },
     { name: "Second pair", box: "b5", hands: ["KQ", "QJ", "QT", "Q8", "Q6", "Q5"] },
   ],
+  // Noam 2026-11-17, flop checked through, BB called a 75% turn bet: top pair top kicker is worth at least 5–15.
+  "A72-6d-8d@x75": [{ name: "Top pair, top kicker", box: "b5", hands: ["AK"] }],
 };
 
 const REVIEWED: Record<string, { name?: string; hands: string[]; box: Bucket }[]> = {
@@ -765,12 +767,13 @@ function solveBoard(flopName: string, turn?: number, river?: number) {
   const lineReview = LINE ? LINE_REVIEWED[`${name}@${LINE}`] : undefined;
   if (lineReview) {
     const taken = new Set(lineReview.flatMap((g) => g.hands));
-    const mine = (h: Hand) => taken.has(rankKey(h.key));
+    // a flush stays with the flushes
+    const mine = (h: Hand) => !h.key.includes("+") && taken.has(rankKey(h.key));
     const all = groups.flatMap((g) => g.hands);
-    const bad = [...taken].filter((k) => !all.some((h) => rankKey(h.key) === k));
+    const bad = [...taken].filter((k) => !all.some((h) => mine(h) && rankKey(h.key) === k));
     if (bad.length) throw new Error(`${name}@${LINE} review: not made hands ${bad.join(" ")}`);
     const rest = groups.map((g) => ({ ...g, hands: g.hands.filter((h) => !mine(h)) })).filter((g) => g.hands.length);
-    groups = [...rest, ...lineReview.map((g) => ({ name: g.name, box: g.box, hands: all.filter((h) => g.hands.includes(rankKey(h.key))) }))];
+    groups = [...rest, ...lineReview.map((g) => ({ name: g.name, box: g.box, hands: all.filter((h) => mine(h) && g.hands.includes(rankKey(h.key))) }))];
     groups.sort((a, b) => BOX_RANK[b.box] - BOX_RANK[a.box]);
   }
   if (reviewed) {
