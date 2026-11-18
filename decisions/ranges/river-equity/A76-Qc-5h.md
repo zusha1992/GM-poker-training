@@ -1,6 +1,6 @@
 # A76-Qc-5h river (A♥ 7♥ 6♣ Q♣ 5♥): equity groups
 
-Generated 2026-11-16 by scripts/analysis/flop-equity-groups.ts --river (6000 samples per hand and level).
+Generated 2026-11-18 by scripts/analysis/flop-equity-groups.ts --river (6000 samples per hand and level).
 BTN opens, BB calls; BTN bets the flop small and bets the turn, BB calls both. Made hands only (ace-high and better). Equity of each BTN hand against:
 L0 = BB after calling the turn · L1 = BB's calls of a 66% river bet · L2 = BB's top pair or better among those calls · L3 = BB's calls of an all-in.
 Box = the biggest box whose test the hand passes: 50–100 if L3 ≥ 50%, 25–50 if L2 ≥ 50%, 15–25 if L1 ≥ 60%, 5–15 if L1 ≥ 50%, 0–5 if L0 ≥ 50%, else Pot is too big.
@@ -10,11 +10,11 @@ Box = the biggest box whose test the hand passes: 50–100 if L3 ≥ 50%, 25–5
 | g1 | 50–100bb | Flushes | ♥ flushes: KQ–K8, K6, K4–K2, QJ–Q8, Q6, JT–J8, T9, T8, 98, 96, 86, 64, 43 | 99% | 100% | 100% | 98% |
 | g2 | 25–50bb | Straights | 98, 43 | 94% | 100% | 100% | 87% |
 | g3 | 15–25bb | Sets | AA, QQ, 77–55 | 92% | 100% | 100% | 80% |
-| g4 | 15–25bb | Two pair | AQ, A7–A5, Q7–Q5, 76, 75, 65 | 87% | 92% | 92% | 70% |
-| g5 | 0–5bb | Top pair | AK, AJ–A8, A4–A2 | 52% | 39% | 39% | 38% |
+| g4 | 15–25bb | Two pair | AQ, A7–A5, Q7–Q5, 76, 75, 65 | 87% | 92% | 92% | 69% |
+| g5 | 0–5bb | Top pair | AK, AJ–A8, A4–A2 | 52% | 39% | 38% | 38% |
 | g6 | 0–5bb | Big pocket pairs | KK | 21% | 0% | 0% | 20% |
-| g7 | 0–5bb | Second pair | KQ, QJ–Q8 | 21% | 0% | 0% | 15% |
-| g8 | 0–5bb | Small pairs | JJ–88, 44–22, K7–K5, J7, T7, 97, 96, 87, 86, 64, 54 | 11% | 0% | 0% | 7% |
+| g7 | 0–5bb | Second pair | KQ, QJ–Q8 | 20% | 0% | 0% | 16% |
+| g8 | 0–5bb | Small pairs | JJ–88, 44–22, K7–K5, J7, T7, 97, 96, 87, 86, 64, 54 | 11% | 0% | 0% | 6% |
 
 ## Every hand
 
@@ -30,66 +30,66 @@ Box = the biggest box whose test the hand passes: 50–100 if L3 ≥ 50%, 25–5
 | K3+fl | flush | 100% | 100% | 100% | 100% | 50–100bb | g1 |
 | K2+fl | flush | 100% | 100% | 100% | 100% | 50–100bb | g1 |
 | Q6+fl | flush | 99% | 100% | 100% | 100% | 50–100bb | g1 |
-| Q8+fl | flush | 99% | 100% | 100% | 99% | 50–100bb | g1 |
+| Q8+fl | flush | 99% | 100% | 100% | 100% | 50–100bb | g1 |
 | QT+fl | flush | 99% | 100% | 100% | 99% | 50–100bb | g1 |
-| QJ+fl | flush | 99% | 100% | 100% | 99% | 50–100bb | g1 |
 | Q9+fl | flush | 99% | 100% | 100% | 99% | 50–100bb | g1 |
-| 96+fl | flushlo | 98% | 100% | 100% | 98% | 50–100bb | g1 |
-| 64+fl | flushlo | 98% | 100% | 100% | 97% | 50–100bb | g1 |
-| 86+fl | flushlo | 98% | 100% | 100% | 96% | 50–100bb | g1 |
-| JT+fl | flush | 97% | 100% | 100% | 96% | 50–100bb | g1 |
+| QJ+fl | flush | 99% | 100% | 100% | 99% | 50–100bb | g1 |
+| 96+fl | flushlo | 98% | 100% | 100% | 97% | 50–100bb | g1 |
+| JT+fl | flush | 98% | 99% | 100% | 97% | 50–100bb | g1 |
+| 86+fl | flushlo | 98% | 100% | 100% | 97% | 50–100bb | g1 |
+| 64+fl | flushlo | 98% | 100% | 100% | 96% | 50–100bb | g1 |
 | J9+fl | flush | 98% | 100% | 100% | 96% | 50–100bb | g1 |
-| T9+fl | flushlo | 97% | 100% | 100% | 96% | 50–100bb | g1 |
-| J8+fl | flush | 98% | 100% | 100% | 95% | 50–100bb | g1 |
-| T8+fl | flushlo | 97% | 100% | 100% | 95% | 50–100bb | g1 |
-| 98+fl | flushlo | 96% | 100% | 100% | 94% | 50–100bb | g1 |
+| J8+fl | flush | 97% | 100% | 100% | 96% | 50–100bb | g1 |
+| T8+fl | flushlo | 96% | 100% | 100% | 95% | 50–100bb | g1 |
+| T9+fl | flushlo | 97% | 100% | 99% | 95% | 50–100bb | g1 |
+| 98+fl | flushlo | 97% | 100% | 100% | 95% | 50–100bb | g1 |
 | 43+fl | flushlo | 96% | 100% | 100% | 93% | 50–100bb | g1 |
 | 98 | straight | 94% | 100% | 100% | 88% | 50–100bb | g2 |
-| 43 | straight | 93% | 100% | 100% | 84% | 50–100bb | g2 |
+| 43 | straight | 93% | 100% | 100% | 85% | 50–100bb | g2 |
+| QQ | twopair | 94% | 100% | 100% | 83% | 50–100bb | g3 |
 | 66 | twopair | 94% | 100% | 100% | 83% | 50–100bb | g3 |
-| QQ | twopair | 93% | 100% | 100% | 83% | 50–100bb | g3 |
-| 77 | twopair | 92% | 100% | 100% | 81% | 50–100bb | g3 |
-| 55 | twopair | 93% | 100% | 100% | 81% | 50–100bb | g3 |
-| AA | twopair | 88% | 99% | 99% | 74% | 50–100bb | g3 |
-| A7 | twopair | 90% | 99% | 99% | 79% | 50–100bb | g4 |
-| AQ | twopair | 92% | 100% | 100% | 78% | 50–100bb | g4 |
-| A6 | twopair | 91% | 97% | 97% | 77% | 50–100bb | g4 |
-| A5 | twopair | 86% | 88% | 87% | 67% | 50–100bb | g4 |
-| 65 | twopair | 81% | 81% | 82% | 57% | 50–100bb | g4 |
-| Q7 | twopair | 80% | 78% | 78% | 54% | 50–100bb | g4 |
-| 76 | twopair | 80% | 78% | 78% | 54% | 50–100bb | g4 |
-| 75 | twopair | 80% | 80% | 80% | 54% | 50–100bb | g4 |
-| Q5 | twopair | 82% | 80% | 80% | 53% | 50–100bb | g4 |
-| Q6 | twopair | 80% | 80% | 79% | 53% | 50–100bb | g4 |
-| AJ | tpmk | 72% | 71% | 71% | 50% | 25–50bb | g5 |
-| AT | tpmk | 64% | 60% | 59% | 47% | 25–50bb | g5 |
-| A9 | tpmk | 55% | 46% | 47% | 42% | 0–5bb | g5 |
-| AK | tpgk | 73% | 72% | 73% | 50% | 50–100bb | g5 |
-| A8 | tpmk | 46% | 29% | 30% | 32% | 0–5bb | g5 |
-| A4 | tpmk | 36% | 10% | 10% | 29% | 0–5bb | g5 |
-| A3 | tpmk | 36% | 10% | 10% | 28% | 0–5bb | g5 |
-| A2 | tpmk | 35% | 11% | 10% | 29% | 0–5bb | g5 |
-| KK | pp1 | 21% | 0% | 0% | 20% | 0–5bb | g6 |
-| QJ | mp | 22% | 0% | 0% | 15% | 0–5bb | g7 |
-| KQ | mp | 21% | 0% | 0% | 17% | 0–5bb | g7 |
-| Q8 | mp | 20% | 0% | 0% | 13% | 0–5bb | g7 |
-| QT | mp | 20% | 0% | 0% | 15% | 0–5bb | g7 |
-| Q9 | mp | 19% | 0% | 0% | 15% | 0–5bb | g7 |
-| TT | pp2 | 19% | 0% | 0% | 12% | 0–5bb | g8 |
+| 77 | twopair | 92% | 99% | 100% | 82% | 50–100bb | g3 |
+| 55 | twopair | 93% | 100% | 100% | 80% | 50–100bb | g3 |
+| AA | twopair | 87% | 99% | 99% | 72% | 50–100bb | g3 |
+| A7 | twopair | 91% | 100% | 99% | 79% | 50–100bb | g4 |
+| AQ | twopair | 91% | 99% | 100% | 78% | 50–100bb | g4 |
+| A6 | twopair | 91% | 98% | 97% | 76% | 50–100bb | g4 |
+| A5 | twopair | 86% | 88% | 87% | 65% | 50–100bb | g4 |
+| 65 | twopair | 80% | 82% | 81% | 55% | 50–100bb | g4 |
+| Q5 | twopair | 81% | 80% | 81% | 55% | 50–100bb | g4 |
+| 75 | twopair | 79% | 79% | 79% | 54% | 50–100bb | g4 |
+| Q7 | twopair | 80% | 77% | 77% | 54% | 50–100bb | g4 |
+| 76 | twopair | 80% | 79% | 78% | 53% | 50–100bb | g4 |
+| Q6 | twopair | 81% | 79% | 78% | 53% | 50–100bb | g4 |
+| AK | tpgk | 73% | 74% | 73% | 49% | 25–50bb | g5 |
+| AJ | tpmk | 72% | 70% | 69% | 50% | 25–50bb | g5 |
+| AT | tpmk | 64% | 60% | 59% | 48% | 25–50bb | g5 |
+| A9 | tpmk | 56% | 47% | 46% | 42% | 0–5bb | g5 |
+| A8 | tpmk | 45% | 30% | 30% | 31% | 0–5bb | g5 |
+| A4 | tpmk | 35% | 10% | 9% | 30% | 0–5bb | g5 |
+| A3 | tpmk | 35% | 11% | 10% | 29% | 0–5bb | g5 |
+| A2 | tpmk | 35% | 10% | 10% | 28% | 0–5bb | g5 |
+| KK | pp1 | 20% | 0% | 0% | 20% | 0–5bb | g6 |
+| QT | mp | 22% | 0% | 0% | 16% | 0–5bb | g7 |
+| QJ | mp | 20% | 0% | 0% | 16% | 0–5bb | g7 |
+| Q9 | mp | 20% | 0% | 0% | 15% | 0–5bb | g7 |
+| Q8 | mp | 20% | 0% | 0% | 12% | 0–5bb | g7 |
+| KQ | mp | 19% | 0% | 0% | 18% | 0–5bb | g7 |
 | JJ | pp2 | 19% | 0% | 0% | 12% | 0–5bb | g8 |
-| 99 | pp2 | 18% | 0% | 0% | 13% | 0–5bb | g8 |
+| 99 | pp2 | 19% | 0% | 0% | 11% | 0–5bb | g8 |
+| TT | pp2 | 19% | 0% | 0% | 12% | 0–5bb | g8 |
 | 88 | pp2 | 18% | 0% | 0% | 9% | 0–5bb | g8 |
-| K7 | bp | 13% | 0% | 0% | 10% | 0–5bb | g8 |
-| J7 | bp | 13% | 0% | 0% | 8% | 0–5bb | g8 |
-| T7 | bp | 13% | 0% | 0% | 9% | 0–5bb | g8 |
-| 97 | bp | 12% | 0% | 0% | 10% | 0–5bb | g8 |
+| K7 | bp | 14% | 0% | 0% | 9% | 0–5bb | g8 |
+| J7 | bp | 13% | 0% | 0% | 9% | 0–5bb | g8 |
+| T7 | bp | 12% | 0% | 0% | 9% | 0–5bb | g8 |
+| 97 | bp | 12% | 0% | 0% | 9% | 0–5bb | g8 |
 | 87 | bp | 11% | 0% | 0% | 8% | 0–5bb | g8 |
-| K6 | bp | 6% | 0% | 0% | 5% | 0–5bb | g8 |
-| 86 | bp | 5% | 0% | 0% | 2% | 0–5bb | g8 |
+| K6 | bp | 7% | 0% | 0% | 5% | 0–5bb | g8 |
 | 96 | bp | 5% | 0% | 0% | 3% | 0–5bb | g8 |
-| 64 | bp | 5% | 0% | 0% | 2% | 0–5bb | g8 |
-| 54 | bp | 4% | 0% | 0% | 1% | 0–5bb | g8 |
-| 22 | pp3 | 3% | 0% | 0% | 1% | 0–5bb | g8 |
-| 33 | pp3 | 3% | 0% | 0% | 1% | 0–5bb | g8 |
-| K5 | bp | 3% | 0% | 0% | 0% | 0–5bb | g8 |
+| 86 | bp | 5% | 0% | 0% | 2% | 0–5bb | g8 |
+| 64 | bp | 5% | 0% | 0% | 1% | 0–5bb | g8 |
 | 44 | pp3 | 3% | 0% | 0% | 1% | 0–5bb | g8 |
+| 54 | bp | 3% | 0% | 0% | 1% | 0–5bb | g8 |
+| 22 | pp3 | 3% | 0% | 0% | 1% | 0–5bb | g8 |
+| K5 | bp | 3% | 0% | 0% | 1% | 0–5bb | g8 |
+| 33 | pp3 | 3% | 0% | 0% | 1% | 0–5bb | g8 |

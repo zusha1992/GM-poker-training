@@ -1,6 +1,6 @@
 # K54-Qd-3h river (K♠ 5♥ 4♣ Q♦ 3♥): equity groups
 
-Generated 2026-11-16 by scripts/analysis/flop-equity-groups.ts --river (6000 samples per hand and level).
+Generated 2026-11-18 by scripts/analysis/flop-equity-groups.ts --river (6000 samples per hand and level).
 BTN opens, BB calls; BTN bets the flop small and bets the turn, BB calls both. Made hands only (ace-high and better). Equity of each BTN hand against:
 L0 = BB after calling the turn · L1 = BB's calls of a 66% river bet · L2 = BB's top pair or better among those calls · L3 = BB's calls of an all-in.
 Box = the biggest box whose test the hand passes: 50–100 if L3 ≥ 50%, 25–50 if L2 ≥ 50%, 15–25 if L1 ≥ 60%, 5–15 if L1 ≥ 50%, 0–5 if L0 ≥ 50%, else Pot is too big.
@@ -9,11 +9,11 @@ Box = the biggest box whose test the hand passes: 50–100 if L3 ≥ 50%, 25–5
 |---|---|---|---|---|---|---|---|
 | g1 | 50–100bb | Straights & sets | KK, QQ, 55–33, A2, 76 | 99% | 100% | 100% | 98% |
 | g2 | 50–100bb | Two pair | KQ, K5–K3, Q5, 54, 43 | 95% | 100% | 100% | 84% |
-| g3 | 15–25bb | Overpair | AA | 87% | 100% | 100% | 60% |
+| g3 | 15–25bb | Overpair | AA | 87% | 100% | 100% | 61% |
 | g4 | 15–25bb | Top pair, good kicker | AK, KJ, KT | 83% | 89% | 88% | 51% |
-| g5 | 0–5bb | Top pair, weak kicker | K9–K6, K2 | 57% | 31% | 27% | 29% |
-| g6 | 0–5bb | Second pair | AQ, QJ–Q6 | 33% | 2% | 0% | 8% |
-| g7 | 0–5bb | Small pairs | JJ–66, 22, A5–A3, 75, 65, 64 | 23% | 2% | 0% | 4% |
+| g5 | 0–5bb | Top pair, weak kicker | K9–K6, K2 | 58% | 31% | 27% | 29% |
+| g6 | 0–5bb | Second pair | AQ, QJ–Q6 | 33% | 2% | 0% | 7% |
+| g7 | 0–5bb | Small pairs | JJ–66, 22, A5–A3, 75, 65, 64 | 24% | 1% | 0% | 4% |
 | g8 | Pot is too big | Ace-high | AJ–A6 | 2% | 0% | 0% | 0% |
 
 ## Every hand
@@ -26,44 +26,44 @@ Box = the biggest box whose test the hand passes: 50–100 if L3 ≥ 50%, 25–5
 | 33 | twopair | 99% | 100% | 100% | 98% | 50–100bb | g1 |
 | 44 | twopair | 99% | 100% | 100% | 98% | 50–100bb | g1 |
 | QQ | twopair | 99% | 100% | 100% | 98% | 50–100bb | g1 |
-| KK | twopair | 99% | 100% | 100% | 97% | 50–100bb | g1 |
+| KK | twopair | 99% | 100% | 100% | 96% | 50–100bb | g1 |
 | KQ | twopair | 98% | 100% | 100% | 92% | 50–100bb | g2 |
-| K4 | twopair | 96% | 100% | 100% | 84% | 50–100bb | g2 |
-| K5 | twopair | 95% | 100% | 100% | 82% | 50–100bb | g2 |
-| K3 | twopair | 94% | 100% | 100% | 79% | 50–100bb | g2 |
-| Q5 | twopair | 92% | 100% | 100% | 75% | 50–100bb | g2 |
+| K4 | twopair | 95% | 100% | 100% | 83% | 50–100bb | g2 |
+| K5 | twopair | 96% | 100% | 100% | 83% | 50–100bb | g2 |
+| K3 | twopair | 94% | 100% | 100% | 81% | 50–100bb | g2 |
+| Q5 | twopair | 92% | 100% | 100% | 74% | 50–100bb | g2 |
 | 43 | twopair | 89% | 100% | 100% | 65% | 50–100bb | g2 |
-| 54 | twopair | 89% | 100% | 100% | 64% | 50–100bb | g2 |
-| AA | op | 87% | 100% | 100% | 60% | 50–100bb | g3 |
-| KT | tpmk | 77% | 73% | 71% | 40% | 25–50bb | g4 |
-| AK | tpgk | 88% | 100% | 100% | 59% | 50–100bb | g4 |
-| KJ | tpmk | 84% | 93% | 93% | 53% | 50–100bb | g4 |
-| K8 | tpmk | 60% | 36% | 32% | 32% | 0–5bb | g5 |
-| K7 | tpmk | 53% | 24% | 21% | 28% | 0–5bb | g5 |
+| 54 | twopair | 89% | 100% | 100% | 63% | 50–100bb | g2 |
+| AA | op | 87% | 100% | 100% | 61% | 50–100bb | g3 |
+| KT | tpmk | 76% | 74% | 71% | 41% | 25–50bb | g4 |
+| AK | tpgk | 89% | 100% | 100% | 59% | 50–100bb | g4 |
+| KJ | tpmk | 84% | 93% | 92% | 53% | 50–100bb | g4 |
+| K8 | tpmk | 59% | 36% | 33% | 32% | 0–5bb | g5 |
+| K7 | tpmk | 56% | 25% | 21% | 29% | 0–5bb | g5 |
+| K9 | tpmk | 68% | 53% | 49% | 36% | 5–15bb | g5 |
 | K6 | tpmk | 52% | 18% | 14% | 25% | 0–5bb | g5 |
-| K9 | tpmk | 68% | 53% | 50% | 35% | 25–50bb | g5 |
-| K2 | tpmk | 47% | 10% | 5% | 17% | 0–5bb | g5 |
-| QJ | mp | 34% | 2% | 0% | 7% | 0–5bb | g6 |
-| Q8 | mp | 34% | 2% | 0% | 8% | 0–5bb | g6 |
-| QT | mp | 33% | 2% | 0% | 8% | 0–5bb | g6 |
+| K2 | tpmk | 48% | 10% | 5% | 16% | 0–5bb | g5 |
+| QT | mp | 34% | 2% | 0% | 7% | 0–5bb | g6 |
+| QJ | mp | 34% | 2% | 0% | 8% | 0–5bb | g6 |
 | Q9 | mp | 33% | 2% | 0% | 8% | 0–5bb | g6 |
-| AQ | mp | 32% | 3% | 0% | 7% | 0–5bb | g6 |
-| Q6 | mp | 32% | 2% | 0% | 8% | 0–5bb | g6 |
-| Q7 | mp | 31% | 2% | 0% | 8% | 0–5bb | g6 |
+| Q8 | mp | 33% | 2% | 0% | 8% | 0–5bb | g6 |
+| Q6 | mp | 32% | 1% | 0% | 8% | 0–5bb | g6 |
+| Q7 | mp | 32% | 2% | 0% | 8% | 0–5bb | g6 |
+| AQ | mp | 31% | 3% | 0% | 6% | 0–5bb | g6 |
 | 99 | pp2 | 32% | 2% | 0% | 7% | 0–5bb | g7 |
 | 88 | pp2 | 32% | 2% | 0% | 7% | 0–5bb | g7 |
-| TT | pp2 | 30% | 2% | 0% | 7% | 0–5bb | g7 |
-| JJ | pp2 | 30% | 1% | 0% | 8% | 0–5bb | g7 |
-| 77 | pp2 | 29% | 2% | 0% | 7% | 0–5bb | g7 |
-| 66 | pp2 | 29% | 2% | 0% | 7% | 0–5bb | g7 |
-| 75 | bp | 25% | 2% | 0% | 4% | 0–5bb | g7 |
-| A5 | bp | 24% | 1% | 0% | 3% | 0–5bb | g7 |
+| 77 | pp2 | 31% | 1% | 0% | 8% | 0–5bb | g7 |
+| TT | pp2 | 31% | 1% | 0% | 7% | 0–5bb | g7 |
+| JJ | pp2 | 30% | 1% | 0% | 7% | 0–5bb | g7 |
+| 66 | pp2 | 30% | 2% | 0% | 7% | 0–5bb | g7 |
+| 75 | bp | 25% | 1% | 0% | 4% | 0–5bb | g7 |
 | 65 | bp | 24% | 2% | 0% | 4% | 0–5bb | g7 |
+| A5 | bp | 23% | 1% | 0% | 4% | 0–5bb | g7 |
+| A4 | bp | 17% | 1% | 0% | 1% | 0–5bb | g7 |
 | 64 | bp | 17% | 2% | 0% | 0% | 0–5bb | g7 |
-| A4 | bp | 16% | 1% | 0% | 1% | 0–5bb | g7 |
-| 22 | pp3 | 15% | 2% | 0% | 0% | 0–5bb | g7 |
-| A3 | bp | 12% | 1% | 0% | 0% | 0–5bb | g7 |
-| AJ | khnd | 8% | 0% | 0% | 0% | Pot is too big | g8 |
+| 22 | pp3 | 16% | 2% | 0% | 0% | 0–5bb | g7 |
+| A3 | bp | 13% | 1% | 0% | 0% | 0–5bb | g7 |
+| AJ | khnd | 8% | 1% | 0% | 0% | Pot is too big | g8 |
 | AT | khnd | 2% | 0% | 0% | 0% | Pot is too big | g8 |
 | A9 | khnd | 0% | 0% | 0% | 0% | Pot is too big | g8 |
 | A8 | khnd | 0% | 0% | 0% | 0% | Pot is too big | g8 |
