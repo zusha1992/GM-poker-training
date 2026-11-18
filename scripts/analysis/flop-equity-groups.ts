@@ -455,7 +455,7 @@ function riverBoxes(groups: Group[], notes: Record<string, Bucket>, board: Card[
   // Noam 2026-11-16 (J♠T♠3♣ 6♣ 3♦): "when a lot of draws missed, ace-high can show down". On a river where
   // no flush and no straight is possible, BB has busted draws: ace-high is 0–5, not Pot is too big.
   const brickRiver = !flushSuit(board) && !straightPossible(board);
-  for (const g of groups) for (const h of g.hands) if (brickRiver && h.box === "big" && h.cat === "aho") h.box = "b0";
+  for (const g of groups) for (const h of g.hands) if (brickRiver && h.box === "big" && h.key[0] === "A" && (h.cat === "aho" || h.cat === "khnd")) h.box = "b0";
   // Each group split by its hands' own boxes; `src` = the group it came from.
   let parts = groups.flatMap((g, src) => boxes.map((box) => ({ name: g.name, src, box, hands: g.hands.filter((h) => h.box === box) })).filter((p) => p.hands.length));
   for (let k = 0; k < parts.length; k++) {
