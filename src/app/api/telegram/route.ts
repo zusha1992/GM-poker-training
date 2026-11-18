@@ -28,6 +28,7 @@ export async function POST(request: Request) {
   }
   const update = (await request.json()) as { message?: TgMessage; edited_message?: TgMessage };
   const m = update.message;
+  console.log("telegram update", JSON.stringify({ chat: m?.chat.id, from: m?.from?.first_name, text: !!(m?.text ?? m?.caption), keys: Object.keys(update) }));
   if (!m || m.chat.id !== TELEGRAM_GROUP || !m.from || m.from.is_bot) return Response.json({ ok: true });
 
   const text = (m.text ?? m.caption ?? "").trim() || (m.voice ? "[voice note in Telegram]" : m.photo ? "[photo in Telegram]" : "");

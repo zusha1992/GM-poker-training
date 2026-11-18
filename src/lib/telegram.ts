@@ -17,7 +17,7 @@ export async function sendToGroup(html: string, buttons: { text: string; url: st
     const { env } = await getCloudflareContext({ async: true });
     const token = (env as unknown as { TELEGRAM_BOT_TOKEN?: string }).TELEGRAM_BOT_TOKEN;
     if (!token) return;
-    await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+    const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -28,6 +28,7 @@ export async function sendToGroup(html: string, buttons: { text: string; url: st
         reply_markup: buttons.length ? { inline_keyboard: [buttons] } : undefined,
       }),
     });
+    if (!res.ok) console.log("telegram send failed", res.status, await res.text());
   } catch {
     // The group is a copy; the note is already saved on the site.
   }

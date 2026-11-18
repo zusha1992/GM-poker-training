@@ -7,10 +7,10 @@ Box = the biggest box whose test the hand passes: 50–100 if L3 ≥ 50%, 25–5
 
 | Group | Box | Name | Hands | L0 | L1 | L2 | L3 |
 |---|---|---|---|---|---|---|---|
-| g1 | 50–100bb | Straights | AA, AK–A2 | 96% | 100% | 100% | 79% |
-| g2 | 25–50bb | Straights | 99, K9, Q9, J9, T9, 98–96 | 82% | 73% | 73% | 25% |
-| g3 | 0–5bb | Sets | KK–TT, 33 | 69% | 36% | 36% | 4% |
-| g4 | 0–5bb | Two pair | KQ–KT, K3, QJ, QT, JT | 47% | 22% | 22% | 3% |
+| g1 | 50–100bb | A-high straights | AA, AK–A2 | 96% | 100% | 100% | 79% |
+| g2 | 25–50bb | K-high straights | 99, K9, Q9, J9, T9, 98–96 | 82% | 73% | 73% | 25% |
+| g3 | 0–5bb | Sets | KK–TT, 33 | 69% | 36% | 35% | 4% |
+| g4 | 0–5bb | Two pair | KQ–KT, K3, QJ, QT, JT | 48% | 22% | 21% | 3% |
 | g5 | 0–5bb | Top pair, weak kicker | K8–K4, K2 | 4% | 0% | 0% | 0% |
 | g6 | 0–5bb | Second pair | Q8–Q5 | 0% | 0% | 0% | 0% |
 | g7 | 0–5bb | Small pairs | 88–44, 22, J8, J7, T8, T7, 43 | 0% | 0% | 0% | 0% |
@@ -19,43 +19,43 @@ Box = the biggest box whose test the hand passes: 50–100 if L3 ≥ 50%, 25–5
 
 | Hand | Kind | L0 | L1 | L2 | L3 | Own box | Group |
 |---|---|---|---|---|---|---|---|
-| AA | straight | 97% | 100% | 100% | 83% | 50–100bb | g1 |
+| AA | straight | 98% | 100% | 100% | 84% | 50–100bb | g1 |
 | AT | straight | 97% | 100% | 100% | 83% | 50–100bb | g1 |
-| A5 | straight | 96% | 100% | 100% | 79% | 50–100bb | g1 |
+| A5 | straight | 96% | 100% | 100% | 80% | 50–100bb | g1 |
+| A7 | straight | 96% | 100% | 100% | 79% | 50–100bb | g1 |
 | A6 | straight | 96% | 100% | 100% | 79% | 50–100bb | g1 |
 | A2 | straight | 96% | 100% | 100% | 79% | 50–100bb | g1 |
-| AQ | straight | 96% | 100% | 100% | 79% | 50–100bb | g1 |
-| A7 | straight | 96% | 100% | 100% | 79% | 50–100bb | g1 |
-| A4 | straight | 96% | 100% | 100% | 79% | 50–100bb | g1 |
 | A3 | straight | 96% | 100% | 100% | 79% | 50–100bb | g1 |
-| A8 | straight | 96% | 100% | 100% | 78% | 50–100bb | g1 |
+| A8 | straight | 96% | 100% | 100% | 79% | 50–100bb | g1 |
+| A4 | straight | 96% | 100% | 100% | 78% | 50–100bb | g1 |
+| AQ | straight | 96% | 100% | 100% | 78% | 50–100bb | g1 |
 | AJ | straight | 96% | 100% | 100% | 78% | 50–100bb | g1 |
-| AK | straight | 96% | 100% | 100% | 78% | 50–100bb | g1 |
-| A9 | straight | 96% | 100% | 100% | 75% | 50–100bb | g1 |
-| 99 | straight | 85% | 78% | 78% | 22% | 25–50bb | g2 |
-| K9 | straight | 81% | 74% | 75% | 23% | 25–50bb | g2 |
+| AK | straight | 95% | 100% | 100% | 76% | 50–100bb | g1 |
+| A9 | straight | 96% | 100% | 100% | 76% | 50–100bb | g1 |
+| 99 | straight | 84% | 78% | 78% | 22% | 25–50bb | g2 |
+| K9 | straight | 81% | 74% | 74% | 23% | 25–50bb | g2 |
 | 97 | straight | 82% | 73% | 73% | 25% | 25–50bb | g2 |
-| 96 | straight | 83% | 73% | 73% | 25% | 25–50bb | g2 |
-| 98 | straight | 82% | 72% | 72% | 25% | 25–50bb | g2 |
-| J9 | straight | 81% | 71% | 72% | 24% | 25–50bb | g2 |
-| T9 | straight | 83% | 72% | 72% | 30% | 25–50bb | g2 |
-| Q9 | straight | 81% | 71% | 71% | 25% | 25–50bb | g2 |
-| TT | twopair | 71% | 32% | 33% | 7% | 0–5bb | g3 |
-| 33 | twopair | 71% | 38% | 37% | 3% | 0–5bb | g3 |
-| KK | twopair | 70% | 46% | 47% | 4% | 0–5bb | g3 |
-| JJ | twopair | 67% | 32% | 33% | 4% | 0–5bb | g3 |
-| QQ | twopair | 67% | 29% | 29% | 3% | 0–5bb | g3 |
-| KQ | twopair | 67% | 37% | 36% | 4% | 0–5bb | g4 |
-| KJ | twopair | 61% | 37% | 37% | 5% | 0–5bb | g4 |
-| KT | twopair | 57% | 32% | 32% | 6% | 0–5bb | g4 |
-| K3 | twopair | 53% | 32% | 32% | 4% | 0–5bb | g4 |
-| QJ | twopair | 41% | 14% | 15% | 2% | 0–5bb | g4 |
-| QT | twopair | 33% | 6% | 7% | 1% | 0–5bb | g4 |
+| 98 | straight | 82% | 73% | 73% | 25% | 25–50bb | g2 |
+| 96 | straight | 83% | 73% | 73% | 24% | 25–50bb | g2 |
+| J9 | straight | 80% | 71% | 72% | 24% | 25–50bb | g2 |
+| Q9 | straight | 81% | 71% | 71% | 24% | 25–50bb | g2 |
+| T9 | straight | 83% | 72% | 71% | 29% | 25–50bb | g2 |
+| TT | twopair | 71% | 34% | 32% | 7% | 0–5bb | g3 |
+| 33 | twopair | 70% | 35% | 38% | 3% | 0–5bb | g3 |
+| KK | twopair | 70% | 47% | 45% | 5% | 0–5bb | g3 |
+| QQ | twopair | 67% | 29% | 30% | 3% | 0–5bb | g3 |
+| JJ | twopair | 67% | 32% | 32% | 4% | 0–5bb | g3 |
+| KQ | twopair | 68% | 38% | 37% | 4% | 0–5bb | g4 |
+| KJ | twopair | 63% | 36% | 35% | 4% | 0–5bb | g4 |
+| KT | twopair | 57% | 32% | 32% | 5% | 0–5bb | g4 |
+| K3 | twopair | 54% | 32% | 32% | 4% | 0–5bb | g4 |
+| QJ | twopair | 41% | 14% | 14% | 2% | 0–5bb | g4 |
+| QT | twopair | 34% | 7% | 7% | 1% | 0–5bb | g4 |
 | JT | twopair | 23% | 1% | 1% | 0% | 0–5bb | g4 |
 | K8 | tpmk | 8% | 0% | 0% | 0% | 0–5bb | g5 |
 | K7 | tpmk | 4% | 0% | 0% | 0% | 0–5bb | g5 |
-| K6 | tpmk | 3% | 0% | 0% | 0% | 0–5bb | g5 |
 | K5 | tpmk | 2% | 0% | 0% | 0% | 0–5bb | g5 |
+| K6 | tpmk | 2% | 0% | 0% | 0% | 0–5bb | g5 |
 | K4 | tpmk | 1% | 0% | 0% | 0% | 0–5bb | g5 |
 | K2 | tpmk | 1% | 0% | 0% | 0% | 0–5bb | g5 |
 | Q8 | mp | 0% | 0% | 0% | 0% | 0–5bb | g6 |

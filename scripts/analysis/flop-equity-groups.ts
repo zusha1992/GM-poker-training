@@ -106,6 +106,25 @@ const LINE_REVIEWED: Record<string, { name: string; hands: string[]; box: Bucket
   ],
   // Noam 2026-11-17, flop checked through, BB called a 75% turn bet: top pair top kicker is worth at least 5–15.
   "A72-6d-8d@x75": [{ name: "Top pair, top kicker", box: "b5", hands: ["AK"] }],
+  // Noam 2026-11-18 (in the app), turn checked through: "sets worth more than 25bb", "top pair here worth 5–15".
+  "A76-8h-2d@bx": [
+    { name: "Sets", box: "b25", hands: ["AA", "88", "77", "66", "22"] },
+    { name: "Top pair", box: "b5", hands: ["AK", "AQ", "AJ", "AT", "A9", "A5", "A4", "A3"] },
+  ],
+  // Noam 2026-11-18 (in the app), four to a straight: straights want the full stack; sets "worth a little bit,
+  // maybe 5–15"; a straight with a pair (T9, T8, T7) is not the two-card straight (JT); two pair worth less.
+  "986-2h-7h": [
+    { name: "J-high straights", box: "b50", hands: ["JT"] },
+    { name: "T-high straights", box: "b50", hands: ["TT", "AT", "KT", "QT", "T9", "T8", "T7"] },
+    { name: "9-high straights", box: "b50", hands: ["A5", "K5", "Q5", "75", "65", "54"] },
+    { name: "Sets", box: "b5", hands: ["99", "88", "77", "66", "55", "22"] },
+    { name: "Overpairs", box: "b5", hands: ["AA", "KK", "QQ", "JJ"] },
+    { name: "Two pair", box: "b5", hands: ["98", "97", "96", "87", "86", "76"] },
+  ],
+  // Noam 2026-11-18 (in the app), four to a straight and a flush: sets check, so 33–55 "the pot will be too big for them".
+  "T87-9h-2c@b75": [{ name: "Small pocket pairs", box: "big", hands: ["55", "44", "33"] }],
+  // Noam 2026-11-18 (in the app): QQ and 55 are "two different hand strengths", two groups.
+  "A72-6d-Ks": [{ name: "Pocket pairs QQ–88", box: "b0", hands: ["QQ", "JJ", "TT", "99", "88"] }],
 };
 
 const REVIEWED: Record<string, { name?: string; hands: string[]; box: Bucket }[]> = {
@@ -232,6 +251,24 @@ function wetTurn(board: Card[]): boolean {
 }
 
 /** Three different ranks inside five on the board (the ace counts low too): a straight is possible. */
+/** Four of the board's ranks inside five in a row (9-8-7-6, T-8-7-9): one card makes a straight. */
+function fourToStraight(board: Card[]): boolean {
+  const ranks = new Set(board.flatMap((c) => (c.r === 14 ? [14, 1] : [c.r])));
+  for (let lo = 1; lo <= 10; lo++) {
+    let n = 0;
+    for (let r = lo; r < lo + 5; r++) if (ranks.has(r)) n++;
+    if (n >= 4) return true;
+  }
+  return false;
+}
+
+/** The high card of the best straight in these ranks (0 = none). */
+function straightHigh(rs: number[]): number {
+  const ranks = new Set(rs.flatMap((r) => (r === 14 ? [14, 1] : [r])));
+  for (let hi = 14; hi >= 5; hi--) if ([0, 1, 2, 3, 4].every((d) => ranks.has(hi - d))) return hi;
+  return 0;
+}
+
 function straightPossible(board: Card[]): boolean {
   const ranks = new Set(board.flatMap((c) => (c.r === 14 ? [14, 1] : [c.r])));
   for (let lo = 1; lo <= 10; lo++) {
@@ -569,6 +606,29 @@ function riverBoxes(groups: Group[], notes: Record<string, Bucket>, board: Card[
       return [...split, ...(rest.length ? [{ ...p, hands: rest, name: kindsOf(rest) }] : [])].filter((q) => q.hands.length);
     });
   }
+  // Noam 2026-11-18 (T♥8♥7♠ 9♥ 2♣, "on this board and on every board"): with four to a straight on the
+  // board, a straight from the bottom, from the top with one card, and from the top with two cards (the nuts)
+  // are very different: one group per straight (by its high card), each boxed by its own hands' equity.
+  if (fourToStraight(board)) {
+    const capOf: Bucket = wetRiver ? "b25" : "b50";
+    const ranksOf = (h: Hand) => [rv(h.key[0]), rv(h.key[1])];
+    parts = parts.flatMap((p) => {
+      const st = p.hands.filter((h) => h.cat === "straight");
+      if (!st.length) return [p];
+      const rest = p.hands.filter((h) => h.cat !== "straight");
+      const byHigh = new Map<number, Hand[]>();
+      for (const h of st) { const hi = straightHigh([...boardRanks, ...ranksOf(h)]); byHigh.set(hi, [...(byHigh.get(hi) ?? []), h]); }
+      const split = [...byHigh].sort((a, b) => b[0] - a[0]).map(([hi, hs]) => {
+        const wt = new Map<Bucket, number>();
+        for (const h of hs) wt.set(h.box, (wt.get(h.box) ?? 0) + h.weight);
+        let box = [...wt].sort((a, b) => b[1] - a[1] || BOX_RANK[b[0]] - BOX_RANK[a[0]])[0][0];
+        if (box === "big") box = "b0";
+        if (BOX_RANK[box] > BOX_RANK[capOf]) box = capOf;
+        return { ...p, box, hands: hs, name: `${ch(hi)}-high straights` };
+      });
+      return [...split, ...(rest.length ? [{ ...p, hands: rest, name: kindsOf(rest) }] : [])];
+    });
+  }
   // Noam 2026-11-14 (A♣7♦2♠ 5♣ 6♣): two pair isn't good enough for stacks, or for 50bb more: 15–25.
   for (const p of parts) if (wetRiver && p.name === "Two pair" && BOX_RANK[p.box] > BOX_RANK.b15) p.box = "b15";
   // SPR (Noam, K♠5♦4♣ 3♠ 9♦): on the 66% line two pair on a straight river is no more than 15–25,
@@ -764,7 +824,12 @@ function solveBoard(flopName: string, turn?: number, river?: number) {
   const reviewedLine = t?.bet === "overbet" ? "b150" : "b75";
   const notes = !LINE || LINE === reviewedLine ? (BOARD_NOTES[name] ?? {}) : {};
   if (r) groups = riverBoxes(groups, notes, board, LINE ? (LINE_SPR[LINE] ?? 4) > 3 : t!.bet !== "overbet", LINE === "bx" || LINE === "xx");
-  const lineReview = LINE ? LINE_REVIEWED[`${name}@${LINE}`] : undefined;
+  // A review on a classic river also holds on its line (66% → b75, overbet → b150), and the other way round.
+  const lineReview = r
+    ? LINE
+      ? (LINE_REVIEWED[`${name}@${LINE}`] ?? (LINE === reviewedLine ? LINE_REVIEWED[name] : undefined))
+      : (LINE_REVIEWED[name] ?? LINE_REVIEWED[`${name}@${reviewedLine}`])
+    : undefined;
   if (lineReview) {
     const taken = new Set(lineReview.flatMap((g) => g.hands));
     // a flush stays with the flushes
@@ -846,7 +911,7 @@ const args = process.argv.slice(2).filter((a, i, all) => a !== "--turn" && a !==
 /** Turns Noam has reviewed (2026-11-13): a general rule never changes them. Only his own note on
  * that turn does: rerun it with --force after adding the note to BOARD_NOTES. */
 /** Rivers Noam has reviewed: the same lock. */
-const REVIEWED_RIVERS = new Set<string>(["A72-5c-6c", "JT3-2h-3d", "KQ4-8s-Td", "KQ4-Ad-7c", "K54-3s-9d", "886-Jd-9d", "JT3-6c-3d"]);
+const REVIEWED_RIVERS = new Set<string>(["A72-5c-6c", "JT3-2h-3d", "KQ4-8s-Td", "KQ4-Ad-7c", "K54-3s-9d", "886-Jd-9d", "JT3-6c-3d", "986-2h-7h", "A72-6d-Ks", "T87-9h-2c"]);
 const REVIEWED_TURNS = new Set(["A72-6d", "962-8d", "KQ4-8s", "QT7-Jh", "962-2c", "886-Jd", "T87-2d"]);
 let locked = 0;
 const flops = args.length ? args.map((a) => a.split("-")[0]) : BOARDS.map((b) => b.name);
@@ -879,7 +944,7 @@ for (const [flopName, turn, river] of spots) {
   const tt = turn === undefined ? undefined : BOARDS.find((b) => b.name === flopName)!.turns[turn];
   const spotName = tt ? `${flopName}-${code(tt.card)}${river === undefined ? "" : `-${code(tt.rivers[river].card)}`}` : flopName;
   // A line's spots are always generated: Noam's notes are applied on the line he reviewed.
-  if (TURN && !LINE && (RIVER ? REVIEWED_RIVERS : REVIEWED_TURNS).has(spotName) && !FORCE) {
+  if (TURN && !LINE && (RIVER ? REVIEWED_RIVERS : REVIEWED_TURNS).has(spotName) && !FORCE && !(process.env.FORCE_SPOTS ?? "").split(",").includes(spotName)) {
     console.log(`${spotName}: reviewed by Noam, left as it is (--force to change it)`);
     locked++;
     continue;
