@@ -18,6 +18,8 @@ type DrillCard = {
   piece: ChessPiece;
   section: "Preflop" | "Postflop";
   href: string;
+  /** Attack and Defend: pick the street in the start sheet. */
+  streets?: { key: string; label: string; href: string }[];
 };
 
 const DRILLS: DrillCard[] = [
@@ -25,13 +27,15 @@ const DRILLS: DrillCard[] = [
   { key: "tb", title: "3-bet", sub: "Facing an open · pick any seats", meta: "15 spots", piece: "knight", section: "Preflop", href: "/drills/preflop/tb" },
   { key: "fb", title: "Facing a 3-bet", sub: "You opened · 4-bet, call or fold", meta: "15 spots", piece: "bishop", section: "Preflop", href: "/drills/preflop/fb" },
   { key: "fv", title: "Facing a 4-bet", sub: "You 3-bet · all in, call or fold", meta: "15 spots", piece: "rook", section: "Preflop", href: "/drills/preflop/fv" },
-  // Noam & Uri 2026-11-10: "How many big blinds?" split into a drill per street.
-  { key: "flop", title: "Flop: how many bb?", sub: "BTN vs BB · 11 flops · made hands by equity", meta: "New", piece: "bishop", section: "Postflop", href: "/drills/postflop/flop" },
-  { key: "turn", title: "Turn: how many bb?", sub: "BTN vs BB · flop bet and call · 33 turns", meta: "New", piece: "rook", section: "Postflop", href: "/drills/postflop/turn" },
-  { key: "river", title: "River: how many bb?", sub: "BTN vs BB · flop and turn bet and called · 66 rivers", meta: "New", piece: "queen", section: "Postflop", href: "/drills/postflop/river" },
-  { key: "price", title: "Full hand: how many bb?", sub: "The old drill · flop to river in one go", meta: "Old", piece: "king", section: "Postflop", href: "/drills/postflop/price" },
-  { key: "line", title: "Flop to river", sub: "BTN vs BB · 20 random hands", meta: "Demo", piece: "queen", section: "Postflop", href: "/drills/postflop/line" },
-  { key: "postflop", title: "BTN c-bet vs BB", sub: "K72r · one strategy", meta: "Draft", piece: "pawn", section: "Postflop", href: "/drills/postflop/btn-vs-bb" },
+  // Noam & Uri 2026-11-20: the postflop POC is exactly four drills. Attack and
+  // Defend pick the street inside. The old postflop drills (Full hand, Flop to
+  // river, K72) left the lobby; their pages still open by link.
+  { key: "attack", title: "Attack: how much is it worth?", sub: "BTN vs BB · bet, bet, bet · how many bets each group wants", meta: "11 flops", piece: "queen", section: "Postflop", href: "/drills/postflop/flop",
+    streets: [{ key: "flop", label: "Flop", href: "/drills/postflop/flop" }, { key: "turn", label: "Turn", href: "/drills/postflop/turn" }, { key: "river", label: "River", href: "/drills/postflop/river" }] },
+  { key: "defend", title: "Defend: call or fold?", sub: "You're the BB · BTN bets flop, turn and river · where calling stops", meta: "New", piece: "rook", section: "Postflop", href: "/drills/postflop/defend/flop",
+    streets: [{ key: "flop", label: "Flop", href: "/drills/postflop/defend/flop" }, { key: "turn", label: "Turn", href: "/drills/postflop/defend/turn" }, { key: "river", label: "River", href: "/drills/postflop/defend/river" }] },
+  { key: "cards", title: "Good card, bad card", sub: "Which turns and rivers help your range", meta: "New", piece: "bishop", section: "Postflop", href: "/drills/postflop/cards" },
+  { key: "round", title: "Round to 100 or 0", sub: "Good card: bet it all · bad card: check it all", meta: "New", piece: "knight", section: "Postflop", href: "/drills/postflop/round" },
 ];
 
 const BRAND = "font-[family-name:var(--font-brand)]";
@@ -100,7 +104,7 @@ export function Lobby() {
 
         <FeedbackSection />
 
-        <DrillStartSheet drill={chosen} onClose={() => setChosen(null)} onPlay={() => chosen && router.push(chosen.href)} />
+        <DrillStartSheet drill={chosen} onClose={() => setChosen(null)} onPlay={(href) => chosen && router.push(href ?? chosen.href)} />
         <div className="mt-auto flex flex-col items-center gap-2.5 pt-2 text-[12px]" style={{ color: "var(--muted)" }}>
           <Rule />
           <span>6-max cash · 100bb · proof of concept</span>

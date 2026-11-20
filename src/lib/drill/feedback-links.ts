@@ -12,6 +12,9 @@ export function feedbackLink(row: Pick<FeedbackRow, "drill" | "pageUrl">): strin
     if (i >= 0) return `/drills/postflop/price?runout=${i}${street ? `&street=${street}` : ""}`;
   }
   if (area === "postflop" && (drill === "flop" || drill === "turn" || drill === "river") && id) return `/drills/postflop/${drill}?board=${encodeURIComponent(id)}`;
+  // Noam & Uri 2026-11-20: "postflop:defend:<street>:<spot>", "postflop:cards:<spot>", "postflop:round:<spot>".
+  if (area === "postflop" && drill === "defend" && id && street) return `/drills/postflop/defend/${id}?spot=${encodeURIComponent(street)}`;
+  if (area === "postflop" && (drill === "cards" || drill === "round") && id) return `/drills/postflop/${drill}?spot=${encodeURIComponent(id)}`;
   if (area === "postflop" && drill === "line-demo" && id) {
     const i = SCENARIOS.findIndex((s) => s.id === id);
     if (i >= 0) return `/drills/postflop/line?hand=${i}`;

@@ -15,7 +15,7 @@ import { LineBar } from "./LineBar";
  * Noam 2026-11-16: the line very clear, each bet and the pot. Every action of the line comes one at a
  * time, announced big; the pot grows; a line bar fills in at the bottom. A tap skips. */
 
-type Seat = "UTG" | "HJ" | "CO" | "BTN" | "SB" | "BB";
+export type Seat = "UTG" | "HJ" | "CO" | "BTN" | "SB" | "BB";
 
 /** Seat centers on the table, in % of the table box. BTN (you) at the bottom. */
 const SEAT_AT: Record<Seat, [number, number]> = { BTN: [50, 91], SB: [11, 70], BB: [11, 27], UTG: [50, 8], HJ: [89, 27], CO: [89, 70] };
@@ -62,7 +62,25 @@ const STREET_NAME = ["Turn", "River"];
 const cardText = (c: Card) => `${rankChar(c.r)}${SUIT_GLYPH[c.s]}`;
 const r1 = (x: number) => String(Math.round(x * 10) / 10);
 
-export function FlopTrailer({ board, street = "flop", turnBet = 6, line: lineProp, onDone }: { board: Card[]; street?: "flop" | "turn" | "river"; turnBet?: number; line?: StreetLine[]; onDone: () => void }) {
+export function FlopTrailer({
+  board,
+  street = "flop",
+  turnBet = 6,
+  line: lineProp,
+  hero = "BTN",
+  caption = "Your made hands: how many bb?",
+  onDone,
+}: {
+  board: Card[];
+  street?: "flop" | "turn" | "river";
+  turnBet?: number;
+  line?: StreetLine[];
+  /** Our seat, lit in gold (Noam & Uri 2026-11-20: the defend drill sits in the BB). */
+  hero?: Seat;
+  /** The question, shown once the line has played. */
+  caption?: string;
+  onDone: () => void;
+}) {
   // Noam 2026-11-16: a spot can come with its own line (turn 75 / 150 / 200%, checks).
   const line = lineProp ?? lineFor(street, turnBet);
   const TL = timeline(line);
@@ -133,7 +151,9 @@ export function FlopTrailer({ board, street = "flop", turnBet = 6, line: linePro
   const lastAct = lastEv?.k === "act" ? actOf(lastEv) : undefined;
   const headline =
     lastEv?.k === "sflip"
-      ? `${STREET_NAME[lastEv.si]}: ${cardText(board[3 + lastEv.si])}`
+      ? board[3 + lastEv.si]
+        ? `${STREET_NAME[lastEv.si]}: ${cardText(board[3 + lastEv.si])}`
+        : `The ${STREET_NAME[lastEv.si].toLowerCase()} card…` // card drills: the question is the card itself
       : lastEv?.k === "act"
         ? actLong(lastAct!, before[lastEv.si][lastEv.ai])
         : lastEv?.k === "flip"
@@ -245,7 +265,7 @@ export function FlopTrailer({ board, street = "flop", turnBet = 6, line: linePro
         </div>
 
         {(Object.keys(SEAT_AT) as Seat[]).map((s) => (
-          <SeatBadge key={s} seat={s} folded={folded[s]} action={action[s]} stack={stack[s]} hero={s === "BTN"} />
+          <SeatBadge key={s} seat={s} folded={folded[s]} action={action[s]} stack={stack[s]} hero={s === hero} />
         ))}
       </div>
 
@@ -266,7 +286,7 @@ export function FlopTrailer({ board, street = "flop", turnBet = 6, line: linePro
               transition={{ duration: 0.35 }}
               data-testid="trailer-caption"
             >
-              Your made hands: how many bb?
+              {caption}
             </motion.b>
           )}
         </AnimatePresence>

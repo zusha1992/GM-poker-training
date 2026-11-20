@@ -6,6 +6,59 @@ This is a living document. It holds every rule for splitting BTN's range into ha
 
 ---
 
+## 00. The postflop POC: four drills *(Noam & Uri, 2026-11-20)*
+
+Source: `decisions/2026-11-20-uri-attack-defend-drills.md`. The Postflop section of the app has exactly four drills, all on one line: BTN opens, BB calls, BTN bets the flop (33%), the turn (the board's size: about 66%, or 150% where BTN overbets) and the river (about 66%), BB calls.
+
+1. **Attack: how much is it worth?** (this rulebook, Flop / Turn / River). Only the bet-bet-bet line is asked; the other five river lines are hidden, not deleted, and their notes stay below.
+   - **The boxes say how many bets** *(Noam & Uri, 2026-11-20)*. The bb are BTN's total by the river:
+     - preflop 2.5 + flop 1.8 ≈ 4;
+     - + the turn ≈ 11;
+     - + a 66% river ≈ 26.
+
+     So the names are the same on every street, and the bb stay as small print:
+
+     | Name | bb |
+     |---|---|
+     | Check, give up | Pot is too big |
+     | One small bet | 0–5bb |
+     | Two bets | 5–15bb |
+     | Three small bets | 15–25bb |
+     | Three bets | 25–50bb |
+     | All in | 50–100bb |
+2. **Defend: call or fold?** We're the BB, facing BTN's bet on the flop, the turn or the river. BB only calls or folds (a solver raise counts as a call).
+   - **Groups:** BB's hands by plain category: two pair or better, overpairs, top pair, pocket pairs under the top card, second pair, third pair or lower, small pocket pairs, flush draws, open-enders, gutshots, ace-high, two overcards, backdoor flush draws, king-high and worse.
+   - **Answer:** how often our solver (TexasSolver) continues with the group, using the 75/25 rule:
+     - 75% or more → call;
+     - 25% or less → fold;
+     - in between → mixed, and either answer is right.
+   - **Splitting:** a category whose hands split around those lines becomes two or three groups. At most 9 groups per spot; small groups join a neighbor with the same answer.
+   - **Why:** the price (a call needs bet ÷ (pot + 2 bets)) against the group's equity versus BTN's betting range.
+   - **Summary:** the groups from most calls to fewest, with the line where calling stops.
+   - Generator: `scripts/analysis/defend-groups.ts`. Reports: `decisions/ranges/defend-drill/`.
+3. **Good card, bad card.** After BTN bet and BB called, a turn card (or a river card after the turn) comes: does it help BTN's range or BB's?
+   - **Pieces** are groups of cards:
+     - one per rank, with neighboring ranks joined when they agree;
+     - the flush suit's cards apart when a flush can come.
+   - **Draft rule until Uri sets one:** BTN's whole-range equity against BB's calling range on that card, compared with an average card:
+     - +2.5 points or more → good;
+     - −2.5 or less → bad;
+     - in between → close, and either answer is right.
+   - Where a solve exists (3 turns per flop, 2 rivers per turn), the solver's bet % for BTN's range is shown too.
+   - Generator: `scripts/analysis/card-quality.ts`. Reports: `decisions/ranges/cards/`.
+4. **Round to 100 or 0.** The same cards and the same data. The question is the action: on a good card, bet the whole range (100%); on a bad card, check it all (0%). Close cards accept both answers.
+
+**Every exercise opens with the table scene** *(Uri, 2026-11-20)*:
+- the table, with the dealer button;
+- the blinds posting;
+- each action up to us;
+- our seat lit, preflop too.
+
+**Open for Uri:**
+- Should good / bad card have a third box, "Neutral"?
+- The ±2.5 thresholds.
+- Should mixed defend groups accept either answer?
+
 ## 0. Split into Flop, Turn and River drills *(Noam & Uri, 2026-11-10)*
 
 The full-hand drill is split into three smaller drills, one per street. The **Flop** drill is built first. Turn and River are in the lobby as "Coming soon". The old full-hand drill stays playable as "Full hand (old)". Everything below section 0 is the old drill's rules.

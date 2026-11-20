@@ -8,14 +8,14 @@ import { Toast, useToast } from "@/components/drill/Toast";
 import { badSound, buzz, goodSound, tone } from "@/lib/drill/sound";
 import { rankChar, type Card } from "@/lib/drill/postflop/line-demo";
 import { BUCKET_COLOR, BUCKET_RANK, BUCKETS, bucketShort, bucketTiny, type Bucket } from "@/lib/drill/postflop/price-hands";
-import { allSpots, buildFlopSpot, FLOP_BOARDS, RIVER_LINE_SPOTS, spotsOf, type FlopPiece, type FlopSpot, type Street } from "@/lib/drill/postflop/flop-drill";
+import { allSpots, buildFlopSpot, FLOP_BOARDS, spotsOf, type FlopPiece, type FlopSpot, type Street } from "@/lib/drill/postflop/flop-drill";
 import { LineMatrix, type MatrixPalette } from "./LineMatrix";
 import { MoneyPaddles } from "./MoneyPaddles";
 import { pieTarget, SortPiece } from "./SortPiece";
 import { HandFan } from "./HandFan";
 import { FlopTrailer } from "./FlopTrailer";
 import { LineBar } from "./LineBar";
-import { LINE_KEYS, LINE_SUB, LINE_TITLE, lineFor, lineOfKey, type LineKey } from "@/lib/drill/postflop/lines";
+import { LINE_TITLE, lineFor, lineOfKey } from "@/lib/drill/postflop/lines";
 import { IconButton, InspectPanel, PrimaryButton, Row, Shell, SUIT_COLOR } from "./drill-ui";
 
 /** The matrix shows the range in one quiet color; groups the player placed take their box's color. */
@@ -35,8 +35,8 @@ function shuffled<T>(xs: T[]): T[] {
 }
 
 /** A random spot of this street (of the picked flop when set), never the same one twice in a row. */
-function pickBoard(street: Street, current: string | null, picked: string | null, line?: LineKey | "all" | null): string {
-  const all = spotsOf(street, line).filter((s) => !picked || s.flop === picked);
+function pickBoard(street: Street, current: string | null, picked: string | null): string {
+  const all = spotsOf(street).filter((s) => !picked || s.flop === picked);
   const pool = all.length > 1 ? all.filter((s) => s.name !== current) : all;
   return pool[Math.floor(Math.random() * pool.length)].name;
 }
@@ -51,8 +51,6 @@ export function FlopScreen({ street = "flop" }: { street?: Street }) {
   const [spot, setSpot] = useState<FlopSpot>(() => buildFlopSpot(spotsOf(street)[0].name));
   const [phase, setPhase] = useState<Phase>("intro");
   const [picked, setPicked] = useState<string | null>(null);
-  /** River: the line before it (Noam 2026-11-16). null = the classic rivers (66% or 150% turn). */
-  const [linePick, setLinePick] = useState<LineKey | "all" | null>(null);
   const [placed, setPlaced] = useState<Partial<Record<string, Bucket>>>({});
   const [queue, setQueue] = useState<FlopPiece[]>([]);
   const [missed, setMissed] = useState<Set<string>>(new Set());
@@ -120,7 +118,7 @@ export function FlopScreen({ street = "flop" }: { street?: Street }) {
   /** `name` = this board; otherwise the picked board, or a random one. */
   function start(name?: string) {
     generation.current += 1;
-    const s = buildFlopSpot(name ?? pickBoard(street, spot.name, picked, linePick));
+    const s = buildFlopSpot(name ?? pickBoard(street, spot.name, picked));
     setSpot(s);
     setMissed(new Set());
     setPlaced({});
@@ -187,7 +185,7 @@ export function FlopScreen({ street = "flop" }: { street?: Street }) {
     }, 380);
   }
 
-  const lineFlops = [...new Set(RIVER_LINE_SPOTS.map((x) => x.flop))];
+
   const spotLine = spot.line ? lineOfKey(spot.line) : lineFor(spot.street, spot.turnBet);
   if (phase !== "intro" && trailer) return <FlopTrailer key={seq} board={spot.board} street={street} turnBet={spot.turnBet} line={spotLine} onDone={endTrailer} />;
 
@@ -207,51 +205,16 @@ export function FlopScreen({ street = "flop" }: { street?: Street }) {
             </p>
           </div>
           <div className="flex flex-col gap-1.5 rounded-2xl p-3 text-[13px]" style={{ background: "var(--panel)", border: "1px solid var(--line)" }}>
-            <Row label="Boxes" text="Pot is too big · 0–5 · 5–15 · 15–25 · 25–50 · 50–100bb" />
+            <Row label="Boxes" text="Check · one small bet · two bets · three small bets · three bets · all in (bb by the river in small print)" />
             <Row label="Groups" text="Ace-high and better, by equity" />
           </div>
-          {street === "river" && RIVER_LINE_SPOTS.length > 0 && (
-            <div className="grid grid-cols-2 gap-1.5" role="radiogroup" aria-label="Line" data-testid="line-picker">
-              <b className="col-span-2 font-[family-name:var(--font-display)] text-[13px] tracking-[0.06em] uppercase" style={{ color: "var(--muted)" }}>
-                {lineFlops.length < FLOP_BOARDS.length ? `Line · so far on ${lineFlops.length} of ${FLOP_BOARDS.length} flops` : "Line"}
-              </b>
-              {[
-                { key: null as LineKey | "all" | null, title: "Classic", sub: "All boards · turn 66% or 150%", wide: false },
-                { key: "all" as LineKey | "all" | null, title: "Mix the 6 lines", sub: "A random line each time", wide: false },
-                ...LINE_KEYS.map((k) => ({ key: k as LineKey | "all" | null, title: LINE_TITLE[k], sub: LINE_SUB[k], wide: false })),
-              ].map((o) => {
-                const on = linePick === o.key;
-                return (
-                  <button
-                    key={o.key ?? "classic"}
-                    type="button"
-                    role="radio"
-                    aria-checked={on}
-                    className="flex cursor-pointer flex-col items-start gap-0.5 rounded-xl border px-2.5 py-2 text-left transition-transform active:scale-[0.98]"
-                    style={{ borderColor: on ? "var(--mix)" : "var(--line)", background: on ? "var(--panel-2)" : "var(--panel)" }}
-                    onClick={() => {
-                      setLinePick(o.key);
-                      if (o.key && picked && !lineFlops.includes(picked)) setPicked(null);
-                    }}
-                    data-testid={`line-${o.key ?? "classic"}`}
-                  >
-                    <b className="text-[14px]" style={{ color: on ? "var(--mix)" : "var(--foreground)" }}>
-                      {o.title}
-                    </b>
-                    <span className="text-[11px] leading-tight" style={{ color: "var(--muted)" }}>
-                      {o.sub}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          )}
+          {/* Noam & Uri 2026-11-20: one line only (bet-bet-bet). The other river lines stay in the data, hidden; their old links still open. */}
           {(
           <div className="grid grid-cols-2 gap-1.5" role="radiogroup" aria-label="Board" data-testid="board-picker">
             <b className="col-span-2 font-[family-name:var(--font-display)] text-[13px] tracking-[0.06em] uppercase" style={{ color: "var(--muted)" }}>
               {street === "river" ? `Flop · ${FLOP_BOARDS.length} flops, 3 turns × 2 rivers each` : street === "turn" ? `Flop · ${FLOP_BOARDS.length} flops, 3 turns each` : `Board · ${FLOP_BOARDS.length} flops`}
             </b>
-            {[{ key: null as string | null, title: "Mix them all", sub: street === "river" ? "A random flop, turn and river each time" : street === "turn" ? "A random flop and turn each time" : "A random flop each time" }, ...FLOP_BOARDS.filter((b) => !(street === "river" && linePick) || lineFlops.includes(b.name)).map((b) => ({ key: b.name as string | null, title: b.flop.join(" "), sub: b.blurb }))].map((o) => {
+            {[{ key: null as string | null, title: "Mix them all", sub: street === "river" ? "A random flop, turn and river each time" : street === "turn" ? "A random flop and turn each time" : "A random flop each time" }, ...FLOP_BOARDS.map((b) => ({ key: b.name as string | null, title: b.flop.join(" "), sub: b.blurb }))].map((o) => {
               const on = picked === o.key;
               return (
                 <button
@@ -404,7 +367,7 @@ export function FlopScreen({ street = "flop" }: { street?: Street }) {
 }
 
 /** The flop, big and in the middle (Noam 2026-11-11). Before the deal: empty slots; then the cards flip in one by one. */
-function BigBoard({ board, dealt, small = false }: { board: Card[]; dealt: boolean; small?: boolean }) {
+export function BigBoard({ board, dealt, small = false }: { board: Card[]; dealt: boolean; small?: boolean }) {
   // Five cards on the river: a bit smaller, so the matrix keeps its room.
   const w = small ? 44 : board.length === 5 ? 52 : 62;
   return (

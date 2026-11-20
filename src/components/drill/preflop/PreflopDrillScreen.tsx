@@ -11,6 +11,7 @@ import { Celebration, type CelebrationTrigger } from "@/components/drill/Celebra
 import { Toast, useToast } from "@/components/drill/Toast";
 import { FeedbackSheet } from "@/components/drill/FeedbackSheet";
 import { SeatsRow } from "./SeatsRow";
+import { PreflopTrailer, type PreflopStory } from "./PreflopTrailer";
 import { SeatPicker, type AnyPreflopSpot } from "./SeatPicker";
 import { ExplainSheet } from "./ExplainSheet";
 import { LegendSheet } from "./LegendSheet";
@@ -123,6 +124,8 @@ export function PreflopDrillScreen({ modeKey }: PreflopDrillScreenProps) {
   const [resultLabelByKey, setResultLabelByKey] = useState<Map<string, string>>(new Map());
   const [celebration, setCelebration] = useState<CelebrationTrigger | null>(null);
   const [finished, setFinished] = useState(false);
+  /** True while the table scene (PreflopTrailer) plays before the questions. */
+  const [intro, setIntro] = useState(false);
   const [legendOpen, setLegendOpen] = useState(false);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [explainPiece, setExplainPiece] = useState<DrillPiece | null>(null);
@@ -165,8 +168,9 @@ export function PreflopDrillScreen({ modeKey }: PreflopDrillScreenProps) {
     setRevealedColors(pre);
     setResultLabelByKey(new Map());
 
-    later(() => showToast(nextSpot.roleText, true, 2600), 0);
-  }, [mode.order, later, showToast]);
+    // Noam & Uri 2026-11-20: the table scene first; the role toast once it's over.
+    setIntro(true);
+  }, [mode.order]);
 
   useEffect(() => {
     // Guarded by a ref (not state) so this runs exactly once per mount even
@@ -486,6 +490,16 @@ export function PreflopDrillScreen({ modeKey }: PreflopDrillScreenProps) {
         </button>
       </div>
 
+      {spot && intro && (
+        <PreflopTrailer
+          key={spot.key}
+          story={evContextFor(spot) as PreflopStory}
+          onDone={() => {
+            setIntro(false);
+            showToast(spot.roleText, true, 2600);
+          }}
+        />
+      )}
       {spot && (
         <>
           <div className="flex items-center gap-2.5">

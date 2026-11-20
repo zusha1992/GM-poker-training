@@ -11,6 +11,11 @@ export const DRILL_VIDEOS: Record<string, string> = {
   flop: "",
   turn: "",
   river: "",
+  // Noam & Uri 2026-11-20: the four postflop drills.
+  attack: "",
+  defend: "",
+  cards: "",
+  round: "",
 };
 
 export type YouTubeVideo = { id: string; vertical: boolean };

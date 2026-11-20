@@ -1,7 +1,7 @@
 "use client";
 
-import type { CSSProperties } from "react";
-import { BUCKET_COLOR, type Bucket } from "@/lib/drill/postflop/price-hands";
+import type { CSSProperties, ReactNode } from "react";
+import { BUCKET_COLOR, bucketBb, type Bucket } from "@/lib/drill/postflop/price-hands";
 import styles from "./MoneyPaddles.module.css";
 
 /** Where each paddle sits: an arc over the drop area like a gauge, small
@@ -13,7 +13,18 @@ import styles from "./MoneyPaddles.module.css";
  * 5–15 bottom left, 15–25 top right, 25–50 bottom right. */
 type Spot = "bl" | "left" | "tl" | "top" | "tr" | "right" | "br";
 const SPOT: Record<Bucket, Spot> = { big: "left", b0: "tl", b5: "bl", b15: "tr", b25: "br", b50: "right" };
-const LABEL: Record<Bucket, string> = { big: "Pot is\ntoo big", b0: "0–5\nbb", b5: "5–15\nbb", b15: "15–25\nbb", b25: "25–50\nbb", b50: "50–100\nbb" };
+// Noam & Uri 2026-11-20: the name as bets, the bb as small print under it.
+const NAME: Record<Bucket, string> = { big: "Check,\ngive up", b0: "One small\nbet", b5: "Two\nbets", b15: "Three\nsmall bets", b25: "Three\nbets", b50: "All\nin" };
+const LABEL = Object.fromEntries(
+  (Object.keys(NAME) as Bucket[]).map((b) => [
+    b,
+    <>
+      {NAME[b]}
+      {"\n"}
+      <small style={{ fontSize: 10.5, fontWeight: 600, opacity: 0.7 }}>{bucketBb(b)}</small>
+    </>,
+  ]),
+) as Record<Bucket, ReactNode>;
 
 const INSET = 6;
 const STROKE = 12;

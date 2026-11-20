@@ -111,14 +111,25 @@ export const BUCKET_COLOR: Record<Bucket, string> = {
 
 const BB_RANGE: Record<Bucket, string> = { big: "Pot is too big", b0: "0–5bb", b5: "5–15bb", b15: "15–25bb", b25: "25–50bb", b50: "50–100bb" };
 
+/** Noam & Uri 2026-11-20: each box also says how many bets that money is on
+ * the bet-bet-bet line. The bb are BTN's total by the river (preflop 2.5 +
+ * flop 1.8 ≈ 4; + turn ≈ 11; + a 66% river ≈ 26), so the names are the same
+ * on every street. */
+export const BUCKET_NAME: Record<Bucket, string> = { big: "Check, give up", b0: "One small bet", b5: "Two bets", b15: "Three small bets", b25: "Three bets", b50: "All in" };
+
+/** The bb range alone, the small print under a box's name. */
+export function bucketBb(b: Bucket): string {
+  return b === "big" ? "Pot is too big" : BB_RANGE[b];
+}
+
 /** Tiny text for the legend and summary chips. */
 export function bucketTiny(b: Bucket): string {
-  return BB_RANGE[b];
+  return BUCKET_NAME[b];
 }
 
 /** Short text for toasts and feedback notes. */
 export function bucketShort(b: Bucket): string {
-  return BB_RANGE[b];
+  return b === "big" ? `${BUCKET_NAME[b]} (pot is too big)` : `${BUCKET_NAME[b]} (${BB_RANGE[b]})`;
 }
 
 export type Answer = { bucket: Bucket; why: string; sure: boolean; auto?: boolean };

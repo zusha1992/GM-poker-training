@@ -7,9 +7,10 @@ import { clickSound } from "@/lib/drill/sound";
 import { DRILL_VIDEOS, youTubeOf } from "@/lib/drill/videos";
 
 type Props = {
-  drill: { key: string; title: string; sub: string } | null;
+  drill: { key: string; title: string; sub: string; streets?: { key: string; label: string; href: string }[] } | null;
   onClose: () => void;
-  onPlay: () => void;
+  /** `href`: the street picked, for drills with one per street. */
+  onPlay: (href?: string) => void;
 };
 
 /** Opened from a lobby drill card: watch the drill's explanation video
@@ -77,7 +78,31 @@ export function DrillStartSheet({ drill, onClose, onPlay }: Props) {
             </button>
           )}
 
-          <button
+{drill.streets ? (
+            <div className="flex flex-col gap-1.5" data-testid="street-picker">
+              <b className="font-[family-name:var(--font-display)] text-[13px] tracking-[0.06em] uppercase" style={{ color: "var(--muted)" }}>
+                Play the drill · pick the street
+              </b>
+              <div className="grid grid-cols-3 gap-1.5">
+                {drill.streets.map((st) => (
+                  <button
+                    key={st.key}
+                    type="button"
+                    className="flex h-[58px] cursor-pointer items-center justify-center rounded-2xl font-[family-name:var(--font-display)] text-[17px] font-bold transition-transform active:scale-[0.97]"
+                    style={{ background: "var(--mix)", color: "#0E1A2B", animation: ended ? "bump .5s ease 2" : undefined }}
+                    onClick={() => {
+                      clickSound();
+                      onPlay(st.href);
+                    }}
+                    data-testid={`play-${st.key}`}
+                  >
+                    {st.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : (
+                    <button
             type="button"
             className="flex min-h-[64px] cursor-pointer items-center gap-3 rounded-2xl p-3.5 text-left transition-transform active:scale-[0.98]"
             style={{ background: "var(--mix)", color: "#0E1A2B", animation: ended ? "bump .5s ease 2" : undefined }}
@@ -97,6 +122,7 @@ export function DrillStartSheet({ drill, onClose, onPlay }: Props) {
               </span>
             </span>
           </button>
+          )}
         </div>
       )}
     </Sheet>
