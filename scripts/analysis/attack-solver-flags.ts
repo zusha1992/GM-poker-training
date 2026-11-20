@@ -2,7 +2,7 @@
 // drill's box. Reads every board's solver report (runs/<board>/report.txt, written by solve-board.ts:
 // per hand category, BTN's EV, how often it bets, and the box that EV points to) and lists the
 // categories whose solver box is two or more boxes away from the drill's. Noam and Uri review only these.
-// Writes decisions/ranges/attack-solver-flags.md.
+// Writes decisions/attack-solver-flags.md.
 // Usage: npx tsx scripts/analysis/attack-solver-flags.ts
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { BOARDS } from "../../src/lib/drill/postflop/price-hands";
@@ -40,5 +40,5 @@ for (const b of BOARDS) {
   }
 }
 out.push("", `${flagged} of ${checked} categories flagged.`, "");
-writeFileSync("decisions/ranges/attack-solver-flags.md", out.join("\n"));
+writeFileSync("decisions/attack-solver-flags.md", out.join("\n"));
 console.log(`${flagged} of ${checked} categories flagged`);
