@@ -1,11 +1,11 @@
 # Defend river · A76-8h-Th (Ah 7h 6c 8h Th)
 
-BTN bets 14bb into 21.1bb. Answer by the EV of calling (Noam 2026-11-21): +0.5bb or more = Call, −0.5 to +0.5 = Bluff-catch, −0.5 or less = Fold. Source: TexasSolver (our solve); EV = both play the solver's strategy after the call. Draft for Noam and Uri.
+BTN bets 14bb into 21.1bb. Answer by the solver's strategy and the EV of calling (Noam 2026-11-21): the solver calls 75%+ = Call, 25% or less = Fold; when it mixes, EV −0.5 to +0.5bb = Bluff-catch, more = Call, less = Fold. Source: TexasSolver (our solve); EV = both play the solver's strategy after the call. Draft for Noam and Uri.
 
 | Group | Hands | Share | EV of a call | Solver continues | Answer |
 |---|---|---|---|---|---|
-| Two pair or better: AQo, AJo, A9o… | AQo, AJo, A9o, A6o, A5o, A4o, KQo, KJ, K9s, K6s, K5s +16 more | 35.8% | +15.83bb | 89% | Call |
-| Two pair or better: AT, A9s, A8… | AT, A9s, A8, A7, A6s | 21.6% | +0.38bb | 59.2% | Bluff-catch |
+| Two pair or better: AQo, AJo, A9… | AQo, AJo, A9, A6o, A5o, A4o, KQo, KJ, K9s, K6s, K5s +16 more | 39.2% | +14.47bb | 89.6% | Call |
+| Two pair or better: AT, A8, A7… | AT, A8, A7, A6s | 18.1% | +0.37bb | 52.3% | Bluff-catch |
 | Top pair: A5o, A4, A3s | A5o, A4, A3s | 18.2% | -0.14bb | 35.3% | Bluff-catch |
 | Top pair: AQo, AJo | AQo, AJo | 6.9% | -0.87bb | 30.3% | Fold |
 | Two pair or better: T8o, T7s, T6s… | T8o, T7s, T6s, 98s, 97s, 87, 86s, 76s | 10.8% | -0.96bb | 29% | Fold |

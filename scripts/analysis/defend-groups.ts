@@ -3,7 +3,7 @@
 // For every spot: BB's range there, split into groups (Tetris pieces), and the EV of calling with each.
 // Answer per group by EV (Noam 2026-11-21: "we don't need equity, just whether the call is +EV, 0 EV or −EV"):
 // EV of the call (bb, both then playing the solver's strategy, scripts/analysis/bb-call-ev.ts)
-// +0.5bb or more = Call, between −0.5 and +0.5 = Bluff-catch (about 0 EV, the solver is indifferent), −0.5 or less = Fold.
+// Solver calls 75%+ = Call, 25% or less = Fold; mixed in between: EV −0.5..+0.5bb = Bluff-catch, above = Call, below = Fold.
 // Reads the TexasSolver results in C:/Users/noams/Developer/tools/TexasSolver/runs/<board>/ (solve-board.ts).
 // Writes src/lib/drill/postflop/defend-groups.json and decisions/ranges/defend-drill/<spot>.md.
 // Usage: npx tsx scripts/analysis/defend-groups.ts [board ...]
@@ -18,7 +18,13 @@ const OUT = "src/lib/drill/postflop/defend-groups.json";
 const DIR = "decisions/ranges/defend-drill";
 /** EV (bb) band around 0 that is a bluff-catch (Noam 2026-11-21: "between 0 and 0.5"). */
 const BLUFF = 0.5;
-const tierOf = (ev: number) => (ev >= BLUFF ? 0 : ev > -BLUFF ? 1 : 2);
+// Noam 2026-11-21: the strategy and the EV decide together. A clear strategy is rounded: the solver
+// calls 75%+ = Call, 25% or less = Fold. Only a mixed strategy (in between) looks at the EV:
+// about 0 (−0.5 to +0.5bb) = Bluff-catch, more = Call, less = Fold.
+const MIN_CALL = 25;
+const MAX_CALL = 75;
+/** 0 call, 1 bluff-catch, 2 fold; `call` = how often the solver continues, 0–100. */
+const tierOf = (ev: number, call: number) => (call >= MAX_CALL ? 0 : call <= MIN_CALL ? 2 : ev >= BLUFF ? 0 : ev > -BLUFF ? 1 : 2);
 const RANKS = "AKQJT98765432";
 const SUITS = ["s", "h", "d", "c"] as const;
 const rv = (c: string) => 14 - RANKS.indexOf(c);
@@ -230,16 +236,16 @@ function spotOf(street: DefendSpot["street"], board: Card[], json: string, input
   for (const cat of CATS) {
     const hands = bb.filter((x) => x.cat === cat);
     if (!hands.length) continue;
-    const byCls = new Map<string, { w: number; e: number }>();
+    const byCls = new Map<string, { w: number; e: number; c: number }>();
     for (const h of hands) {
-      const cur = byCls.get(h.cls) ?? { w: 0, e: 0 };
-      byCls.set(h.cls, { w: cur.w + h.w, e: cur.e + h.w * h.ev });
+      const cur = byCls.get(h.cls) ?? { w: 0, e: 0, c: 0 };
+      byCls.set(h.cls, { w: cur.w + h.w, e: cur.e + h.w * h.ev, c: cur.c + h.w * h.c });
     }
     // Split by the answer of each hand class (call ≥75%, mixed, fold ≤25%); a part under 12% of
     // the category joins the next part, so a group never mixes a clear call with a clear fold.
     const tier = (k: string) => {
       const v = byCls.get(k)!;
-      return tierOf(v.e / v.w);
+      return tierOf(v.e / v.w, (v.c / v.w) * 100);
     };
     const wAll = hands.reduce((s, h) => s + h.w, 0);
     const parts: BB[][] = [0, 1, 2].map((t) => hands.filter((h) => tier(h.cls) === t)).filter((p) => p.length);
@@ -257,7 +263,7 @@ function spotOf(street: DefendSpot["street"], board: Card[], json: string, input
   const callOf = (g: G) => (g.hands.reduce((s, h) => s + h.w * h.c, 0) / wOf(g)) * 100;
   // pctOf: the group's EV of calling; the order and the answer go by it.
   const pctOf = (g: G) => g.hands.reduce((s, h) => s + h.w * h.ev, 0) / wOf(g);
-  const answerOf = (e: number): DefendGroup["answer"] => (["call", "bluff", "fold"] as const)[tierOf(e)];
+  const answerOf = (g: G): DefendGroup["answer"] => (["call", "bluff", "fold"] as const)[tierOf(pctOf(g), callOf(g))];
   // Strongest (most calls) first; a tiny group joins its neighbor with the same answer.
   groups.sort((a, b) => pctOf(b) - pctOf(a));
   // Never overwhelm (Uri): at most 9 groups, so past that the smallest ones join a neighbor too.
@@ -270,7 +276,7 @@ function spotOf(street: DefendSpot["street"], board: Card[], json: string, input
   };
   while (groups.length > MAX_GROUPS) {
     const pair = groups
-      .map((g, i) => ({ g, n: groups.filter((x) => x !== g && x.fam === g.fam && answerOf(pctOf(x)) === answerOf(pctOf(g))).sort((a, b) => wOf(a) - wOf(b))[0] }))
+      .map((g, i) => ({ g, n: groups.filter((x) => x !== g && x.fam === g.fam && answerOf(x) === answerOf(g)).sort((a, b) => wOf(a) - wOf(b))[0] }))
       .filter((x) => x.n)
       .sort((a, b) => wOf(a.g) + wOf(a.n) - (wOf(b.g) + wOf(b.n)))[0];
     if (!pair) break;
@@ -279,8 +285,8 @@ function spotOf(street: DefendSpot["street"], board: Card[], json: string, input
   for (let i = 0; i < groups.length; i++) {
     const g = groups[i];
     if (wOf(g) / total >= 0.02 || groups.length <= 3) continue;
-    const ans = answerOf(pctOf(g));
-    const n = groups.filter((x) => x !== g && x.fam === g.fam && answerOf(pctOf(x)) === ans).sort((a, b) => Math.abs(pctOf(a) - pctOf(g)) - Math.abs(pctOf(b) - pctOf(g)))[0];
+    const ans = answerOf(g);
+    const n = groups.filter((x) => x !== g && x.fam === g.fam && answerOf(x) === ans).sort((a, b) => Math.abs(pctOf(a) - pctOf(g)) - Math.abs(pctOf(b) - pctOf(g)))[0];
     if (!n) continue;
     n.hands.push(...g.hands);
     if (!n.label.includes(g.label) && !n.label.includes(" & ")) n.label = `${n.label} & ${g.label.toLowerCase()}`;
@@ -307,15 +313,20 @@ function spotOf(street: DefendSpot["street"], board: Card[], json: string, input
     const classes = Object.keys(cells);
     const callPct = callOf(g);
     const ev = pctOf(g);
-    const answer = answerOf(ev);
+    const answer = answerOf(g);
     const hl = handsLabel(classes);
     const evTxt = `${ev >= 0 ? "+" : "−"}${Math.abs(ev).toFixed(1)}bb`;
+    const mixed = callPct > MIN_CALL && callPct < MAX_CALL;
     const why =
-      answer === "call"
-        ? `Call: calling wins ${evTxt} on average. The solver calls ${callPct.toFixed(0)}%.`
-        : answer === "bluff"
-          ? `Bluff-catch: calling is worth about 0 (${evTxt}). It beats BTN's bluffs and loses to his value bets; the solver calls ${callPct.toFixed(0)}%.`
-          : `Fold: calling loses ${evTxt.slice(1)} on average. The solver calls ${callPct.toFixed(0)}%.`;
+      answer === "bluff"
+        ? `Bluff-catch: the solver mixes (calls ${callPct.toFixed(0)}%) and calling is worth about 0 (${evTxt}). It beats BTN's bluffs and loses to his value bets.`
+        : answer === "call"
+          ? mixed
+            ? `Call: the solver mixes (calls ${callPct.toFixed(0)}%), but calling wins ${evTxt} on average.`
+            : `Call: the solver calls ${callPct.toFixed(0)}% of the time; calling is worth ${evTxt}.`
+          : mixed
+            ? `Fold: the solver mixes (calls ${callPct.toFixed(0)}%), but calling loses ${evTxt.slice(1)} on average.`
+            : `Fold: the solver folds ${(100 - callPct).toFixed(0)}% of the time; calling is worth ${evTxt}.`;
     const seen = new Set<string>();
     const fan = g.hands
       .slice()
@@ -362,7 +373,7 @@ function report(name: string, s: DefendSpot) {
   const lines = [
     `# Defend ${s.street} · ${name} (${s.board.join(" ")})`,
     "",
-    `BTN bets ${s.bet}bb into ${s.pot}bb. Answer by the EV of calling (Noam 2026-11-21): +${BLUFF}bb or more = Call, −${BLUFF} to +${BLUFF} = Bluff-catch, −${BLUFF} or less = Fold. Source: TexasSolver (our solve); EV = both play the solver's strategy after the call${s.approx ? " (flop: the solve's dump stops at the turn, so hands are checked down from the river; approximate)" : ""}. Draft for Noam and Uri.`,
+    `BTN bets ${s.bet}bb into ${s.pot}bb. Answer by the solver's strategy and the EV of calling (Noam 2026-11-21): the solver calls ${MAX_CALL}%+ = Call, ${MIN_CALL}% or less = Fold; when it mixes, EV −${BLUFF} to +${BLUFF}bb = Bluff-catch, more = Call, less = Fold. Source: TexasSolver (our solve); EV = both play the solver's strategy after the call${s.approx ? " (flop: the solve's dump stops at the turn, so hands are checked down from the river; approximate)" : ""}. Draft for Noam and Uri.`,
     "",
     "| Group | Hands | Share | EV of a call | Solver continues | Answer |",
     "|---|---|---|---|---|---|",

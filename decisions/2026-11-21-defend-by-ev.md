@@ -10,7 +10,7 @@
 - The turn and river animation must show the whole action: BB checks again, BTN bets the drill's size, and only then the drill.
 
 ## Decisions (applied)
-- **Answer = EV of calling** (bb, from BB's decision, folding = 0; both then play the solver's strategy to the end). `scripts/analysis/bb-call-ev.ts`.
+- **Answer = strategy + EV (updated same day, Noam):** solver calls 75%+ = Call, 25% or less = Fold (rounded to 100 or 0); only when it mixes does the EV decide: −0.5..+0.5bb = Bluff-catch, above = Call, below = Fold. EV of calling (bb, from BB's decision, folding = 0; both then play the solver's strategy to the end). `scripts/analysis/bb-call-ev.ts`.
   - **Call:** +0.5bb or more.
   - **Bluff-catch:** −0.5 to +0.5bb. Symmetric around 0 because the solver's own pure calls sometimes come out slightly below 0 (e.g. top pair on A-7-6-K turn vs the 14bb overbet: −0.4bb while it calls 95–100%), which is solver noise around "indifferent".
   - **Fold:** −0.5bb or less.
