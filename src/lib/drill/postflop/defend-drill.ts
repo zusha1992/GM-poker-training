@@ -5,11 +5,11 @@ import DEFEND_JSON from "./defend-groups.json";
 
 /** Defend drill (Noam & Uri 2026-11-20): we're the BB, BTN bets the flop (33%), the turn (the board's
  * size) and the river (about 66%). BB only calls or folds. BB's range comes in groups; each goes to
- * Call or Fold. Answers: the solver's continue % per group with the 75/25 rule
- * (scripts/analysis/defend-groups.ts). "mix" = the solver mixes, either answer is right. */
+ * Call, Bluff-catch or Fold, by the EV of calling (Noam 2026-11-21): +0.5bb or more call,
+ * −0.5 to +0.5 bluff-catch, less fold (scripts/analysis/defend-groups.ts, bb-call-ev.ts). */
 
-export type DefendAnswer = "call" | "fold" | "mix";
-type RawGroup = { id: string; label: string; handsLabel: string; cells: Record<string, number>; fan: string[]; callPct: number; eq: number; share: number; answer: DefendAnswer; why: string };
+export type DefendAnswer = "call" | "fold" | "bluff";
+type RawGroup = { id: string; label: string; handsLabel: string; cells: Record<string, number>; fan: string[]; callPct: number; ev: number; share: number; answer: DefendAnswer; why: string };
 type RawSpot = { street: "flop" | "turn" | "river"; board: string[]; pot: number; bet: number; behind: number; need: number; basis: Record<string, number>; groups: RawGroup[] };
 const DATA = DEFEND_JSON as unknown as Record<string, RawSpot>;
 
@@ -26,7 +26,8 @@ export type DefendPiece = {
   cards: [Card, Card][];
   pct: number;
   callPct: number;
-  eq: number;
+  /** EV of calling, bb. */
+  ev: number;
   answer: DefendAnswer;
   why: string;
 };
@@ -88,7 +89,7 @@ export function buildDefendSpot(name: string): DefendSpot {
       key: g.id,
       label: g.label,
       hands: g.handsLabel,
-      name: `Solver continues ${g.callPct.toFixed(0)}% · equity ${g.eq.toFixed(0)}% vs BTN's bets (a call needs ${raw.need.toFixed(0)}%)`,
+      name: `EV of a call ${g.ev >= 0 ? "+" : "−"}${Math.abs(g.ev).toFixed(1)}bb · the solver calls ${g.callPct.toFixed(0)}%`,
       desc: g.handsLabel,
       color: GROUP_COLORS[i % GROUP_COLORS.length],
       partMark: "some",
@@ -96,7 +97,7 @@ export function buildDefendSpot(name: string): DefendSpot {
       cards: g.fan.map((c) => [card(c.slice(0, 2)), card(c.slice(2))] as [Card, Card]),
       pct: Math.round(g.share),
       callPct: g.callPct,
-      eq: g.eq,
+      ev: g.ev,
       answer: g.answer,
       why: g.why,
     };

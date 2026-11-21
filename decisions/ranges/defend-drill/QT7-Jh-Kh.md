@@ -1,11 +1,10 @@
 # Defend river · QT7-Jh-Kh (Qh Td 7s Jh Kh)
 
-BTN bets 14bb into 21.1bb. A call needs 28.5% equity. Source: TexasSolver (our solve), BB's continue % (call or raise) per hand; 75/25 rule. Draft for Noam and Uri.
+BTN bets 14bb into 21.1bb. Answer by the EV of calling (Noam 2026-11-21): +0.5bb or more = Call, −0.5 to +0.5 = Bluff-catch, −0.5 or less = Fold. Source: TexasSolver (our solve); EV = both play the solver's strategy after the call. Draft for Noam and Uri.
 
-| Group | Hands | Share | Solver continues | Equity vs BTN's bets | Answer |
+| Group | Hands | Share | EV of a call | Solver continues | Answer |
 |---|---|---|---|---|---|
-| Two pair or better: AJo, AT, A9s… | AJo, AT, A9s, A8s, A7, J9o, T9o, T8s, T6s, T5s, T4s +6 more | 38.4% | 93.2% | 52.8% | Call |
-| Two pair or better: KTo, K9, Q9… | KTo, K9, Q9, JTo, J9s, 98s, 97s | 25.7% | 43.6% | 31.7% | Mixed |
-| Two pair or better: KQo, KJ, KTs… | KQo, KJ, KTs, K7s, QJ, Q7s, JTs, J7s, 98o | 18% | 6.2% | 27.3% | Fold |
-| Second pair | Q8s, Q6s, Q5s, Q4s, Q3s, Q2s | 14.4% | 0% | 23.3% | Fold |
-| Third pair or lower | T8s, T6s, T5s, T4s, T3s, 87s, 76s, 75s, 74s | 3.5% | 0% | 18.6% | Fold |
+| Two pair or better: AJo, AT, A9s… | AJo, AT, A9s, A8s, A7, T8s, T6s, T5s, T4s, T3s, 98s +5 more | 27.1% | +18.2bb | 97% | Call |
+| Two pair or better: KQo, KJ, KT… | KQo, KJ, KT, K9, K7s, QJ, Q9, Q7s, JT, J9, J7s +3 more | 55% | -0.03bb | 39.6% | Bluff-catch |
+| Second pair | Q8s, Q6s, Q5s, Q4s, Q3s, Q2s | 14.4% | -2.15bb | 0% | Fold |
+| Third pair or lower | T8s, T6s, T5s, T4s, T3s, 87s, 76s, 75s, 74s | 3.5% | -4.87bb | 0% | Fold |

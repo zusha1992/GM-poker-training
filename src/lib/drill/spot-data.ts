@@ -80,10 +80,11 @@ export function defendSpotData(s: DefendSpot): SpotData {
     spot: { hero: "BB", board: s.board.map(txt), pot: s.pot, behind: 100 - s.pot / 2, title: `Defend ${s.street} · ${s.name}`, question: `BTN bets ${s.bet}bb: call or fold?` },
     actions: [...btnVsBbActions(s.street, s.turnBet), { street: s.street, seat: "BB", act: "check" }, { street: s.street, seat: "BTN", act: "bet", bb: s.bet }],
     boxes: [
-      { id: "fold", label: "Fold", color: "#5B87C9" },
-      { id: "call", label: "Call", color: "#35C277" },
+      { id: "fold", label: "Fold", small: "−EV", color: "#5B87C9" },
+      { id: "bluff", label: "Bluff-catch", small: "about 0 EV", color: "#F2C14E" },
+      { id: "call", label: "Call", small: "+EV", color: "#35C277" },
     ],
-    groups: s.pieces.map((p) => ({ id: p.key, label: p.label, items: p.entries.map((e) => e.hand), correct: p.answer === "mix" ? ["call", "fold"] : [p.answer], why: p.why, numbers: { callPct: p.callPct, equity: p.eq, need: s.need } })),
+    groups: s.pieces.map((p) => ({ id: p.key, label: p.label, items: p.entries.map((e) => e.hand), correct: [p.answer], why: p.why, numbers: { ev: p.ev, callPct: p.callPct } })),
   };
 }
 

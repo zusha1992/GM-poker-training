@@ -21,21 +21,24 @@ import { IconButton, InspectPanel, PrimaryButton, Row, Shell, SUIT_GLYPH } from 
 /** "Defend: call or fold?" (Noam & Uri 2026-11-20). We're the BB; BTN bets. BB's range comes in
  * groups, one at a time: drag each to Call or Fold. The summary shows where calling stops. */
 
-type Box = "fold" | "call";
+type Box = "fold" | "bluff" | "call";
 const CALL = "#35C277";
 const FOLD = "#5B87C9";
 const MIXED = "#F2C14E";
 const BOXES: SideBox<Box>[] = [
-  { id: "fold", label: "Fold", color: FOLD, side: "left" },
-  { id: "call", label: "Call", color: CALL, side: "right" },
+  { id: "fold", label: "Fold", sub: "−EV", color: FOLD, side: "left" },
+  { id: "bluff", label: "Bluff-catch", sub: "about 0 EV", color: MIXED, side: "bottom" },
+  { id: "call", label: "Call", sub: "+EV", color: CALL, side: "right" },
 ];
 const RANGE = "#46525C";
 type Phase = "intro" | "decide" | "final";
 const TITLE: Record<DefendStreet, string> = { flop: "Flop", turn: "Turn", river: "River" };
 const cardText = (c: Card) => `${rankChar(c.r)}${SUIT_GLYPH[c.s]}`;
 const answerColor = (p: DefendPiece) => (p.answer === "call" ? CALL : p.answer === "fold" ? FOLD : MIXED);
-const answerText = (p: DefendPiece) => (p.answer === "call" ? "Call" : p.answer === "fold" ? "Fold" : `Mixed (${p.callPct.toFixed(0)}% calls)`);
-const right = (p: DefendPiece, b: Box) => p.answer === "mix" || p.answer === b;
+const answerText = (p: DefendPiece) => (p.answer === "call" ? "Call" : p.answer === "fold" ? "Fold" : "Bluff-catch");
+/** "+2.1bb" / "−0.4bb": the EV of calling. */
+const evText = (ev: number) => `${ev >= 0 ? "+" : "−"}${Math.abs(ev).toFixed(1)}bb`;
+const right = (p: DefendPiece, b: Box) => p.answer === b;
 
 function shuffled<T>(xs: T[]): T[] {
   const out = [...xs];
@@ -53,6 +56,27 @@ function pickSpot(street: DefendStreet, current: string | null, picked: string |
 }
 
 export function DefendScreen({ street }: { street: DefendStreet }) {
+  if (!defendSpotsOf(street).length) return <NotReady street={street} />;
+  return <DefendDrill street={street} />;
+}
+
+/** Noam 2026-11-21: the flop's EV needs the flops re-solved with the turn kept; until a board is done there's no spot. */
+function NotReady({ street }: { street: DefendStreet }) {
+  const router = useRouter();
+  return (
+    <Shell>
+      <div className="flex h-full flex-col items-center justify-center gap-4 text-center">
+        <b className="font-[family-name:var(--font-brand)] text-[24px] font-bold">Defend the {TITLE[street].toLowerCase()}</b>
+        <p className="m-0 max-w-[320px] text-[14px] leading-[1.5]" style={{ color: "var(--muted)" }} data-testid="not-ready">
+          The answers are being recomputed by EV (call, bluff-catch, fold). Back soon. Turn and river are ready.
+        </p>
+        <PrimaryButton onClick={() => router.push("/")}>Back to lobby</PrimaryButton>
+      </div>
+    </Shell>
+  );
+}
+
+function DefendDrill({ street }: { street: DefendStreet }) {
   const router = useRouter();
   const [spot, setSpot] = useState<DefendSpot>(() => buildDefendSpot(defendSpotsOf(street)[0].name));
   const [phase, setPhase] = useState<Phase>("intro");
@@ -99,7 +123,7 @@ export function DefendScreen({ street }: { street: DefendStreet }) {
     order: spot.order,
     fill: (g) => {
       const b = placed[g];
-      return b === "call" ? CALL : b === "fold" ? FOLD : RANGE;
+      return b === "call" ? CALL : b === "fold" ? FOLD : b === "bluff" ? MIXED : RANGE;
     },
   };
 
@@ -151,7 +175,7 @@ export function DefendScreen({ street }: { street: DefendStreet }) {
   function handleDrop(p: DefendPiece, b: Box) {
     if (busy.current || placed[p.key]) return;
     if (!right(p, b)) {
-      showToast(b === "call" ? "Not quite. The solver folds these" : "Not quite. The solver calls these", false);
+      showToast(`Not quite. Calling is worth ${evText(p.ev)} here`, false);
       badSound();
       buzz([30, 40, 30]);
       setShake((n) => n + 1);
@@ -160,7 +184,7 @@ export function DefendScreen({ street }: { street: DefendStreet }) {
       return;
     }
     busy.current = true;
-    showToast(p.answer === "mix" ? `Good · ${p.label}: mixed, the solver calls ${p.callPct.toFixed(0)}%` : `Perfect · ${p.label}: ${b === "call" ? "call" : "fold"}`, true);
+    showToast(`Perfect · ${p.label}: ${answerText(p).toLowerCase()} (${evText(p.ev)})`, true);
     goodSound();
     buzz(15);
     setFlying({ key: p.key, box: b, rect: rectOf(b) });
@@ -198,12 +222,12 @@ export function DefendScreen({ street }: { street: DefendStreet }) {
               You&apos;re the BB. BTN opened, you called, 100bb deep.
               {street === "flop" && " BTN bets small on the flop (33%)."}
               {street === "turn" && " You called a small flop bet; now BTN bets the turn."}
-              {street === "river" && " You called the flop and the turn; now BTN bets the river."} Your hands come in groups, one at a time: drag each to Call or Fold. You can only call, never raise.
+              {street === "river" && " You called the flop and the turn; now BTN bets the river."} Your hands come in groups, one at a time: drag each to Call, Bluff-catch or Fold. You can only call, never raise.
             </p>
           </div>
           <div className="flex flex-col gap-1.5 rounded-2xl p-3 text-[13px]" style={{ background: "var(--panel)", border: "1px solid var(--line)" }}>
-            <Row label="Boxes" text="Fold · Call" />
-            <Row label="Answers" text="How often the solver continues: 75%+ call, 25% or less fold; in between it mixes and both are right" />
+            <Row label="Boxes" text="Fold · Bluff-catch · Call" />
+            <Row label="Answers" text="The EV of calling, from our solver: +0.5bb or more is a call, about 0 (−0.5 to +0.5bb) a bluff-catch, less is a fold" />
           </div>
           <div className="grid grid-cols-2 gap-1.5" role="radiogroup" aria-label="Board" data-testid="board-picker">
             <b className="col-span-2 font-[family-name:var(--font-display)] text-[13px] tracking-[0.06em] uppercase" style={{ color: "var(--muted)" }}>
@@ -287,7 +311,6 @@ export function DefendScreen({ street }: { street: DefendStreet }) {
             <span className="whitespace-nowrap rounded-full px-2.5 py-0.5 font-bold" style={{ color: "var(--gold)", border: "1px solid color-mix(in srgb, var(--gold) 45%, transparent)" }}>
               BTN bets {spot.bet}bb into {spot.pot}bb
             </span>
-            <span>a call needs {spot.need.toFixed(0)}%</span>
           </div>
 
           <div ref={zoneRef} className="relative mt-auto flex-shrink-0" style={{ touchAction: "none", height: "clamp(220px, 34dvh, 290px)" }} data-testid="buckets">
@@ -298,7 +321,7 @@ export function DefendScreen({ street }: { street: DefendStreet }) {
             ) : (
               <>
                 <SidePaddles boxes={BOXES} w={zone.w} h={zone.h} armed={armed} holding={holding} flash={flash} hitRef={(b, el) => (boxes.current[b] = el)} />
-                <div className="absolute inset-y-2 left-[84px] right-[84px] flex items-center justify-center">
+                <div className="absolute top-5 bottom-[66px] left-[84px] right-[84px] flex items-center justify-center">
                   <Toast toast={toast} />
                   {current && (
                     <div className="flex flex-col items-center" data-testid="sort-row">
@@ -323,7 +346,7 @@ export function DefendScreen({ street }: { street: DefendStreet }) {
                   )}
                 </div>
                 {current && (
-                  <span className="absolute bottom-2.5 left-1/2 -translate-x-1/2 font-[family-name:var(--font-display)] text-[12px] font-semibold" style={{ color: "var(--muted)", fontVariantNumeric: "tabular-nums" }} data-testid="piece-count">
+                  <span className="absolute top-0 left-1/2 -translate-x-1/2 font-[family-name:var(--font-display)] text-[12px] font-semibold" style={{ color: "var(--muted)", fontVariantNumeric: "tabular-nums" }} data-testid="piece-count">
                     {done + 1} / {queue.length}
                   </span>
                 )}
@@ -349,7 +372,7 @@ export function DefendScreen({ street }: { street: DefendStreet }) {
 /** The end of a spot: BB's groups from most calls to fewest, and the line where calling stops. */
 function Summary({ spot, missed, onNext, onReplay }: { spot: DefendSpot; missed: Set<string>; onNext: () => void; onReplay: () => void }) {
   const [picked, setPicked] = useState<DefendPiece | null>(null);
-  const sorted = [...spot.pieces].sort((a, b) => b.callPct - a.callPct);
+  const sorted = [...spot.pieces].sort((a, b) => b.ev - a.ev);
   const asked = sorted.length;
   const firstTry = asked - sorted.filter((p) => missed.has(p.key)).length;
   const lastCall = sorted.filter((p) => p.answer !== "fold").pop();
@@ -403,7 +426,7 @@ function Summary({ spot, missed, onNext, onReplay }: { spot: DefendSpot; missed:
                 </span>
                 {missed.has(p.key) && <span style={{ color: "var(--raise)" }}>✕</span>}
                 <b className="flex-shrink-0 font-[family-name:var(--font-display)]" style={{ color }}>
-                  {answerText(p)}
+                  {answerText(p)} <small className="font-semibold opacity-75">{evText(p.ev)}</small>
                 </b>
               </button>
             </div>

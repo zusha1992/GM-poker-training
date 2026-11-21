@@ -1,21 +1,24 @@
 // Defend drill (Noam & Uri 2026-11-20): we're the BB, BTN bets the flop, the turn and the river
 // (the attack drill's line: flop 33%, the board's turn size, river about 66%). BB only calls or folds.
-// For every spot: BB's range there, split into groups (Tetris pieces), and how often the solver
-// continues (calls, or raises, which counts as a call here) with each group against that bet.
-// Answer per group, Noam's 75/25 rule: ≥75% call, ≤25% fold, in between "mixed" (either answer is right).
-// The why: the price (equity a call needs) and the group's equity vs BTN's betting range (from the same solve).
+// For every spot: BB's range there, split into groups (Tetris pieces), and the EV of calling with each.
+// Answer per group by EV (Noam 2026-11-21: "we don't need equity, just whether the call is +EV, 0 EV or −EV"):
+// EV of the call (bb, both then playing the solver's strategy, scripts/analysis/bb-call-ev.ts)
+// +0.5bb or more = Call, between −0.5 and +0.5 = Bluff-catch (about 0 EV, the solver is indifferent), −0.5 or less = Fold.
 // Reads the TexasSolver results in C:/Users/noams/Developer/tools/TexasSolver/runs/<board>/ (solve-board.ts).
 // Writes src/lib/drill/postflop/defend-groups.json and decisions/ranges/defend-drill/<spot>.md.
 // Usage: npx tsx scripts/analysis/defend-groups.ts [board ...]
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { score } from "./price-equity";
+import { bbCallEv } from "./bb-call-ev";
 import type { Card } from "../../src/lib/drill/postflop/line-demo";
 import { BOARDS } from "../../src/lib/drill/postflop/price-hands";
 
 const RUNS = "C:/Users/noams/Developer/tools/TexasSolver/runs";
 const OUT = "src/lib/drill/postflop/defend-groups.json";
 const DIR = "decisions/ranges/defend-drill";
-const SAMPLES = Number(process.env.SAMPLES ?? 4000);
+/** EV (bb) band around 0 that is a bluff-catch (Noam 2026-11-21: "between 0 and 0.5"). */
+const BLUFF = 0.5;
+const tierOf = (ev: number) => (ev >= BLUFF ? 0 : ev > -BLUFF ? 1 : 2);
 const RANKS = "AKQJT98765432";
 const SUITS = ["s", "h", "d", "c"] as const;
 const rv = (c: string) => 14 - RANKS.indexOf(c);
@@ -78,7 +81,7 @@ const FAMILY: Record<Cat, string> = {
   Overpairs: "pocket",
   "Pocket pairs under the top card": "pocket",
   "Small pocket pairs": "pocket",
-  "Top pair": "pair",
+  "Top pair": "top",
   // Noam 2026-11-21 (A-7-6-K turn): a pair with a flush draw is a +EV call, its own group.
   "Pair + draw": "pairdraw",
   "Second pair": "pair",
@@ -150,37 +153,6 @@ function categoryOf(hole: [Card, Card], board: Card[]): Cat {
   return "King-high and worse";
 }
 
-// ---------- equity of a group vs BTN's betting range ----------
-type W = { cards: [Card, Card]; w: number };
-function pick<T extends { w: number }>(xs: T[], total: number): T {
-  let x = Math.random() * total;
-  for (const c of xs) if ((x -= c.w) <= 0) return c;
-  return xs[xs.length - 1];
-}
-function equity(mine: W[], btn: W[], board: Card[]): number {
-  const tm = mine.reduce((s, c) => s + c.w, 0);
-  const tb = btn.reduce((s, c) => s + c.w, 0);
-  let win = 0, n = 0;
-  for (let i = 0; i < SAMPLES; i++) {
-    const h = pick(mine, tm);
-    let v = pick(btn, tb);
-    let guard = 0;
-    while (v.cards.some((c) => h.cards.some((d) => same(c, d))) && guard++ < 30) v = pick(btn, tb);
-    if (guard >= 30) continue;
-    const dead = [...board, ...h.cards, ...v.cards];
-    const runout = [...board];
-    while (runout.length < 5) {
-      const c = { r: 2 + Math.floor(Math.random() * 13), s: SUITS[Math.floor(Math.random() * 4)] } as Card;
-      if (dead.some((d) => same(d, c)) || runout.some((d) => same(d, c))) continue;
-      runout.push(c);
-    }
-    const a = score([...h.cards, ...runout]), b = score([...v.cards, ...runout]);
-    win += a > b ? 1 : a === b ? 0.5 : 0;
-    n++;
-  }
-  return n ? (win / n) * 100 : 0;
-}
-
 /** "AKs, AKo, AQs" → "AK, AQs" (suited and offsuit together when both are there), strongest first. */
 function handsLabel(classes: string[]): string {
   const set = new Set(classes);
@@ -206,11 +178,11 @@ export type DefendGroup = {
   fan: string[];
   /** How often the solver continues (call or raise), 0–100. */
   callPct: number;
-  /** Equity vs BTN's betting range, 0–100. */
-  eq: number;
+  /** EV of calling, bb (folding = 0). */
+  ev: number;
   /** Share of BB's range at this spot, 0–100. */
   share: number;
-  answer: "call" | "fold" | "mix";
+  answer: "call" | "fold" | "bluff";
   why: string;
 };
 export type DefendSpot = {
@@ -221,6 +193,8 @@ export type DefendSpot = {
   behind: number;
   /** Equity a call needs: bet / (pot + 2 bets). */
   need: number;
+  /** The flop's EV checks hands down from the river (the flop solve's dump stops at the turn). */
+  approx?: boolean;
   /** Combos per hand class still live (for the matrix). */
   basis: Record<string, number>;
   groups: DefendGroup[];
@@ -229,30 +203,26 @@ export type DefendSpot = {
 function spotOf(street: DefendSpot["street"], board: Card[], json: string, input: string, pot: number, betBb: number, behind: number, prefix: string): DefendSpot {
   const tree = JSON.parse(readFileSync(json, "utf8")) as Node;
   const bbPrior = rangeOf(input, "oop");
-  const btnPrior = rangeOf(input, "ip");
   const checks = prob(tree, (a) => a === "CHECK");
   const ip = tree.childrens!.CHECK;
   const bets = Object.keys(ip.childrens!).filter((a) => a.startsWith("BET"));
   const bet = bets.sort((a, b) => Math.abs(Number(a.split(" ")[1]) - betBb) - Math.abs(Number(b.split(" ")[1]) - betBb))[0];
   const realBet = Number(bet.split(" ")[1]);
-  const btnBets = prob(ip, (a) => a === bet);
   const bbNode = ip.childrens![bet];
   const cont = prob(bbNode, (a) => a !== "FOLD");
+  const { ev: evMap, checkedDown } = bbCallEv(tree as never, input, bet);
 
   // BB's live combos and how often each continues.
-  type BB = { combo: string; cls: string; cards: [Card, Card]; w: number; c: number; cat: Cat };
+  type BB = { combo: string; cls: string; cards: [Card, Card]; w: number; c: number; ev: number; cat: Cat };
   const bb: BB[] = [];
   for (const combo of Object.keys(bbNode.strategy!.strategy)) {
     const cls = classOf(combo);
     const w = (bbPrior.get(cls) ?? 0) * checks(combo);
-    if (w < 0.005) continue;
+    if (w < 0.005 || !evMap.has(combo)) continue;
     const cards: [Card, Card] = [parse(combo.slice(0, 2)), parse(combo.slice(2))];
-    bb.push({ combo, cls, cards, w, c: cont(combo), cat: categoryOf(cards, board) });
+    bb.push({ combo, cls, cards, w, c: cont(combo), ev: evMap.get(combo)!, cat: categoryOf(cards, board) });
   }
   const total = bb.reduce((s, x) => s + x.w, 0);
-  const btn: W[] = Object.keys(ip.strategy!.strategy)
-    .map((combo) => ({ cards: [parse(combo.slice(0, 2)), parse(combo.slice(2))] as [Card, Card], w: (btnPrior.get(classOf(combo)) ?? 0) * btnBets(combo) }))
-    .filter((x) => x.w > 0.005);
 
   // Groups: one per category; a category whose hands split around 50% becomes two groups.
   type G = { label: string; hands: BB[]; fam: string };
@@ -260,16 +230,16 @@ function spotOf(street: DefendSpot["street"], board: Card[], json: string, input
   for (const cat of CATS) {
     const hands = bb.filter((x) => x.cat === cat);
     if (!hands.length) continue;
-    const byCls = new Map<string, { w: number; c: number }>();
+    const byCls = new Map<string, { w: number; e: number }>();
     for (const h of hands) {
-      const cur = byCls.get(h.cls) ?? { w: 0, c: 0 };
-      byCls.set(h.cls, { w: cur.w + h.w, c: cur.c + h.w * h.c });
+      const cur = byCls.get(h.cls) ?? { w: 0, e: 0 };
+      byCls.set(h.cls, { w: cur.w + h.w, e: cur.e + h.w * h.ev });
     }
     // Split by the answer of each hand class (call ≥75%, mixed, fold ≤25%); a part under 12% of
     // the category joins the next part, so a group never mixes a clear call with a clear fold.
     const tier = (k: string) => {
       const v = byCls.get(k)!;
-      return v.c / v.w >= 0.75 ? 0 : v.c / v.w > 0.25 ? 1 : 2;
+      return tierOf(v.e / v.w);
     };
     const wAll = hands.reduce((s, h) => s + h.w, 0);
     const parts: BB[][] = [0, 1, 2].map((t) => hands.filter((h) => tier(h.cls) === t)).filter((p) => p.length);
@@ -284,8 +254,10 @@ function spotOf(street: DefendSpot["street"], board: Card[], json: string, input
     for (const p of parts) groups.push({ label: cat, hands: p, fam: FAMILY[cat] });
   }
   const wOf = (g: G) => g.hands.reduce((s, h) => s + h.w, 0);
-  const pctOf = (g: G) => (g.hands.reduce((s, h) => s + h.w * h.c, 0) / wOf(g)) * 100;
-  const answerOf = (p: number): DefendGroup["answer"] => (p >= 75 ? "call" : p <= 25 ? "fold" : "mix");
+  const callOf = (g: G) => (g.hands.reduce((s, h) => s + h.w * h.c, 0) / wOf(g)) * 100;
+  // pctOf: the group's EV of calling; the order and the answer go by it.
+  const pctOf = (g: G) => g.hands.reduce((s, h) => s + h.w * h.ev, 0) / wOf(g);
+  const answerOf = (e: number): DefendGroup["answer"] => (["call", "bluff", "fold"] as const)[tierOf(e)];
   // Strongest (most calls) first; a tiny group joins its neighbor with the same answer.
   groups.sort((a, b) => pctOf(b) - pctOf(a));
   // Never overwhelm (Uri): at most 9 groups, so past that the smallest ones join a neighbor too.
@@ -322,6 +294,7 @@ function spotOf(street: DefendSpot["street"], board: Card[], json: string, input
     if (g.fam === "pocket") g.label = `Pocket pairs ${[...new Set(g.hands.map((h) => h.cls))].sort((a, b) => "AKQJT98765432".indexOf(a[0]) - "AKQJT98765432".indexOf(b[0])).join(", ")}`;
     else if (g.fam === "air") g.label = g.hands.some((h) => h.cat === "Ace-high") ? "Ace-high and worse" : "No pair, no draw";
     else if (g.fam === "draw") g.label = "Draws";
+    else if (g.fam === "pair") g.label = "Second pair and weaker pairs";
   }
   // Two groups with one name: tell them apart by their hands.
   const named = new Map<string, number>();
@@ -332,12 +305,17 @@ function spotOf(street: DefendSpot["street"], board: Card[], json: string, input
     const cells: Record<string, number> = {};
     for (const h of g.hands) cells[h.cls] = +((cells[h.cls] ?? 0) + h.w).toFixed(3);
     const classes = Object.keys(cells);
-    const callPct = pctOf(g);
-    const eq = equity(g.hands.map((h) => ({ cards: h.cards, w: h.w })), btn, board);
-    const answer = answerOf(callPct);
+    const callPct = callOf(g);
+    const ev = pctOf(g);
+    const answer = answerOf(ev);
     const hl = handsLabel(classes);
-    const verdict = answer === "call" ? "Call" : answer === "fold" ? "Fold" : `Mixed: the solver calls ${callPct.toFixed(0)}%, either answer is right`;
-    const why = `${verdict}. A call needs ${need.toFixed(0)}% equity; this group has ${eq.toFixed(0)}% against BTN's betting range. The solver continues ${callPct.toFixed(0)}% of the time${street !== "river" ? " (draws and hands that improve call for what's still to come)" : ""}.`;
+    const evTxt = `${ev >= 0 ? "+" : "−"}${Math.abs(ev).toFixed(1)}bb`;
+    const why =
+      answer === "call"
+        ? `Call: calling wins ${evTxt} on average. The solver calls ${callPct.toFixed(0)}%.`
+        : answer === "bluff"
+          ? `Bluff-catch: calling is worth about 0 (${evTxt}). It beats BTN's bluffs and loses to his value bets; the solver calls ${callPct.toFixed(0)}%.`
+          : `Fold: calling loses ${evTxt.slice(1)} on average. The solver calls ${callPct.toFixed(0)}%.`;
     const seen = new Set<string>();
     const fan = g.hands
       .slice()
@@ -352,7 +330,7 @@ function spotOf(street: DefendSpot["street"], board: Card[], json: string, input
       cells,
       fan,
       callPct: +callPct.toFixed(1),
-      eq: +eq.toFixed(1),
+      ev: +ev.toFixed(2),
       share: +((wOf(g) / total) * 100).toFixed(1),
       answer,
       why,
@@ -372,23 +350,23 @@ function spotOf(street: DefendSpot["street"], board: Card[], json: string, input
     }
     basis[cls] = n;
   }
-  return { street, board: board.map((c) => ch(c.r) + c.s), pot, bet: realBet, behind, need: +need.toFixed(1), basis, groups: out };
+  return { street, board: board.map((c) => ch(c.r) + c.s), pot, bet: realBet, behind, need: +need.toFixed(1), ...(checkedDown && street === "flop" ? { approx: true } : {}), basis, groups: out };
 }
 
 // ---------- every spot of every board ----------
 const names = process.argv.slice(2);
 const all: Record<string, DefendSpot> = existsSync(OUT) ? JSON.parse(readFileSync(OUT, "utf8")) : {};
 mkdirSync(DIR, { recursive: true });
-const ANS = { call: "Call", fold: "Fold", mix: "Mixed" };
+const ANS = { call: "Call", fold: "Fold", bluff: "Bluff-catch" };
 function report(name: string, s: DefendSpot) {
   const lines = [
     `# Defend ${s.street} · ${name} (${s.board.join(" ")})`,
     "",
-    `BTN bets ${s.bet}bb into ${s.pot}bb. A call needs ${s.need}% equity. Source: TexasSolver (our solve), BB's continue % (call or raise) per hand; 75/25 rule. Draft for Noam and Uri.`,
+    `BTN bets ${s.bet}bb into ${s.pot}bb. Answer by the EV of calling (Noam 2026-11-21): +${BLUFF}bb or more = Call, −${BLUFF} to +${BLUFF} = Bluff-catch, −${BLUFF} or less = Fold. Source: TexasSolver (our solve); EV = both play the solver's strategy after the call${s.approx ? " (flop: the solve's dump stops at the turn, so hands are checked down from the river; approximate)" : ""}. Draft for Noam and Uri.`,
     "",
-    "| Group | Hands | Share | Solver continues | Equity vs BTN's bets | Answer |",
+    "| Group | Hands | Share | EV of a call | Solver continues | Answer |",
     "|---|---|---|---|---|---|",
-    ...s.groups.map((g) => `| ${g.label} | ${g.handsLabel} | ${g.share}% | ${g.callPct}% | ${g.eq}% | ${ANS[g.answer]} |`),
+    ...s.groups.map((g) => `| ${g.label} | ${g.handsLabel} | ${g.share}% | ${g.ev >= 0 ? "+" : ""}${g.ev}bb | ${g.callPct}% | ${ANS[g.answer]} |`),
     "",
   ];
   writeFileSync(`${DIR}/${name}.md`, lines.join("\n"));
@@ -396,8 +374,11 @@ function report(name: string, s: DefendSpot) {
 for (const b of BOARDS.filter((x) => !names.length || names.includes(x.name))) {
   const dir = `${RUNS}/${b.name}`;
   const flop = b.flop.map((c) => parse(code(c)));
-  if (existsSync(`${dir}/flop.json`)) {
-    all[b.name] = spotOf("flop", flop, `${dir}/flop.json`, `${dir}/flop.txt`, 5.5, 1.8, 97.5, "f");
+  // The flop re-solved with the turn in the dump (for the EV), when it's there.
+  // Without it the EV would check hands down from the turn, too rough: the flop spot waits.
+  if (!existsSync(`${dir}/flop-d2.json`)) delete all[b.name];
+  else {
+    all[b.name] = spotOf("flop", flop, `${dir}/flop-d2.json`, `${dir}/flop-d2.txt`, 5.5, 1.8, 97.5, "f");
     report(b.name, all[b.name]);
     console.log(b.name, "flop:", all[b.name].groups.length, "groups");
   }

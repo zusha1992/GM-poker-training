@@ -1,14 +1,14 @@
 # Defend river · KQ4-2c-Jd (Kd Qd 4s 2c Jd)
 
-BTN bets 24bb into 36.5bb. A call needs 28.4% equity. Source: TexasSolver (our solve), BB's continue % (call or raise) per hand; 75/25 rule. Draft for Noam and Uri.
+BTN bets 24bb into 36.5bb. Answer by the EV of calling (Noam 2026-11-21): +0.5bb or more = Call, −0.5 to +0.5 = Bluff-catch, −0.5 or less = Fold. Source: TexasSolver (our solve); EV = both play the solver's strategy after the call. Draft for Noam and Uri.
 
-| Group | Hands | Share | Solver continues | Equity vs BTN's bets | Answer |
+| Group | Hands | Share | EV of a call | Solver continues | Answer |
 |---|---|---|---|---|---|
-| Two pair or better | ATs, A9s, A8s, A7s, A6s, A4s, A3s, A2s, KJ, K2s, QJ +12 more | 18.3% | 100% | 82.1% | Call |
-| Top pair: KT, K9 | KT, K9 | 19.9% | 91.1% | 29.8% | Call |
-| Top pair: K8, K7s, K6s… | K8, K7s, K6s, K5s, K3s | 22% | 63.5% | 29.4% | Mixed |
-| Third pair or lower: AJo, JT, J9s | AJo, JT, J9s | 5.8% | 47.6% | 29.7% | Mixed |
-| Second pair: AQo, QT, Q9o… | AQo, QT, Q9o, Q5s, Q3s | 11.7% | 29.9% | 28.4% | Mixed |
-| Second pair: Q9s, Q8s, Q7s… | Q9s, Q8s, Q7s, Q6s | 12.7% | 18.3% | 26% | Fold |
-| Third pair or lower: A4, A2s, T4s… | A4, A2s, T4s, 74s, 64s, 54s, 52s, 43s | 8% | 2.7% | 27.7% | Fold |
-| Ace-high | A9s, A8s, A7s, A6s, A3s | 1.6% | 0.3% | 22.4% | Fold |
+| Two pair or better | ATs, A9s, A8s, A7s, A6s, A4s, A3s, A2s, KJ, K2s, QJ +12 more | 18.3% | +45.74bb | 100% | Call |
+| Third pair or lower: AJo, JT | AJo, JT | 5.7% | +1.61bb | 47.9% | Call |
+| Top pair: KT, K9o, K8o… | KT, K9o, K8o, K7s, K6s, K5s, K3s | 36.2% | +1.58bb | 77.3% | Call |
+| Top pair: K9s, K8s | K9s, K8s | 5.6% | +0.33bb | 72% | Bluff-catch |
+| Second pair: AQo, QT, Q5s… | AQo, QT, Q5s, Q3s | 10.2% | -0.07bb | 30.2% | Bluff-catch |
+| Second pair: Q9, Q8s, Q7s… | Q9, Q8s, Q7s, Q6s | 14.2% | -0.98bb | 19.3% | Fold |
+| Third pair or lower: A4, A2s, J9s… | A4, A2s, J9s, T4s, 74s, 64s, 54s, 52s, 43s | 8.1% | -1.11bb | 3% | Fold |
+| Ace-high | A9s, A8s, A7s, A6s, A3s | 1.6% | -6.5bb | 0.3% | Fold |

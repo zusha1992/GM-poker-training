@@ -1,15 +1,15 @@
 # Defend river · JT3-6c-3d (Js Ts 3c 6c 3d)
 
-BTN bets 14bb into 21.1bb. A call needs 28.5% equity. Source: TexasSolver (our solve), BB's continue % (call or raise) per hand; 75/25 rule. Draft for Noam and Uri.
+BTN bets 14bb into 21.1bb. Answer by the EV of calling (Noam 2026-11-21): +0.5bb or more = Call, −0.5 to +0.5 = Bluff-catch, −0.5 or less = Fold. Source: TexasSolver (our solve); EV = both play the solver's strategy after the call. Draft for Noam and Uri.
 
-| Group | Hands | Share | Solver continues | Equity vs BTN's bets | Answer |
+| Group | Hands | Share | EV of a call | Solver continues | Answer |
 |---|---|---|---|---|---|
-| Two pair or better | A3s, K3s, 63s, 53s, 43s, 32s | 4.4% | 100% | 94.3% | Call |
-| Top pair | AJo, KJ, QJ, J8s, J7s, J5s, J4s, J2s | 10.7% | 100% | 82.3% | Call |
-| Second pair: AT, T6s | AT, T6s | 11.8% | 100% | 38.9% | Call |
-| Second pair: KT, QT, T9o… | KT, QT, T9o, T8, T7s, T5s, T4s | 49.1% | 54.5% | 29% | Mixed |
-| Third pair or lower | A6, K6s, Q6s, 96s, 86s, 76s, 65s, 64s | 5.7% | 44.1% | 26.8% | Mixed |
-| Ace-high | A4s, A2s | 1.2% | 26.9% | 28.4% | Mixed |
-| Pocket pairs under the top card: 99 | 99 | 1.8% | 25.5% | 26% | Mixed |
-| Pocket pairs under the top card: 88, 77 | 88, 77 | 5.6% | 21% | 25.6% | Fold |
-| Ace-high and worse | AQo, A9s, A8s, A7s, KQo, K9s, K8s, Q9 | 9.8% | 8.3% | 25.6% | Fold |
+| Two pair or better | A3s, K3s, 63s, 53s, 43s, 32s | 4.4% | +32.29bb | 100% | Call |
+| Top pair | AJo, KJ, QJ, J8s, J7s, J5s, J4s, J2s | 10.7% | +26.52bb | 100% | Call |
+| Second pair: AT, T9o, T8… | AT, T9o, T8, T7s, T6s, T5s, T4s | 38% | +1.94bb | 70.8% | Call |
+| Third pair or lower: A6 | A6 | 2.3% | +0.37bb | 55.4% | Bluff-catch |
+| Ace-high | AQo, A9s, A8s, A7s, A4s, A2s | 6.4% | +0.02bb | 17.3% | Bluff-catch |
+| Second pair: KT, QT | KT, QT | 22.9% | -0.05bb | 50.9% | Bluff-catch |
+| Third pair or lower: K6s, Q6s, 96s… | K6s, Q6s, 96s, 86s, 76s, 65s, 64s | 3.4% | -1.03bb | 36.4% | Fold |
+| Pocket pairs under the top card | 99, 88, 77 | 7.4% | -1.29bb | 22.1% | Fold |
+| No pair, no draw | KQo, K9s, K8s, Q9 | 4.6% | -3.54bb | 0.4% | Fold |
