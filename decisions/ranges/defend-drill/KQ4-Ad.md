@@ -4,12 +4,12 @@ BTN bets 6bb into 9.1bb. A call needs 28.4% equity. Source: TexasSolver (our sol
 
 | Group | Hands | Share | Solver continues | Equity vs BTN's bets | Answer |
 |---|---|---|---|---|---|
-| Top pair | AJo, AT, A9, A8, A7, A6, A5o, A3s, A2s | 13.8% | 100% | 59.1% | Call |
-| Two pair or better | AQo, A4, JT, J9s, J8s, J7s, J6s, J5s, J4s, J3s, J2s +25 more | 10.2% | 100% | 84.1% | Call |
-| Flush draws & second pair | KJ, KT, J9o, T9o | 8.7% | 100% | 42.9% | Call |
-| Third pair or lower: QJ, QT | QJ, QT | 9.5% | 100% | 45.5% | Call |
-| Third pair or lower & second pair | K9o, K8o, Q9o, 99, 88, 77 | 14.4% | 39.1% | 38.5% | Mixed |
-| Pocket pairs under the top card | 66, 55 | 6.9% | 4.5% | 27.9% | Fold |
-| Third pair or lower: Q9s, Q8s, Q7s… | Q9s, Q8s, Q7s, Q6s, Q5s, Q3s, Q2s, J4s, T4s, 84s, 74s +4 more | 16.1% | 0.5% | 33.8% | Fold |
-| Second pair | K9s, K8s, K7s, K6s, K5s, K3s, K2s | 9% | 0.2% | 39.2% | Fold |
-| King-high and worse & gutshots | J9, J8s, J7s, J6s, J5s, J3s, J2s, T9o, T8s, T7s, T6s +17 more | 11.4% | 0% | 18.8% | Fold |
+| Two pair or better | AQo, A4, JT, J9s, J8s, J7s, J6s, J5s, J4s, J3s, J2s +25 more | 10.2% | 100% | 85.4% | Call |
+| Pair + draw | KJo, KTo, K9o, K8o, QJo, QTo, Q9o | 6.6% | 100% | 55.2% | Call |
+| Flush draws | J9o, T9o | 2.7% | 100% | 32.9% | Call |
+| Third pair or lower & second pair | AJo, AT, A9, A8, A7, A6, A5o, A3s, A2s, KJ, KT +2 more | 25.4% | 100% | 50.2% | Call |
+| Pocket pairs under the top card | 99, 88, 77 | 6.2% | 46.7% | 30.6% | Mixed |
+| Pocket pairs 66, 55, 33, 22 | 66, 55, 33, 22 | 11.1% | 2.8% | 26.9% | Fold |
+| Second pair & third pair or lower | K9, K8, K7s, K6s, K5s, K3s, K2s, Q9, Q8s, Q7s, Q6s +11 more | 30.6% | 0.3% | 37.6% | Fold |
+| Gutshots | J9, J8s, J7s, J6s, J5s, J3s, J2s, T9o, T8s, T7s, T6s +4 more | 5.5% | 0% | 15.9% | Fold |
+| King-high and worse | 98s, 97s, 96s, 95s, 87s, 86s, 85s, 76s, 75s, 65s, 63s | 1.6% | 0% | 4% | Fold |

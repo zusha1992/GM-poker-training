@@ -5,7 +5,7 @@ BTN bets 24bb into 36.5bb. A call needs 28.4% equity. Source: TexasSolver (our s
 | Group | Hands | Share | Solver continues | Equity vs BTN's bets | Answer |
 |---|---|---|---|---|---|
 | Two pair or better | A7, A2s, Q7s, Q2s, 77 | 10.9% | 100% | 78% | Call |
-| Top pair: AJo, AT | AJo, AT | 22.2% | 89.7% | 36.8% | Call |
-| Top pair: A9, A8, A6… | A9, A8, A6, A5o, A4, A3s | 60.6% | 49.8% | 26.6% | Mixed |
-| Second pair | KJ | 2.7% | 5.1% | 23.8% | Fold |
-| Third pair or lower | 76, 75s, 74s | 3.6% | 0.4% | 19.7% | Fold |
+| Top pair: AJo, AT | AJo, AT | 22.2% | 89.7% | 38% | Call |
+| Top pair: A9, A8, A6… | A9, A8, A6, A5o, A4, A3s | 60.6% | 49.8% | 27.1% | Mixed |
+| Second pair | KJ | 2.7% | 5.1% | 24.3% | Fold |
+| Third pair or lower | 76, 75s, 74s | 3.6% | 0.4% | 19.8% | Fold |

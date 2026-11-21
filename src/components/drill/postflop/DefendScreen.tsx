@@ -182,7 +182,7 @@ export function DefendScreen({ street }: { street: DefendStreet }) {
   }
 
   if (phase !== "intro" && trailer)
-    return <FlopTrailer key={seq} board={spot.board} street={street} turnBet={spot.turnBet} hero="BB" caption={`BTN bets ${spot.bet}bb: call or fold?`} onDone={endTrailer} />;
+    return <FlopTrailer key={seq} board={spot.board} street={street} turnBet={spot.turnBet} line={[...lineFor(street, spot.turnBet), { street, acts: [{ who: "BB", act: "check" }, { who: "BTN", act: "bet", bb: spot.bet }] }]} openLast hero="BB" caption={`BTN bets ${spot.bet}bb: call or fold?`} onDone={endTrailer} />;
 
   if (phase === "intro") {
     const spots = defendSpotsOf(street);

@@ -33,7 +33,7 @@ type Ev =
 
 /** The timeline, ms from the start: preflop and the flop, then each action of the line, the bets swept in
  * and the next card dealt. */
-function timeline(line: StreetLine[]): { ev: Ev; at: number }[] {
+function timeline(line: StreetLine[], openLast = false): { ev: Ev; at: number }[] {
   const out: { ev: Ev; at: number }[] = [
     { ev: { k: "folds" }, at: 250 },
     { ev: { k: "raise" }, at: 700 },
@@ -49,6 +49,8 @@ function timeline(line: StreetLine[]): { ev: Ev; at: number }[] {
       out.push({ ev: { k: "act", si, ai }, at: t });
       t += 850;
     });
+    // The street being asked (defend: BB checks, BTN bets): its bets stay out, no next card.
+    if (openLast && si === line.length - 1) return;
     out.push({ ev: { k: "ssweep", si }, at: t });
     out.push({ ev: { k: "sdeal", si }, at: t + 300 });
     out.push({ ev: { k: "sflip", si }, at: t + 550 });
@@ -67,6 +69,7 @@ export function FlopTrailer({
   street = "flop",
   turnBet = 6,
   line: lineProp,
+  openLast = false,
   hero = "BTN",
   caption = "Your made hands: how many bb?",
   onDone,
@@ -75,6 +78,8 @@ export function FlopTrailer({
   street?: "flop" | "turn" | "river";
   turnBet?: number;
   line?: StreetLine[];
+  /** The last street of `line` is the one being asked: its actions play, its bets stay in front of the seats. */
+  openLast?: boolean;
   /** Our seat, lit in gold (Noam & Uri 2026-11-20: the defend drill sits in the BB). */
   hero?: Seat;
   /** The question, shown once the line has played. */
@@ -83,7 +88,7 @@ export function FlopTrailer({
 }) {
   // Noam 2026-11-16: a spot can come with its own line (turn 75 / 150 / 200%, checks).
   const line = lineProp ?? lineFor(street, turnBet);
-  const TL = timeline(line);
+  const TL = timeline(line, openLast);
   const [step, setStep] = useState(-1);
   const done = useRef(false);
   const finish = () => {

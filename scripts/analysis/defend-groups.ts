@@ -57,6 +57,7 @@ const CATS = [
   "Two pair or better",
   "Overpairs",
   "Top pair",
+  "Pair + draw",
   "Pocket pairs under the top card",
   "Second pair",
   "Third pair or lower",
@@ -70,6 +71,26 @@ const CATS = [
   "King-high and worse",
 ] as const;
 type Cat = (typeof CATS)[number];
+// Groups only ever join inside one family (Noam 2026-11-21: 99, 77 and A2s were one group on 8-8-6-2
+// because all three call). Pocket pairs with pocket pairs, board pairs with board pairs, and so on.
+const FAMILY: Record<Cat, string> = {
+  "Two pair or better": "strong",
+  Overpairs: "pocket",
+  "Pocket pairs under the top card": "pocket",
+  "Small pocket pairs": "pocket",
+  "Top pair": "pair",
+  // Noam 2026-11-21 (A-7-6-K turn): a pair with a flush draw is a +EV call, its own group.
+  "Pair + draw": "pairdraw",
+  "Second pair": "pair",
+  "Third pair or lower": "pair",
+  "Flush draws": "draw",
+  "Open-enders": "draw",
+  Gutshots: "draw",
+  "Ace-high": "air",
+  "Two overcards": "air",
+  "Backdoor flush draws": "air",
+  "King-high and worse": "air",
+};
 
 const catOf5 = (cards: Card[]) => Math.floor(score(cards) / 15 ** 5);
 function straightOuts(hole: Card[], board: Card[]): number {
@@ -108,6 +129,11 @@ function categoryOf(hole: [Card, Card], board: Card[]): Cat {
   }
   if (hits.length) {
     const best = Math.min(...hits);
+    // A pair below top pair with a flush draw or an open-ender (Noam 2026-11-21): its own group.
+    if (best > 0 && board.length < 5) {
+      const fd = hole.some((h) => [...hole, ...board].filter((c) => c.s === h.s).length >= 4);
+      if (fd || straightOuts(hole, board) >= 2) return "Pair + draw";
+    }
     return best === 0 ? "Top pair" : best === 1 ? "Second pair" : "Third pair or lower";
   }
   if (board.length < 5) {
@@ -229,7 +255,7 @@ function spotOf(street: DefendSpot["street"], board: Card[], json: string, input
     .filter((x) => x.w > 0.005);
 
   // Groups: one per category; a category whose hands split around 50% becomes two groups.
-  type G = { label: string; hands: BB[] };
+  type G = { label: string; hands: BB[]; fam: string };
   const groups: G[] = [];
   for (const cat of CATS) {
     const hands = bb.filter((x) => x.cat === cat);
@@ -255,7 +281,7 @@ function spotOf(street: DefendSpot["street"], board: Card[], json: string, input
       parts.splice(i, 1);
       i = -1;
     }
-    for (const p of parts) groups.push({ label: cat, hands: p });
+    for (const p of parts) groups.push({ label: cat, hands: p, fam: FAMILY[cat] });
   }
   const wOf = (g: G) => g.hands.reduce((s, h) => s + h.w, 0);
   const pctOf = (g: G) => (g.hands.reduce((s, h) => s + h.w * h.c, 0) / wOf(g)) * 100;
@@ -272,7 +298,7 @@ function spotOf(street: DefendSpot["street"], board: Card[], json: string, input
   };
   while (groups.length > MAX_GROUPS) {
     const pair = groups
-      .map((g, i) => ({ g, n: [groups[i - 1], groups[i + 1]].filter((x) => x && answerOf(pctOf(x)) === answerOf(pctOf(g))).sort((a, b) => wOf(a) - wOf(b))[0] }))
+      .map((g, i) => ({ g, n: groups.filter((x) => x !== g && x.fam === g.fam && answerOf(pctOf(x)) === answerOf(pctOf(g))).sort((a, b) => wOf(a) - wOf(b))[0] }))
       .filter((x) => x.n)
       .sort((a, b) => wOf(a.g) + wOf(a.n) - (wOf(b.g) + wOf(b.n)))[0];
     if (!pair) break;
@@ -282,13 +308,20 @@ function spotOf(street: DefendSpot["street"], board: Card[], json: string, input
     const g = groups[i];
     if (wOf(g) / total >= 0.02 || groups.length <= 3) continue;
     const ans = answerOf(pctOf(g));
-    const n = [groups[i - 1], groups[i + 1]].find((x) => x && answerOf(pctOf(x)) === ans);
+    const n = groups.filter((x) => x !== g && x.fam === g.fam && answerOf(pctOf(x)) === ans).sort((a, b) => Math.abs(pctOf(a) - pctOf(g)) - Math.abs(pctOf(b) - pctOf(g)))[0];
     if (!n) continue;
     n.hands.push(...g.hands);
     if (!n.label.includes(g.label) && !n.label.includes(" & ")) n.label = `${n.label} & ${g.label.toLowerCase()}`;
     groups.splice(i, 1);
     i = -1;
     groups.sort((a, b) => pctOf(b) - pctOf(a));
+  }
+  // A group made of several categories gets its family's plain name.
+  for (const g of groups) {
+    if (!g.label.includes(" & ")) continue;
+    if (g.fam === "pocket") g.label = `Pocket pairs ${[...new Set(g.hands.map((h) => h.cls))].sort((a, b) => "AKQJT98765432".indexOf(a[0]) - "AKQJT98765432".indexOf(b[0])).join(", ")}`;
+    else if (g.fam === "air") g.label = g.hands.some((h) => h.cat === "Ace-high") ? "Ace-high and worse" : "No pair, no draw";
+    else if (g.fam === "draw") g.label = "Draws";
   }
   // Two groups with one name: tell them apart by their hands.
   const named = new Map<string, number>();

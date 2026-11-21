@@ -6,7 +6,7 @@
 export type Who = "BTN" | "BB";
 /** `pct`: the bet as a % of the pot, as the line names it (13.7 into 9.1 is "150%"). */
 export type Act = { who: Who; act: "check" | "bet" | "call"; bb?: number; pct?: number };
-export type StreetLine = { street: "flop" | "turn"; acts: Act[] };
+export type StreetLine = { street: "flop" | "turn" | "river"; acts: Act[] };
 
 export const PREFLOP_POT = 5.5;
 export const START_BEHIND = 97.5;

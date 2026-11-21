@@ -4,12 +4,12 @@ BTN bets 14bb into 9.1bb. A call needs 37.7% equity. Source: TexasSolver (our so
 
 | Group | Hands | Share | Solver continues | Equity vs BTN's bets | Answer |
 |---|---|---|---|---|---|
-| Flush draws & two pair or better | A7, A6, K7s, K6s, QJs, QTs, JTs, T8s, 98s, 95s, 85s +3 more | 6.7% | 100% | 69.5% | Call |
-| Top pair: AQo, AJo, AT… | AQo, AJo, AT, A9, A8, A3s, A2s | 25.3% | 95.1% | 53.6% | Call |
-| Second pair & flush draws | KJs, KTs, K9s, K8, K5s, K4s, K3s, K2s, 43s | 4% | 36.9% | 50% | Mixed |
-| Third pair or lower: Q6s, J6s, T6s… | Q6s, J6s, T6s, 96s, 86s, 65s, 64s, 63s | 11.2% | 33.3% | 45.7% | Mixed |
-| Top pair: A5o, A4 | A5o, A4 | 9.4% | 24.8% | 52.1% | Fold |
-| Open-enders & flush draws | KQo, KJo, KTo, K9o, Q9s, Q8s, Q5s, Q4s, Q3s, Q2s, J4s +9 more | 6.5% | 7.2% | 41.5% | Fold |
-| Third pair or lower: Q7s, J7s, T7s… | Q7s, J7s, T7s, 97s, 87, 75s, 74s | 12.6% | 0% | 43.6% | Fold |
-| Small pocket pairs & pocket pairs under the top card | 99, 88, 55, 44, 33, 22 | 11.7% | 0% | 36.8% | Fold |
-| King-high and worse & gutshots | QJs, QTs, Q9s, Q8s, Q5s, Q4s, Q3s, Q2s, JTs, J4s, J3s +10 more | 12.5% | 0% | 17.2% | Fold |
+| Two pair or better | A7, A6, K7s, K6s, 76 | 5.7% | 100% | 74.1% | Call |
+| Pair + draw | KJs, KTs, K9s, K8s, K5s, K4s, K3s, K2s, Q6s, J6s, T6s +5 more | 4.8% | 100% | 53.6% | Call |
+| Flush draws: QJs, QTs, JTs… | QJs, QTs, JTs, T8s, 98s, 95s, 85s, 54s, 53s | 1% | 99.9% | 34.9% | Call |
+| Top pair | AQo, AJo, AT, A9, A8, A3s, A2s | 25.3% | 95.1% | 53.7% | Call |
+| Flush draws: 43s | 43s | 0.3% | 63.4% | 29.3% | Mixed |
+| Third pair or lower & second pair & top pair | A5o, A4, KQo, KJ, KT, K9, K8, K5s, K4s, K3s, K2s +15 more | 36.5% | 8.1% | 46.8% | Fold |
+| Draws | QJs, QTs, Q9s, Q8s, Q5s, Q4s, Q3s, Q2s, JTs, J4s, J3s +13 more | 12.1% | 0% | 18.7% | Fold |
+| Pocket pairs 99, 88, 55, 44, 33, 22 | 99, 88, 55, 44, 33, 22 | 11.7% | 0% | 36.4% | Fold |
+| King-high and worse | Q9s, Q8s, Q5s, Q4s, Q3s, Q2s, J4s, J3s, J2s, T3s, 52s +2 more | 2.5% | 0% | 13.8% | Fold |
