@@ -156,7 +156,7 @@ function spotOf(street: CardSpot["street"], board: Card[], btnSpec: string, bbSp
     const solvedHere = p.cards.map((c) => solved.get(txt(c))).filter((x): x is number => x != null);
     const solverBet = solvedHere.length ? solvedHere.reduce((s, x) => s + x, 0) / solvedHere.length : null;
     const why =
-      `${ans === "good" ? "Good card for BTN" : ans === "bad" ? "Bad card for BTN" : "Close: neither good nor bad, either answer is right"}. ` +
+      `${ans === "good" ? "Good card for BTN" : ans === "bad" ? "Bad card for BTN" : "Neutral card: it barely changes who's ahead"}. ` +
       `BTN's range has ${eq.toFixed(0)}% against BB's range on this ${where} (${delta >= 0 ? "+" : ""}${delta.toFixed(1)} vs an average card, ${avg.toFixed(0)}%).` +
       (solverBet != null ? ` The solver bets ${solverBet.toFixed(0)}% of BTN's range on it.` : "");
     return { id: `c${i + 1}`, label: p.label, cards: p.cards.map(txt), eq: +eq.toFixed(1), delta: +delta.toFixed(1), solverBet: solverBet == null ? null : +solverBet.toFixed(0), answer: ans, why };
@@ -167,7 +167,7 @@ function spotOf(street: CardSpot["street"], board: Card[], btnSpec: string, bbSp
 const names = process.argv.slice(2);
 const all: Record<string, CardSpot> = existsSync(OUT) ? JSON.parse(readFileSync(OUT, "utf8")) : {};
 mkdirSync(DIR, { recursive: true });
-const V = { good: "Good", bad: "Bad", close: "Close" };
+const V = { good: "Good", bad: "Bad", close: "Neutral" };
 function report(name: string, s: CardSpot) {
   writeFileSync(
     `${DIR}/${name}.md`,

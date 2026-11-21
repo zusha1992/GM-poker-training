@@ -62,6 +62,10 @@ const prob = (n: Node, action: (a: string) => boolean) => {
 };
 
 // ---------- BB's hand, in plain categories (strongest feature first) ----------
+// Made hands (Noam 2026-11-21, T-8-7-2-9: flushes, straights and two pair were one group): each its
+// own category, never merged with another. Straights one per height, flushes big (one of the top 3
+// still possible) or small.
+const MADE = ["Straight flush", "Full house or better", "Big flush", "Small flush", "Straight", "Set or trips", "Two pair"];
 const CATS = [
   "Two pair or better",
   "Overpairs",
@@ -79,10 +83,24 @@ const CATS = [
   "Backdoor flush draws",
   "King-high and worse",
 ] as const;
-type Cat = (typeof CATS)[number];
+type BaseCat = (typeof CATS)[number];
+/** A base category, a made hand from MADE, or "Straight: J-high". */
+type Cat = string;
+/** Strongest first: made hands, then CATS order. */
+const catRank = (c: Cat) => {
+  if (c.startsWith("Straight: ")) return 4 + (15 - RANKS.length + RANKS.indexOf(c[10])) / 100;
+  const m = MADE.indexOf(c);
+  return m >= 0 ? m : 10 + CATS.indexOf(c as BaseCat);
+};
+// A tiny made-hand group (under 2%) may join its closest relative: the straight flush the big flush,
+// straights of other heights, a set two pair. Big and small flushes never join (Noam 2026-11-21).
+const MADE_FAMILY: Record<string, string> = { "Straight flush": "bigflush", "Big flush": "bigflush", "Small flush": "smallflush", "Full house or better": "boat", "Set or trips": "sets", "Two pair": "sets" };
+/** Made-hand families join only when a group is tiny, never just to keep the count down (Noam: separate straights, flushes). */
+const MADE_FAMS = new Set(["bigflush", "smallflush", "boat", "sets", "straight"]);
+const famOf = (c: Cat) => (c in FAMILY ? FAMILY[c as BaseCat] : c.startsWith("Straight: ") ? c : (MADE_FAMILY[c] ?? c));
 // Groups only ever join inside one family (Noam 2026-11-21: 99, 77 and A2s were one group on 8-8-6-2
 // because all three call). Pocket pairs with pocket pairs, board pairs with board pairs, and so on.
-const FAMILY: Record<Cat, string> = {
+const FAMILY: Record<BaseCat, string> = {
   "Two pair or better": "strong",
   Overpairs: "pocket",
   "Pocket pairs under the top card": "pocket",
@@ -90,8 +108,8 @@ const FAMILY: Record<Cat, string> = {
   "Top pair": "top",
   // Noam 2026-11-21 (A-7-6-K turn): a pair with a flush draw is a +EV call, its own group.
   "Pair + draw": "pairdraw",
-  "Second pair": "pair",
-  "Third pair or lower": "pair",
+  "Second pair": "second",
+  "Third pair or lower": "third",
   "Flush draws": "draw",
   "Open-enders": "draw",
   Gutshots: "draw",
@@ -126,9 +144,21 @@ function categoryOf(hole: [Card, Card], board: Card[]): Cat {
   const boardCat = catOf5(board);
   const ranks = [...new Set(board.map((c) => c.r))].sort((a, b) => b - a);
   const top = ranks[0];
-  // Trips or better, or two pair with both hole cards (unpaired board): strong.
-  if (cat >= 3 && cat > boardCat) return "Two pair or better";
-  if (cat === 2 && boardCat === 0 && hole[0].r !== hole[1].r) return "Two pair or better";
+  // Trips or better, or two pair with both hole cards (unpaired board): a made hand, by its kind.
+  if ((cat >= 3 && cat > boardCat) || (cat === 2 && boardCat === 0 && hole[0].r !== hole[1].r)) {
+    if (cat === 8) return "Straight flush";
+    if (cat >= 6) return "Full house or better";
+    if (cat === 5) {
+      const all = [...hole, ...board];
+      const suit = SUITS.find((x) => all.filter((c) => c.s === x).length >= 5)!;
+      const mine = Math.max(...hole.filter((c) => c.s === suit).map((c) => c.r));
+      const above = [...Array(14 - mine).keys()].map((i) => mine + 1 + i).filter((r) => !all.some((c) => c.s === suit && c.r === r)).length;
+      return above <= 2 ? "Big flush" : "Small flush";
+    }
+    if (cat === 4) return `Straight: ${ch(Math.floor(score([...hole, ...board]) / 15 ** 4) % 15)}-high`;
+    if (cat === 3) return "Set or trips";
+    return "Two pair";
+  }
   const pocket = hole[0].r === hole[1].r;
   const hits = hole.filter((h) => ranks.includes(h.r)).map((h) => ranks.indexOf(h.r));
   if (pocket && !ranks.includes(hole[0].r)) {
@@ -233,7 +263,8 @@ function spotOf(street: DefendSpot["street"], board: Card[], json: string, input
   // Groups: one per category; a category whose hands split around 50% becomes two groups.
   type G = { label: string; hands: BB[]; fam: string };
   const groups: G[] = [];
-  for (const cat of CATS) {
+  const present = [...new Set(bb.map((x) => x.cat))].sort((a, b) => catRank(a) - catRank(b));
+  for (const cat of present) {
     const hands = bb.filter((x) => x.cat === cat);
     if (!hands.length) continue;
     const byCls = new Map<string, { w: number; e: number; c: number }>();
@@ -248,7 +279,11 @@ function spotOf(street: DefendSpot["street"], board: Card[], json: string, input
       return tierOf(v.e / v.w, (v.c / v.w) * 100);
     };
     const wAll = hands.reduce((s, h) => s + h.w, 0);
-    const parts: BB[][] = [0, 1, 2].map((t) => hands.filter((h) => tier(h.cls) === t)).filter((p) => p.length);
+    let parts: BB[][] = [0, 1, 2].map((t) => hands.filter((h) => tier(h.cls) === t)).filter((p) => p.length);
+    // Noam 2026-11-21 (AT, KT, QT on T-8-7-2-9): a category splits only when some hands are clear calls
+    // and others clear folds; call-or-mixed, or mixed-or-fold, stays one group.
+    const tiers = new Set(hands.map((h) => tier(h.cls)));
+    if (!(tiers.has(0) && tiers.has(2))) parts = [hands];
     for (let i = 0; i < parts.length; i++) {
       const w = parts[i].reduce((s, h) => s + h.w, 0);
       if (w >= 0.12 * wAll || parts.length === 1) continue;
@@ -257,7 +292,7 @@ function spotOf(street: DefendSpot["street"], board: Card[], json: string, input
       parts.splice(i, 1);
       i = -1;
     }
-    for (const p of parts) groups.push({ label: cat, hands: p, fam: FAMILY[cat] });
+    for (const p of parts) groups.push({ label: cat, hands: p, fam: famOf(cat) });
   }
   const wOf = (g: G) => g.hands.reduce((s, h) => s + h.w, 0);
   const callOf = (g: G) => (g.hands.reduce((s, h) => s + h.w * h.c, 0) / wOf(g)) * 100;
@@ -276,7 +311,7 @@ function spotOf(street: DefendSpot["street"], board: Card[], json: string, input
   };
   while (groups.length > MAX_GROUPS) {
     const pair = groups
-      .map((g, i) => ({ g, n: groups.filter((x) => x !== g && x.fam === g.fam && answerOf(x) === answerOf(g)).sort((a, b) => wOf(a) - wOf(b))[0] }))
+      .map((g, i) => ({ g, n: groups.filter((x) => x !== g && x.fam === g.fam && !MADE_FAMS.has(g.fam) && answerOf(x) === answerOf(g)).sort((a, b) => wOf(a) - wOf(b))[0] }))
       .filter((x) => x.n)
       .sort((a, b) => wOf(a.g) + wOf(a.n) - (wOf(b.g) + wOf(b.n)))[0];
     if (!pair) break;
@@ -300,6 +335,9 @@ function spotOf(street: DefendSpot["street"], board: Card[], json: string, input
     if (g.fam === "pocket") g.label = `Pocket pairs ${[...new Set(g.hands.map((h) => h.cls))].sort((a, b) => "AKQJT98765432".indexOf(a[0]) - "AKQJT98765432".indexOf(b[0])).join(", ")}`;
     else if (g.fam === "air") g.label = g.hands.some((h) => h.cat === "Ace-high") ? "Ace-high and worse" : "No pair, no draw";
     else if (g.fam === "draw") g.label = "Draws";
+    else if (g.fam === "bigflush") g.label = "Big flush or better";
+    else if (g.fam === "sets") g.label = "Two pair or a set";
+    else if (g.fam === "straight") g.label = `Straight: ${[...new Set(g.hands.map((h) => h.cat[10]))].sort((a, b) => RANKS.indexOf(a) - RANKS.indexOf(b)).join("- or ")}-high`;
     else if (g.fam === "pair") g.label = "Second pair and weaker pairs";
   }
   // Two groups with one name: tell them apart by their hands.

@@ -4,8 +4,14 @@ BTN bets 14bb into 21.1bb. Answer by the solver's strategy and the EV of calling
 
 | Group | Hands | Share | EV of a call | Solver continues | Answer |
 |---|---|---|---|---|---|
-| Two pair or better: AJo, ATo, A9o… | AJo, ATo, A9o, A8o, A6s, A4s, A3s, KQo, KJo, KTo, K9o +22 more | 47.8% | +11.41bb | 93.5% | Call |
-| Two pair or better: A7s, K7s, J9… | A7s, K7s, J9, J8s, J7s, T9o, T8, 99, 98, 88, 87s | 23.3% | -0.03bb | 54.1% | Bluff-catch |
+| Straight flush | A7s, KQo, QJo, QTo, Q9o, Q7s, Q6s, Q5s, Q4s, Q3s, Q2s +2 more | 9.3% | +34.27bb | 100% | Call |
+| Big flush | AJo, ATo, A9o, A8o, A6s, A4s, A3s, KQo, KJo, KTo, K9o +4 more | 9.2% | +23.63bb | 100% | Call |
+| Small flush | 66, 63s, 55, 53s, 44, 43s | 2.7% | +4.06bb | 100% | Call |
+| Straight: Q-high | QJ, QT, Q9, Q8s, Q7s, Q6s, Q5s, Q4s, Q3s, Q2s | 21.7% | +0.09bb | 93.4% | Call |
+| Two pair or a set | J9, J8s, T9o, T8, 99, 98, 88 | 20.8% | -0.02bb | 53.5% | Bluff-catch |
+| Straight: J-high: 77 | 77 | 1.4% | -0.05bb | 75.6% | Call |
+| Straight: J-high: A7s, K7s, J7s… | A7s, K7s, J7s, 87 | 2.9% | -0.2bb | 59.2% | Bluff-catch |
+| Straight: K-high | KQo | 3.2% | -0.4bb | 63.3% | Bluff-catch |
 | Second pair | AT, KT | 7.3% | -0.71bb | 4.6% | Fold |
 | Top pair | AJo, KJ, J6s, J5s, J4s, J2s | 12.5% | -0.83bb | 3.9% | Fold |
 | Third pair or lower | A9o, A8, A3s, K9, K8s, K3s, 85s, 63s, 53s, 43s | 5.5% | -1.41bb | 1.4% | Fold |

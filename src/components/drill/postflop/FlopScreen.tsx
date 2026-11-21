@@ -104,8 +104,8 @@ export function FlopScreen({ street = "flop" }: { street?: Street }) {
     drill: `${TITLE[street]}: how many big blinds`,
     spot: `${spot.board.map(cardText).join(" ")} · ${TITLE[street]}`,
     focus: focusPiece ? `${focusPiece.label} (${focusPiece.hands})` : phase === "final" ? "End-of-board summary" : undefined,
-    app: focusPiece ? bucketShort(focusPiece.answer.bucket) : undefined,
-    player: focusPiece && tries[focusPiece.key] ? `${bucketShort(tries[focusPiece.key]!)} (wrong)` : undefined,
+    app: focusPiece ? bucketShort(focusPiece.answer.bucket, spot.street) : undefined,
+    player: focusPiece && tries[focusPiece.key] ? `${bucketShort(tries[focusPiece.key]!, spot.street)} (wrong)` : undefined,
   };
 
   function later(fn: () => void, ms: number) {
@@ -162,7 +162,7 @@ export function FlopScreen({ street = "flop" }: { street?: Street }) {
       return;
     }
     busy.current = true;
-    showToast(`Perfect · ${p.label}: ${bucketShort(b)}`, true);
+    showToast(`Perfect · ${p.label}: ${bucketShort(b, spot.street)}`, true);
     goodSound();
     buzz(15);
     setFlying({ key: p.key, bucket: b, rect: boxes.current[b]?.getBoundingClientRect() ?? null });
@@ -205,7 +205,7 @@ export function FlopScreen({ street = "flop" }: { street?: Street }) {
             </p>
           </div>
           <div className="flex flex-col gap-1.5 rounded-2xl p-3 text-[13px]" style={{ background: "var(--panel)", border: "1px solid var(--line)" }}>
-            <Row label="Boxes" text="Check · one small bet · two bets · three small bets · three bets · all in (bb by the river in small print)" />
+            <Row label="Boxes" text={`${BUCKETS.map((b) => bucketTiny(b, street)).join(" · ")} (bb by the river in small print)`} />
             <Row label="Groups" text="Ace-high and better, by equity" />
           </div>
           {/* Noam & Uri 2026-11-20: one line only (bet-bet-bet). The other river lines stay in the data, hidden; their old links still open. */}
@@ -313,7 +313,7 @@ export function FlopScreen({ street = "flop" }: { street?: Street }) {
               </div>
             ) : (
               <>
-                <MoneyPaddles w={zone.w} h={zone.h} armed={armed} holding={holding} flash={flash} hitRef={(b, el) => (boxes.current[b] = el)} />
+                <MoneyPaddles street={spot.street} w={zone.w} h={zone.h} armed={armed} holding={holding} flash={flash} hitRef={(b, el) => (boxes.current[b] = el)} />
                 <div className="absolute inset-y-2 left-[64px] right-[64px] flex items-center justify-center">
                   <Toast toast={toast} />
                   {current && (
@@ -441,7 +441,7 @@ function Summary({ spot, missed, onNext, onReplay }: { spot: FlopSpot; missed: S
               </span>
               {missed.has(p.key) && <span style={{ color: "var(--raise)" }}>✕</span>}
               <b className="flex-shrink-0 font-[family-name:var(--font-display)]" style={{ color }}>
-                {bucketTiny(p.answer.bucket)}
+                {bucketTiny(p.answer.bucket, spot.street)}
               </b>
             </button>
           );

@@ -4,7 +4,7 @@ import CARD_JSON from "./card-quality.json";
 
 /** Good card, bad card and Round to 100 or 0 (Noam & Uri 2026-11-20): the same data
  * (scripts/analysis/card-quality.ts). A spot = a flop (its turn cards) or a turn (its river
- * cards), after BTN bet and BB called. Pieces are groups of cards. "close" = either answer. */
+ * cards), after BTN bet and BB called. Pieces are groups of cards. "close" = Neutral card in Good card, bad card; either answer in Round to 100 or 0. */
 
 export type CardVerdict = "good" | "bad" | "close";
 type RawPiece = { id: string; label: string; cards: string[]; eq: number; delta: number; solverBet: number | null; answer: CardVerdict; why: string };

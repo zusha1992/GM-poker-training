@@ -1,7 +1,7 @@
 "use client";
 
 import type { CSSProperties, ReactNode } from "react";
-import { BUCKET_COLOR, bucketBb, type Bucket } from "@/lib/drill/postflop/price-hands";
+import { BUCKET_COLOR, BUCKET_NAMES, bucketBb, type BetStreet, type Bucket } from "@/lib/drill/postflop/price-hands";
 import styles from "./MoneyPaddles.module.css";
 
 /** Where each paddle sits: an arc over the drop area like a gauge, small
@@ -13,18 +13,21 @@ import styles from "./MoneyPaddles.module.css";
  * 5–15 bottom left, 15–25 top right, 25–50 bottom right. */
 type Spot = "bl" | "left" | "tl" | "top" | "tr" | "right" | "br";
 const SPOT: Record<Bucket, Spot> = { big: "left", b0: "tl", b5: "bl", b15: "tr", b25: "br", b50: "right" };
-// Noam & Uri 2026-11-20: the name as bets, the bb as small print under it.
-const NAME: Record<Bucket, string> = { big: "Check,\ngive up", b0: "One small\nbet", b5: "Two\nbets", b15: "Three\nsmall bets", b25: "Three\nbets", b50: "All\nin" };
-const LABEL = Object.fromEntries(
-  (Object.keys(NAME) as Bucket[]).map((b) => [
-    b,
-    <>
-      {NAME[b]}
-      {"\n"}
-      <small style={{ fontSize: 10.5, fontWeight: 600, opacity: 0.7 }}>{bucketBb(b)}</small>
-    </>,
-  ]),
-) as Record<Bucket, ReactNode>;
+// Noam & Uri 2026-11-20: the name as bets, the bb as small print under it. Noam 2026-11-21: the
+// names count the bets left on the street (BUCKET_NAMES), broken onto two lines for the paddle.
+const twoLines = (s: string) => (s.includes(", ") ? s.replace(", ", ",\n") : s.replace(/ (?=\S+$)/, "\n"));
+const labelsFor = (street: BetStreet) =>
+  Object.fromEntries(
+    (Object.keys(BUCKET_NAMES[street]) as Bucket[]).map((b) => [
+      b,
+      <>
+        {twoLines(BUCKET_NAMES[street][b])}
+        {"\n"}
+        <small style={{ fontSize: 10.5, fontWeight: 600, opacity: 0.7 }}>{bucketBb(b)}</small>
+      </>,
+    ]),
+  ) as Record<Bucket, ReactNode>;
+const LABELS: Record<BetStreet, Record<Bucket, ReactNode>> = { flop: labelsFor("flop"), turn: labelsFor("turn"), river: labelsFor("river") };
 
 const INSET = 6;
 const STROKE = 12;
@@ -52,11 +55,14 @@ type Props = {
   flash: Partial<Record<Bucket, number>>;
   /** Registers each paddle's touch area, for hit-testing the drop. */
   hitRef: (b: Bucket, el: HTMLDivElement | null) => void;
+  /** Which street's names (the bets left); the flop's by default. */
+  street?: BetStreet;
 };
 
 /** The six drop targets as neon paddles: same design, different colors,
  * in an arc around the top of the drop area. */
-export function MoneyPaddles({ w, h, armed, holding, flash, hitRef }: Props) {
+export function MoneyPaddles({ w, h, armed, holding, flash, hitRef, street = "flop" }: Props) {
+  const LABEL = LABELS[street];
   const L = paddleLength(w, h);
   const a = Math.round(L / 2);
   const r = Math.min(30, Math.round(a * 0.45));

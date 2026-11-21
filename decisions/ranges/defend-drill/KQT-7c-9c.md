@@ -4,8 +4,10 @@ BTN bets 14bb into 21.1bb. Answer by the solver's strategy and the EV of calling
 
 | Group | Hands | Share | EV of a call | Solver continues | Answer |
 |---|---|---|---|---|---|
-| Two pair or better: ATs, A8s, A6s… | ATs, A8s, A6s, A4s, A3s, A2s, KQo, KJ, KT, K8s, K6s +13 more | 44.2% | +14.64bb | 94.4% | Call |
-| Two pair or better: K9, K7s, Q9… | K9, K7s, Q9, Q7s, T7s | 21.1% | +0.17bb | 53.6% | Bluff-catch |
-| Top pair: K8 | K8 | 6.2% | -0.24bb | 46% | Bluff-catch |
-| Second pair and weaker pairs | AQo, AT, A9s, A7, T8s, T6s, T5s, T4s, T3s | 16.9% | -0.39bb | 12.7% | Fold |
-| Top pair: K6s, K5s, K4s… | K6s, K5s, K4s, K3s, K2s | 11.6% | -1.18bb | 9.3% | Fold |
+| Big flush | ATs, A8s, A6s, A4s, A3s, A2s, KJs, KTs, K8s, K6s, K5s +4 more | 7.2% | +32.88bb | 100% | Call |
+| Small flush | T8s, T6s, T5s, T4s, T3s | 0.7% | +32.03bb | 100% | Call |
+| Straight: K-high | KJ, QJ, JT, J9o | 24.3% | +15.79bb | 100% | Call |
+| Two pair | KQo, KT, K9, K7s, QT, Q9, Q7s, T7s | 33.2% | +0.31bb | 63.1% | Bluff-catch |
+| Third pair or lower | AT, A9s, A7, T8s, T6s, T5s, T4s, T3s | 16.4% | -0.39bb | 12.7% | Fold |
+| Second pair | AQo | 0.5% | -0.52bb | 13% | Fold |
+| Top pair | K8, K6s, K5s, K4s, K3s, K2s | 17.7% | -0.85bb | 22% | Fold |

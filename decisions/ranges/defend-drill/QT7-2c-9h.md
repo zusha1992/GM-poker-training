@@ -4,7 +4,8 @@ BTN bets 24bb into 36.5bb. Answer by the solver's strategy and the EV of calling
 
 | Group | Hands | Share | EV of a call | Solver continues | Answer |
 |---|---|---|---|---|---|
-| Two pair or better | KJ, Q9, Q7s, Q2s, 22 | 19.1% | +50.08bb | 100% | Call |
+| Straight: K-high | KJ | 8% | +59.18bb | 100% | Call |
+| Two pair or a set | Q9, Q7s, Q2s, 22 | 11.1% | +43.56bb | 100% | Call |
 | Top pair | KQo, QJ, Q8s, Q6s, Q5s, Q4s, Q3s | 32% | +2.16bb | 95.9% | Call |
 | Second pair | AT, KT, JT, T8, T6s, T5s, T4s, T3s | 32.6% | -0.78bb | 29% | Fold |
 | Third pair or lower | A2s, K7s, 87, 76, 75s, 74s | 16.4% | -1.25bb | 6.8% | Fold |

@@ -1,5 +1,5 @@
 import type { Card } from "./postflop/line-demo";
-import { BUCKET_COLOR, BUCKET_NAME, BUCKETS, bucketBb } from "./postflop/price-hands";
+import { BUCKET_COLOR, BUCKET_NAMES, BUCKETS, bucketBb } from "./postflop/price-hands";
 import type { FlopSpot } from "./postflop/flop-drill";
 import type { DefendSpot } from "./postflop/defend-drill";
 import type { CardSpot } from "./postflop/card-drill";
@@ -68,7 +68,7 @@ export function attackSpotData(s: FlopSpot): SpotData {
     id: s.name,
     spot: { hero: "BTN", board: s.board.map(txt), pot: s.pot, behind: s.behind, title: `${s.street} · ${s.name}`, question: "How many bets is each group worth?" },
     actions: btnVsBbActions(s.street, s.turnBet),
-    boxes: BUCKETS.map((b) => ({ id: b, label: BUCKET_NAME[b], small: bucketBb(b), color: BUCKET_COLOR[b] })),
+    boxes: BUCKETS.map((b) => ({ id: b, label: BUCKET_NAMES[s.street][b], small: bucketBb(b), color: BUCKET_COLOR[b] })),
     groups: s.pieces.map((p) => ({ id: p.key, label: p.label, items: p.entries.map((e) => e.hand), correct: [p.answer.bucket], why: p.answer.why, numbers: Object.fromEntries(p.eq.map((x, i) => [`eq${i}`, x])) })),
   };
 }
@@ -90,6 +90,7 @@ export function defendSpotData(s: DefendSpot): SpotData {
 
 export function cardSpotData(s: CardSpot, mode: "cards" | "round"): SpotData {
   const [l, r] = mode === "cards" ? ["Bad card", "Good card"] : ["Check it all", "Bet it all"];
+  const neutral = mode === "cards";
   return {
     drill: mode,
     id: s.name,
@@ -97,8 +98,9 @@ export function cardSpotData(s: CardSpot, mode: "cards" | "round"): SpotData {
     actions: btnVsBbActions(s.street, s.turnBet),
     boxes: [
       { id: "left", label: l, color: "#E0565B" },
+      ...(neutral ? [{ id: "mid", label: "Neutral card", color: "#F2C14E" }] : []),
       { id: "right", label: r, color: "#35C277" },
     ],
-    groups: s.pieces.map((p) => ({ id: p.key, label: p.label, items: p.cards.map(txt), correct: p.answer === "close" ? ["left", "right"] : [p.answer === "good" ? "right" : "left"], why: p.why, numbers: { equity: p.eq, vsAverage: p.delta, ...(p.solverBet != null ? { solverBet: p.solverBet } : {}) } })),
+    groups: s.pieces.map((p) => ({ id: p.key, label: p.label, items: p.cards.map(txt), correct: p.answer === "close" ? (neutral ? ["mid"] : ["left", "right"]) : [p.answer === "good" ? "right" : "left"], why: p.why, numbers: { equity: p.eq, vsAverage: p.delta, ...(p.solverBet != null ? { solverBet: p.solverBet } : {}) } })),
   };
 }

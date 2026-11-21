@@ -22,13 +22,15 @@ import { BoardCard, IconButton, PrimaryButton, Row, Shell, SUIT_GLYPH } from "./
  * The pieces are groups of cards (all the kings, the flush cards, …), one at a time. */
 
 export type CardMode = "cards" | "round";
-type Box = "left" | "right";
+type Box = "left" | "mid" | "right";
 const GOOD = "#35C277";
 const BAD = "#E0565B";
 const CLOSE = "#F2C14E";
 const BOXES: Record<CardMode, SideBox<Box>[]> = {
   cards: [
     { id: "left", label: "Bad\ncard", color: BAD, side: "left" },
+    // Noam 2026-11-21: close cards get their own box instead of accepting both answers.
+    { id: "mid", label: "Neutral card", color: CLOSE, side: "bottom" },
     { id: "right", label: "Good\ncard", color: GOOD, side: "right" },
   ],
   round: [
@@ -39,10 +41,12 @@ const BOXES: Record<CardMode, SideBox<Box>[]> = {
 const TITLE: Record<CardMode, string> = { cards: "Good card, bad card", round: "Round to 100 or 0" };
 const cardText = (c: Card) => `${rankChar(c.r)}${SUIT_GLYPH[c.s]}`;
 type Phase = "intro" | "decide" | "final";
-const right = (p: CardPiece, b: Box) => p.answer === "close" || (p.answer === "good") === (b === "right");
+/** Good card, bad card: one right box each (close = Neutral). Round to 100 or 0: close accepts both. */
+const right = (mode: CardMode, p: CardPiece, b: Box) =>
+  p.answer === "close" ? (mode === "cards" ? b === "mid" : b !== "mid") : b === (p.answer === "good" ? "right" : "left");
 
 function answerText(mode: CardMode, p: CardPiece) {
-  if (p.answer === "close") return "Close: either";
+  if (p.answer === "close") return mode === "cards" ? "Neutral card" : "Close: either";
   if (mode === "cards") return p.answer === "good" ? "Good card" : "Bad card";
   return p.answer === "good" ? "Bet it all" : "Check it all";
 }
@@ -58,16 +62,42 @@ function shuffled<T>(xs: T[]): T[] {
 }
 
 /** A group of cards as the piece: up to four cards side by side, the rest counted. */
+/** Noam 2026-11-21: one card per rank, no suits ("a king", "5 6 7 8"): the suit doesn't matter
+ * unless it's the flush card, so only the flush piece shows its suit. A long run is "5 – 9". */
 function CardStack({ cards }: { cards: Card[] }) {
+  const oneSuit = cards.length > 1 && cards.every((c) => c.s === cards[0].s) && new Set(cards.map((c) => c.r)).size === cards.length;
+  const box = { background: "var(--panel-2)", border: "1px solid var(--line)" };
+  if (oneSuit)
+    return (
+      <div className="flex items-center gap-1 rounded-xl px-2 py-2" style={box}>
+        {cards.slice(0, 4).map((c, i) => (
+          <BoardCard key={i} card={c} />
+        ))}
+        {cards.length > 4 && (
+          <b className="ml-0.5 text-[13px]" style={{ color: "var(--muted)" }}>
+            +{cards.length - 4}
+          </b>
+        )}
+      </div>
+    );
+  const ranks = [...new Set(cards.map((c) => c.r))].sort((a, b) => a - b);
+  const shown = ranks.length > 5 ? [ranks[0], 0, ranks[ranks.length - 1]] : ranks;
   return (
-    <div className="flex items-center gap-1 rounded-xl px-2 py-2" style={{ background: "var(--panel-2)", border: "1px solid var(--line)" }}>
-      {cards.slice(0, 4).map((c, i) => (
-        <BoardCard key={i} card={c} />
-      ))}
-      {cards.length > 4 && (
-        <b className="ml-0.5 text-[13px]" style={{ color: "var(--muted)" }}>
-          +{cards.length - 4}
-        </b>
+    <div className="flex items-center gap-1 rounded-xl px-2 py-2" style={box} data-testid="rank-stack">
+      {shown.map((r, i) =>
+        r === 0 ? (
+          <b key={i} className="px-0.5 text-[18px]" style={{ color: "var(--muted)" }}>
+            –
+          </b>
+        ) : (
+          <span
+            key={i}
+            className="flex h-[52px] w-[38px] items-center justify-center rounded-lg font-[family-name:var(--font-display)] text-[24px] font-bold"
+            style={{ background: "#F4EFE3", color: "#1B2433", boxShadow: "0 2px 6px rgba(0,0,0,0.35)" }}
+          >
+            {rankChar(r)}
+          </span>
+        ),
       )}
     </div>
   );
@@ -161,7 +191,7 @@ export function CardScreen({ mode }: { mode: CardMode }) {
 
   function handleDrop(p: CardPiece, b: Box) {
     if (busy.current || placed[p.key]) return;
-    if (!right(p, b)) {
+    if (!right(mode, p, b)) {
       showToast(mode === "cards" ? (p.answer === "good" ? "Not quite. This card helps BTN" : "Not quite. This card hurts BTN") : p.answer === "good" ? "Not quite. BTN bets it all here" : "Not quite. BTN checks it all here", false);
       badSound();
       buzz([30, 40, 30]);
@@ -171,7 +201,7 @@ export function CardScreen({ mode }: { mode: CardMode }) {
       return;
     }
     busy.current = true;
-    showToast(p.answer === "close" ? `Good · ${p.label}: close, either is right` : `Perfect · ${p.label}: ${answerText(mode, p).toLowerCase()}`, true);
+    showToast(p.answer === "close" && mode === "round" ? `Good · ${p.label}: close, either is right` : `Perfect · ${p.label}: ${answerText(mode, p).toLowerCase()}`, true);
     goodSound();
     buzz(15);
     setFlying({ key: p.key, box: b, rect: rectOf(b) });
@@ -221,12 +251,12 @@ export function CardScreen({ mode }: { mode: CardMode }) {
             <b className="font-[family-name:var(--font-brand)] text-[26px] font-bold">{TITLE[mode]}</b>
             <p className="m-0 max-w-[330px] text-[13.5px] leading-[1.5]" style={{ color: "var(--muted)" }}>
               {mode === "cards"
-                ? "You're the BTN: you bet, BB called. Now a new card comes. Cards come in groups: drag each to Good card (it helps your whole range) or Bad card (it helps BB)."
+                ? "You're the BTN: you bet, BB called. Now a new card comes. Cards come in groups: drag each to Good card (it helps your whole range), Bad card (it helps BB) or Neutral card (it changes little)."
                 : "You're the BTN: you bet, BB called. Keep it simple: on a good card bet your whole range, on a bad card check it all. Drag each group of cards to Bet it all or Check it all."}
             </p>
           </div>
           <div className="flex flex-col gap-1.5 rounded-2xl p-3 text-[13px]" style={{ background: "var(--panel)", border: "1px solid var(--line)" }}>
-            <Row label="Answers" text="How the card moves BTN's range equity vs BB's (draft rule for Uri: ±2.5 points); close cards accept both" />
+            <Row label="Answers" text={mode === "cards" ? "How the card moves BTN's range equity vs BB's (draft rule for Uri: +2.5 points good, −2.5 bad, in between neutral)" : "How the card moves BTN's range equity vs BB's (draft rule for Uri: ±2.5 points); close cards accept both"} />
           </div>
           <div className="grid grid-cols-2 gap-1.5" role="radiogroup" aria-label="Street" data-testid="street-picker">
             {(["turn", "river"] as CardStreet[]).map((st) => (
@@ -316,7 +346,7 @@ export function CardScreen({ mode }: { mode: CardMode }) {
           <b className="flex-shrink-0 text-center font-[family-name:var(--font-display)] text-[16px]">{question}</b>
           <div ref={zoneRef} className="relative min-h-[240px] flex-1" style={{ touchAction: "none", maxHeight: 420 }} data-testid="buckets">
             <SidePaddles boxes={BX} w={zone.w} h={zone.h} armed={armed} holding={holding} flash={flash} hitRef={(b, el) => (boxes.current[b] = el)} />
-            <div className="absolute inset-y-2 left-[84px] right-[84px] flex items-center justify-center">
+            <div className={`absolute ${mode === "cards" ? "top-5 bottom-[66px]" : "inset-y-2"} left-[84px] right-[84px] flex items-center justify-center`}>
               <Toast toast={toast} />
               {current && (
                 <div className="flex flex-col items-center gap-1" data-testid="sort-row">
@@ -344,7 +374,7 @@ export function CardScreen({ mode }: { mode: CardMode }) {
               )}
             </div>
             {current && (
-              <span className="absolute bottom-2.5 left-1/2 -translate-x-1/2 font-[family-name:var(--font-display)] text-[12px] font-semibold" style={{ color: "var(--muted)" }} data-testid="piece-count">
+              <span className={`absolute ${mode === "cards" ? "top-0" : "bottom-2.5"} left-1/2 -translate-x-1/2 font-[family-name:var(--font-display)] text-[12px] font-semibold`} style={{ color: "var(--muted)" }} data-testid="piece-count">
                 {done + 1} / {queue.length}
               </span>
             )}

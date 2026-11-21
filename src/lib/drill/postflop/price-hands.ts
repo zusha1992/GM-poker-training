@@ -115,7 +115,15 @@ const BB_RANGE: Record<Bucket, string> = { big: "Pot is too big", b0: "0–5bb",
  * the bet-bet-bet line. The bb are BTN's total by the river (preflop 2.5 +
  * flop 1.8 ≈ 4; + turn ≈ 11; + a 66% river ≈ 26), so the names are the same
  * on every street. */
-export const BUCKET_NAME: Record<Bucket, string> = { big: "Check, give up", b0: "One small bet", b5: "Two bets", b15: "Three small bets", b25: "Three bets", b50: "All in" };
+export type BetStreet = "flop" | "turn" | "river";
+/** Noam 2026-11-21: the names count the bets still to come on that street. The flop has three
+ * (flop, turn, river), the turn two, the river one; the bb small print stays the same. */
+export const BUCKET_NAMES: Record<BetStreet, Record<Bucket, string>> = {
+  flop: { big: "Check, give up", b0: "One small bet", b5: "Two bets", b15: "Three small bets", b25: "Three bets", b50: "All in" },
+  turn: { big: "Check, give up", b0: "Check, show down", b5: "One bet", b15: "Two bets", b25: "Two big bets", b50: "All in" },
+  river: { big: "Check, give up", b0: "Check, show down", b5: "Small bet", b15: "One bet", b25: "Big bet", b50: "All in" },
+};
+export const BUCKET_NAME = BUCKET_NAMES.flop;
 
 /** The bb range alone, the small print under a box's name. */
 export function bucketBb(b: Bucket): string {
@@ -123,13 +131,14 @@ export function bucketBb(b: Bucket): string {
 }
 
 /** Tiny text for the legend and summary chips. */
-export function bucketTiny(b: Bucket): string {
-  return BUCKET_NAME[b];
+export function bucketTiny(b: Bucket, street: BetStreet = "flop"): string {
+  return BUCKET_NAMES[street][b];
 }
 
 /** Short text for toasts and feedback notes. */
-export function bucketShort(b: Bucket): string {
-  return b === "big" ? `${BUCKET_NAME[b]} (pot is too big)` : `${BUCKET_NAME[b]} (${BB_RANGE[b]})`;
+export function bucketShort(b: Bucket, street: BetStreet = "flop"): string {
+  const name = BUCKET_NAMES[street][b];
+  return b === "big" ? `${name} (pot is too big)` : `${name} (${BB_RANGE[b]})`;
 }
 
 export type Answer = { bucket: Bucket; why: string; sure: boolean; auto?: boolean };

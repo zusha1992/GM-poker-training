@@ -4,12 +4,9 @@ BTN bets 14bb into 21.1bb. Answer by the solver's strategy and the EV of calling
 
 | Group | Hands | Share | EV of a call | Solver continues | Answer |
 |---|---|---|---|---|---|
-| Two pair or better | K8, K3s, Q8s, Q3s, 43s | 4.5% | +30.93bb | 100% | Call |
+| Two pair | K8, K3s, Q8s, Q3s, 43s | 4.5% | +30.93bb | 100% | Call |
 | Top pair | KJ, KT, K9, K7s, K6s, K5s, K2s | 20.7% | +22.75bb | 100% | Call |
-| Third pair or lower: A8, A4, A3s… | A8, A4, A3s, 86s, 85s, 64s, 54s, 42s | 10.9% | +0.68bb | 55.9% | Call |
-| Second pair: AQo, Q6s, Q5s… | AQo, Q6s, Q5s, Q2s | 10.1% | +0.66bb | 67.8% | Call |
-| Pocket pairs under the top card: 77, 66, 55 | 77, 66, 55 | 1.4% | +0.19bb | 46.9% | Bluff-catch |
-| Third pair or lower: J8s, J4s, T8s… | J8s, J4s, T8s, T4s, 98s, 87s, 74s | 4.3% | +0bb | 47.1% | Bluff-catch |
-| Second pair: QJ, QT, Q9… | QJ, QT, Q9, Q7s | 35.1% | -0.22bb | 49.7% | Bluff-catch |
+| Third pair or lower | A8, A4, A3s, J8s, J4s, T8s, T4s, 98s, 87s, 86s, 85s +4 more | 15.2% | +0.49bb | 53.4% | Bluff-catch |
+| Second pair | AQo, QJ, QT, Q9, Q7s, Q6s, Q5s, Q2s | 45.2% | -0.03bb | 53.8% | Bluff-catch |
+| Pocket pairs under the top card | 99, 77, 66, 55 | 2.1% | -0.23bb | 35.4% | Bluff-catch |
 | Ace-high | AJo, AT, A9s, A7s, A6s | 12.3% | -0.34bb | 3.1% | Fold |
-| Pocket pairs under the top card: 99 | 99 | 0.6% | -1.24bb | 7.9% | Fold |
